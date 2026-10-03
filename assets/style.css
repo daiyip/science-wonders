@@ -314,3 +314,7 @@ button[aria-pressed="true"] { background: var(--ink); color: var(--paper); borde
 .badge { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.04em; color: var(--good); }
 a.btn { display: inline-block; text-decoration: none; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.lang-select { font: inherit; font-size: var(--step--1); padding: 4px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+.topbar nav { align-items: center; }
+:lang(zh-CN) { --font-display: "Spectral", "Noto Serif SC", "Songti SC", "SimSun", serif; --font-body: "IBM Plex Sans", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+:lang(zh-CN) .eyebrow { letter-spacing: 0.04em; }

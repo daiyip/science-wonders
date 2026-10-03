@@ -143,16 +143,16 @@
     try { sessionStorage.setItem("science-wonders-tour", tour.id); } catch (e) {}
     const i = tour.steps.findIndex((s) => s.slug === slug);
     const step = tour.steps[i];
-    const link = (s, label, cls) => s ? el("a", { class: cls, href: `../${s.slug}/index.html?tour=${tour.id}`, text: label }) : null;
+    const link = (s, cls, ...kids) => s ? el("a", { class: cls, href: `../${s.slug}/index.html?tour=${tour.id}` }, ...kids) : null;
     const prev = tour.steps[i - 1], next = tour.steps[i + 1];
     const bar = el("aside", { class: "tour-bar", "aria-label": "Guided tour" },
       el("div", { class: "tour-meta" },
         el("a", { href: "../../tours/index.html", class: "eyebrow", text: `Tour · ${tour.title}` }),
         el("span", { class: "eyebrow", text: `Step ${i + 1} of ${tour.steps.length}` })),
-      el("p", { class: "tour-goal" }, el("b", { text: "Your goal: " }), step.goal),
+      el("p", { class: "tour-goal" }, el("b", { text: "Your goal:" }), " ", el("span", { text: step.goal })),
       el("div", { class: "tour-nav" },
-        link(prev, "← " + (bySlug[prev && prev.slug] || {}).title, "tour-prev"),
-        next ? link(next, "Next: " + (bySlug[next.slug] || {}).title + " →", "tour-next")
+        link(prev, "tour-prev", "← ", el("span", { text: (bySlug[prev && prev.slug] || {}).title })),
+        next ? link(next, "tour-next", el("span", { text: "Next:" }), " ", el("span", { text: (bySlug[next.slug] || {}).title }), " →")
              : el("a", { class: "tour-next", href: "../../tours/index.html", text: "Finish the tour →", onclick: () => {
                  update((p) => { (p.tours = p.tours || {})[tour.id] = Date.now(); });
                  try { sessionStorage.removeItem("science-wonders-tour"); } catch (e) {}
@@ -172,8 +172,8 @@
       if (choice !== null) update((p) => { (p.predicted = p.predicted || {})[slug] = right ? "right" : "wrong"; });
       card.replaceChildren(
         el("div", { class: "eyebrow", text: choice === null ? "The answer" : right ? "Your prediction was right" : "Most people guess that too" }),
-        el("p", { class: "predict-answer" }, el("b", { text: pr.options[pr.answer] + ". " }), pr.reveal),
-        el("p", { class: "predict-try" }, el("b", { text: "See it yourself: " }), pr.tryIt));
+        el("p", { class: "predict-answer" }, el("b", { text: pr.options[pr.answer] }), " ", el("span", { text: pr.reveal })),
+        el("p", { class: "predict-try" }, el("b", { text: "See it yourself:" }), " ", el("span", { text: pr.tryIt })));
       card.classList.add("answered", choice === null ? "skipped" : right ? "right" : "wrong");
       unblur();
     }
@@ -209,7 +209,7 @@
           if (j === item.answer) b.classList.add("correct");
           else if (j === k) b.classList.add("incorrect");
         });
-        fb.textContent = (answers[qi] ? "Right. " : "Not quite. ") + item.why;
+        fb.replaceChildren(el("b", { text: answers[qi] ? "Right." : "Not quite." }), " ", el("span", { text: item.why }));
         const n = Object.keys(answers).length;
         if (n === content.quiz.length) {
           const s = Object.values(answers).filter(Boolean).length;
