@@ -1,5 +1,5 @@
 // Offline support: precache the site, then serve from cache while refreshing it.
-const CACHE = "science-wonders-v7";
+const CACHE = "science-wonders-v8";
 const PRECACHE = [
   "./",
   "index.html",
@@ -30,6 +30,7 @@ const PRECACHE = [
   "assets/lab.js",
   "assets/tours.js",
   "assets/icon.svg",
+  "assets/icon-light.svg",
   "assets/catalog.js",
   "assets/content/quantum.js",
   "assets/content/cosmos.js",
