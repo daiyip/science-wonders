@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stern–Gerlach Experiment</title>
+<meta name="description" content="Send silver atoms through a chain of magnets and watch them split into exactly two beams, then see a blocked result come back.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .control.is-off { opacity: 0.45; }
+  button:disabled { cursor: not-allowed; }
+  .button-row button.preset { padding: 6px 11px; font-family: var(--font-mono); }
+  .note { font-size: var(--step--1); color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum mechanics · Stern &amp; Gerlach, Frankfurt 1922 · Spin 1925</div>
+    <h1>The Stern–Gerlach experiment</h1>
+    <p class="lede">Shoot silver atoms between the poles of a shaped magnet. Each one is a tiny magnet itself, pointing any which way, so you would expect a smear. You get exactly two spots. Then chain the magnets together and things get stranger.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="420" aria-label="Side view of an oven sending silver atoms through up to three magnets. Each magnet splits its incoming beam into an up and a down beam; one is blocked and the other continues. A detector at the end counts atoms in the final two spots."></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Atoms sent <b id="sent">0</b></span>
+    <span>Reached the detector <b id="reached">–</b></span>
+    <span>Final up · down <b id="final">0 · 0</b></span>
+    <span>Last magnet predicts up <b id="pred">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Magnets in the chain</span>
+      <div class="seg" role="group" aria-label="Magnets in the chain">
+        <button id="n1" aria-pressed="false">1</button>
+        <button id="n2" aria-pressed="false">2</button>
+        <button id="n3" aria-pressed="true">3</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Classic set-ups</span>
+      <div class="button-row">
+        <button class="preset" id="presetZ">Z</button>
+        <button class="preset" id="presetZZ">Z, Z</button>
+        <button class="preset" id="presetZX">Z, X</button>
+        <button class="preset" id="presetZXZ">Z, X, Z</button>
+        <button class="preset" id="presetZ60">Z, 60°</button>
+      </div>
+    </div>
+    <div class="control" id="stage1">
+      <label for="angle1">Magnet 1 axis <output id="angle1Out">Z (0°)</output></label>
+      <input type="range" id="angle1" min="0" max="360" step="5" value="0">
+      <div class="seg" role="group" aria-label="Magnet 1 beam to keep">
+        <button id="keep1Up" aria-pressed="true">Pass up</button>
+        <button id="keep1Down" aria-pressed="false">Pass down</button>
+      </div>
+    </div>
+    <div class="control" id="stage2">
+      <label for="angle2">Magnet 2 axis <output id="angle2Out">X (90°)</output></label>
+      <input type="range" id="angle2" min="0" max="360" step="5" value="90">
+      <div class="seg" role="group" aria-label="Magnet 2 beam to keep">
+        <button id="keep2Up" aria-pressed="true">Pass up</button>
+        <button id="keep2Down" aria-pressed="false">Pass down</button>
+      </div>
+    </div>
+    <div class="control" id="stage3">
+      <label for="angle3">Magnet 3 axis <output id="angle3Out">Z (0°)</output></label>
+      <input type="range" id="angle3" min="0" max="360" step="5" value="0">
+      <div class="seg" role="group" aria-label="Magnet 3 beam to keep">
+        <button id="keep3Up" aria-pressed="true">Pass up</button>
+        <button id="keep3Down" aria-pressed="false">Pass down</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="rate">Atoms per second <output id="rateOut">12</output></label>
+      <input type="range" id="rate" min="0" max="100" value="45">
+    </div>
+    <div class="control">
+      <span class="label">Oven</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="burst">Send 1,000</button>
+        <button id="clear">Clear</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Comparison</span>
+      <label class="switch" for="classical"><input type="checkbox" id="classical"> Show what classical magnets would do</label>
+      <span class="note" id="classicalNote">Shown for a single magnet.</span>
+    </div>
+  </div>
+  <p class="callout" id="hint">This is the famous one. Magnet 1 keeps only the atoms that went up along Z. Magnet 2 sorts them along X. Magnet 3 asks about Z again, and half of them now come out down, even though every down atom was removed at the start.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>An oven boils off silver atoms. Each has one unpaired electron, and that electron's spin makes the atom a tiny magnet. The magnet's poles are shaped so the field is stronger near one pole, which pushes an atom up or down depending on how its little magnet is tilted along the magnet's axis.</p>
+      <p>A classical tilted compass needle could have any tilt, so the atoms should spread into a continuous band. Instead every atom lands in one of two spots. Along any axis you ask about, the spin is only ever up or down.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Z, Z: atoms that went up once go up again, every time. The answer is repeatable.</li>
+        <li>Z, X: knowing the spin is up along Z tells you nothing about X. It's 50/50.</li>
+        <li>Z, X, Z: half come out down along Z, though you blocked every down atom at the first magnet. Measuring X wiped out the Z answer.</li>
+        <li>Turn magnet 2 slowly from 0° to 180°. The chance of up follows cos²(θ/2), where θ is the angle between this magnet and the one before.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>An atom can't have a definite spin along Z and along X at the same time. Measuring one throws away the other, just as position and momentum trade off. So the atom isn't carrying a hidden arrow that each magnet reads. Each magnet asks a question, and the act of asking sets the answer that the next magnet sees.</p>
+      <p class="muted">Otto Stern and Walther Gerlach saw the split in February 1922, before spin had been proposed. Uhlenbeck and Goudsmit explained it as electron spin in 1925. Stern received the 1943 Nobel Prize.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Two answers, endless uses</h2>
+      <p>The discovery that spin only ever comes in "up" or "down" along an axis turned into a toolkit. Flipping spins, reading them and sorting by them runs through medicine, timekeeping and every computer.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>MRI scanners</h3>
+        <p>The protons in your body's water are spin-½, just like these silver atoms. In a 3 tesla scanner their two energy levels are split by a radio frequency of about 128 MHz. Radio pulses tip the spins, and the signal they send back as they relax builds the image.</p>
+        <span class="link"><b>In the demo:</b> the magnet's two beams are the two energy levels MRI flips between.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Chemistry</span>
+        <h3>NMR spectroscopy</h3>
+        <p>The same physics in a test tube. A nucleus's exact flip frequency depends slightly on the electrons and atoms around it, so chemists read a molecule's structure from its spectrum. It is a standard tool for checking new drugs and materials.</p>
+        <span class="link"><b>In the demo:</b> every spin answers only "up" or "down", which makes the frequencies sharp.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Timekeeping</span>
+        <h3>Caesium atomic clocks</h3>
+        <p>The second is defined by a caesium transition at exactly 9,192,631,770 cycles per second. Classic caesium beam clocks use Stern–Gerlach-style magnets: one to pick out atoms in one state, a microwave cavity to flip them, and a second magnet to send only the flipped atoms to the detector.</p>
+        <span class="link"><b>In the demo:</b> block one beam, change the atoms, then sort again.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Electronics</span>
+        <h3>Hard-drive read heads</h3>
+        <p>Giant magnetoresistance, found independently by Albert Fert and Peter Grünberg in 1988 (Nobel Prize 2007), makes a layered metal's resistance depend on electron spin. Read heads built on it from 1997 let hard drives pack in far more data, and their successors still read every hard drive today.</p>
+        <span class="link"><b>In the demo:</b> spin-up and spin-down electrons are treated differently, like the two beams.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Electronics</span>
+        <h3>MRAM memory</h3>
+        <p>Magnetic RAM stores each bit as the up or down magnetization of a tiny layer, read through a spin-dependent tunnelling current. It keeps data with the power off and survives endless rewrites, so it is used in satellites, industrial controllers and some chip foundries' embedded memory.</p>
+        <span class="link"><b>In the demo:</b> two states, chosen by spin, read by how electrons pass through.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Sensing · Computing</span>
+        <h3>Spin qubits and sensors</h3>
+        <p>A single electron spin in a diamond defect (an NV centre) can sense magnetic fields from single cells and tiny circuits. Electron spins in silicon chips are being built into qubits. In both, measuring along an axis tilted by θ gives "up" with probability cos²(θ/2), the rule you can test here.</p>
+        <span class="link"><b>In the demo:</b> turn magnet 2 and watch the counts follow cos²(θ/2).</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Magnet axes are angles in the plane across the beam, measured from Z towards X. Each magnet's two beams are drawn up and down on the page, whatever its real axis. Beam splitting is exaggerated; in 1922 the two traces were about 0.2 mm apart.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="stern-gerlach.js"></script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Birthday Paradox</title>
+<meta name="description" content="Fill a room with people one at a time and watch shared birthdays appear far sooner than intuition says, with the exact odds and a 1,000-room simulation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .formula { font-family: var(--font-mono); font-size: 0.92em; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Probability · von Mises 1939</div>
+    <h1>The birthday paradox</h1>
+    <p class="lede">How many people need to be in a room before two of them probably share a birthday? Most people guess around 180. The answer is 23. Fill the room and watch the matches turn up.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="440" aria-label="Left: a ring of 365 days with each person drawn as a dot at their birthday, shared birthdays in amber. Right: the chance of at least one shared birthday against the number of people, with the simulated rate overlaid"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>People <b id="nPeople">23</b></span>
+    <span>Pairs to compare <b id="nPairs">253</b></span>
+    <span>Chance of a shared birthday <b id="pTheory">50.7%</b></span>
+    <span>This room <b id="matchNow">–</b></span>
+    <span>Simulated rooms with a match <b id="simRate">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="people">People in the room <output id="peopleOut">23</output></label>
+      <input type="range" id="people" min="1" max="100" value="23">
+    </div>
+    <div class="control">
+      <span class="label">Room</span>
+      <div class="button-row">
+        <button id="addOne">Add a person</button>
+        <button id="newRoom">New room</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Start empty</span>
+      <div class="button-row">
+        <button id="fillMatch" class="primary">Add people until a match</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Simulation <output id="simCount">0 rooms</output></span>
+      <div class="button-row">
+        <button id="runSim">Run 1,000 rooms</button>
+        <button id="clearSim">Clear</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Pairs</span>
+      <label class="switch" for="showPairs"><input type="checkbox" id="showPairs"> Draw a line for every pair</label>
+    </div>
+    <div class="control">
+      <span class="label">Shortcut</span>
+      <label class="switch" for="showApprox"><input type="checkbox" id="showApprox" checked> Overlay the pairs estimate</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Press "Add people until a match" a few times and note where it stops. Then run 1,000 rooms: the amber line lands on the white curve.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each dot is a person, placed on a ring of 365 days at their birthday. Birthdays are random and equally likely; February 29 is left out. When two people share a day, both dots turn amber.</p>
+      <p>The white curve is the exact chance that at least one pair matches: <span class="formula">P = 1 − 365! / ((365 − n)! · 365<sup>n</sup>)</span>. It passes 50.7% at 23 people and 99.9% at 70. The amber line is the share of simulated rooms that had a match at each size.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Turn on "Draw a line for every pair". With 23 people there are 23 × 22 ÷ 2 = 253 pairs, and each one is a chance of a match.</li>
+        <li>Slide to 70. Finding a room with no match is now rarer than 1 in 1,000.</li>
+        <li>Run the simulation several times. The more rooms, the closer amber hugs white.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>We picture ourselves in the room: what are the odds someone shares <em>my</em> birthday? With 23 people that is only 1 − (364/365)<sup>22</sup> ≈ 5.9%. You would need 253 other people to reach even odds.</p>
+      <p>But the question is about any pair at all, and pairs grow with the square of the room. Each pair matches with chance 1/365, so the chance of no match is roughly e<sup>−pairs/365</sup>, which drops below one half once there are about 253 pairs.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where collisions come early</h2>
+      <p>Replace 365 days with any number of possible labels, and collisions show up after roughly the square root of that number. Engineers plan around this, and attackers exploit it.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Cryptography</span>
+        <h3>The birthday attack on hashes</h3>
+        <p>A hash with n-bit outputs takes about 2<sup>n</sup> tries to match one given value, but only about 2<sup>n/2</sup> to find any two inputs that match. That halving is why 160-bit SHA-1 was retired. In 2017 Google and CWI Amsterdam published the first real SHA-1 collision: two different PDF files with the same hash.</p>
+        <span class="link"><b>In the demo:</b> 23 is close to √365; collisions start near the square root.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Software</span>
+        <h3>Random IDs (UUIDs)</h3>
+        <p>A version 4 UUID has 122 random bits, so 5.3 × 10<sup>36</sup> possible values. The birthday rule says you would need to make about 2.7 × 10<sup>18</sup> of them before the chance of any duplicate reaches 50%. That is why systems can create IDs independently without checking with each other.</p>
+        <span class="link"><b>In the demo:</b> the pairs estimate 1 − e<sup>−pairs/N</sup> with N = 2<sup>122</sup>.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Hash tables</h3>
+        <p>A hash table drops keys into numbered slots. Even a table with plenty of free space will see two keys land in the same slot surprisingly early, so every practical design includes a plan for collisions, such as chaining entries in a list or probing for the next free slot.</p>
+        <span class="link"><b>In the demo:</b> 365 slots, 23 keys, a coin-flip chance of a collision.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Software</span>
+        <h3>Short Git commit IDs</h3>
+        <p>Git names every commit by a long hash, but people use the first 7 hex characters. That gives 268 million values, and a project with tens of thousands of commits will contain clashing short IDs. Git now lengthens its abbreviations automatically as a repository grows; the Linux kernel uses 12 characters.</p>
+        <span class="link"><b>In the demo:</b> a bigger room needs a bigger calendar to stay match-free.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Forensics</span>
+        <h3>DNA database matches</h3>
+        <p>A partial DNA profile might match a random person with odds of one in many millions. But comparing every profile in a database to every other one means billions of pairs, so some partial matches between unrelated people are expected. Searches of state databases in the US found such pairs and forced courts to weigh the difference between the two questions.</p>
+        <span class="link"><b>In the demo:</b> "matches me" (5.9%) versus "any pair matches" (50.7%).</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Everyday odds</span>
+        <h3>Lottery repeats</h3>
+        <p>In September 2009 the Bulgarian lottery drew the same six numbers in two draws four days apart, prompting an investigation. With thousands of lotteries holding draws for decades, some draw somewhere repeating an earlier one is far more likely than any particular repeat.</p>
+        <span class="link"><b>In the demo:</b> each new draw is another person entering a very large room.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Birthdays are drawn uniformly from 365 days. Real birthdays are slightly uneven across the year, which makes matches a little more likely, not less.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="birthday-paradox.js"></script>
+</body>
+</html>

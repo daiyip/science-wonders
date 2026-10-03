@@ -1,0 +1,496 @@
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const W = 960, H = 500;
+  const ctx = Lab.setupCanvas($("bench"), W, H);
+  const DEG = Math.PI / 180;
+
+  // ---------- Physics (real units, mm) ----------
+  const LAMBDA_MM = 702e-6, L_MM = 1000, D_MM = 0.2, A_MM = 0.04;
+  const HALF = 12;            // screen shows ±12 mm
+  const BINS = 96;
+  const K = Math.PI / (LAMBDA_MM * L_MM);
+  const sinc2 = (u) => (Math.abs(u) < 1e-9 ? 1 : (Math.sin(u) / u) ** 2);
+  const envelope = (x) => sinc2(K * A_MM * x);   // single-slit diffraction envelope
+  const phase = (x) => K * D_MM * x;              // half the phase difference between the slits
+
+  // Pair state (|top>|H> + |bottom>|V>)/√2 when tagged.
+  // Screen alone: |ψtop|² + |ψbot|², no cross term. Untagged: |ψtop + ψbot|².
+  function screenProb(x) {
+    return state.tags ? envelope(x) : envelope(x) * Math.cos(phase(x)) ** 2;
+  }
+  // Probability the twin goes to D1 (polarizer axis at θ from H), given the hit at x.
+  function probD1(x, angleDeg) {
+    const th = angleDeg * DEG;
+    if (!state.tags) return Math.cos(th - Math.PI / 4) ** 2; // untagged twin is fixed at 45°, uncorrelated
+    return (1 + Math.sin(2 * th) * Math.cos(2 * phase(x))) / 2;
+  }
+
+  const state = {
+    tags: true, angle: 45, delay: false, colour: true,
+    rate: 24, running: true, pending: 0,
+    hits: [], flights: [],
+    cAll: new Array(BINS).fill(0), c1: new Array(BINS).fill(0), c2: new Array(BINS).fill(0),
+    n1: 0, n2: 0, waiting: 0,
+    pAll: new Array(BINS).fill(0), p1: new Array(BINS).fill(0), p2: new Array(BINS).fill(0),
+    flash1: 0, flash2: 0, flashScreen: null, coil: 0,
+  };
+
+  function sampleX() {
+    for (let i = 0; i < 20000; i++) {
+      const x = (Math.random() * 2 - 1) * HALF;
+      if (Math.random() < screenProb(x)) return x;
+    }
+    return 0;
+  }
+
+  function computePdf() {
+    let total = 0;
+    for (let b = 0; b < BINS; b++) {
+      let s = 0, s1 = 0;
+      for (let j = 0; j < 6; j++) {
+        const x = -HALF + (b + (j + 0.5) / 6) * (2 * HALF / BINS);
+        const p = screenProb(x);
+        s += p; s1 += p * probD1(x, state.angle);
+      }
+      state.pAll[b] = s; state.p1[b] = s1; state.p2[b] = s - s1;
+      total += s;
+    }
+    for (let b = 0; b < BINS; b++) { state.pAll[b] /= total; state.p1[b] /= total; state.p2[b] /= total; }
+  }
+
+  // ---------- Layout ----------
+  const LASER = { x: 40, y: 250 }, CRY = { x: 110, y: 250 };
+  const SIG_Y = 140, BAR_X = 250, SCR_X = 400, SCR_TOP = 60, SCR_BOT = 220;
+  const IDL_Y = 360, COIL_X = 232, PBS = { x: 320, y: IDL_Y }, D1 = { x: 408, y: IDL_Y }, D2 = { x: PBS.x, y: 448 };
+  const SORT = { x: 408, y: 290 };
+  const PX = 486, PW = 458, PANEL_H = 140, PANEL_GAP = 12, PANEL_TOP = 40;
+  const FILM_H = 30, HIST_H = 78;
+  const SLIT_GAP = 22;
+
+  const COL = {
+    bg: "#05080e", label: "#7f8ea6", dim: "#56647c", rule: "#1f2a3f",
+    metal: "#3a4760", photon: "#ff6f5e", pump: "#a98bff",
+    grey: "#aab6c8", d1: "#6fd8c4", d2: "#f0b35a", white: "#e9eef7",
+  };
+
+  const yOnScreen = (x) => SIG_Y - (x / HALF) * ((SCR_BOT - SCR_TOP) / 2);
+  const xOnPanel = (x) => PX + ((x + HALF) / (2 * HALF)) * PW;
+  const binOf = (x) => Math.min(BINS - 1, Math.max(0, Math.floor((x + HALF) / (2 * HALF) * BINS)));
+
+  // Offscreen films for the three panels, so thousands of dots cost nothing per frame.
+  const films = [0, 1, 2].map(() => {
+    const c = document.createElement("canvas");
+    return { c, g: Lab.setupCanvas(c, PW, FILM_H) };
+  });
+  function dot(film, x, fy, colour) {
+    film.g.fillStyle = colour;
+    film.g.fillRect(((x + HALF) / (2 * HALF)) * PW - 0.8, 2 + fy * (FILM_H - 5), 1.6, 1.6);
+  }
+
+  // ---------- Hits and sorting ----------
+  function land(x) {
+    const h = { x, fy: Math.random(), o: 0 };
+    state.hits.push(h);
+    state.cAll[binOf(x)]++;
+    dot(films[0], x, h.fy, COL.grey);
+    if (state.delay) state.waiting++;
+    else sortHit(h, false);
+  }
+
+  function sortHit(h, wasWaiting) {
+    h.o = Math.random() < probD1(h.x, state.angle) ? 1 : 2;
+    const b = binOf(h.x);
+    if (h.o === 1) { state.c1[b]++; state.n1++; state.flash1 = 1; dot(films[1], h.x, h.fy, COL.d1); }
+    else { state.c2[b]++; state.n2++; state.flash2 = 1; dot(films[2], h.x, h.fy, COL.d2); }
+    if (state.colour) dot(films[0], h.x, h.fy, h.o === 1 ? COL.d1 : COL.d2);
+    if (wasWaiting) state.waiting--;
+  }
+
+  function measureStored() {
+    for (const h of state.hits) if (!h.o) sortHit(h, true);
+    state.waiting = 0;
+    updateReadouts();
+  }
+
+  // Redraw films and counts from the hit list.
+  function rebuild() {
+    for (const f of films) f.g.clearRect(0, 0, PW, FILM_H);
+    state.cAll.fill(0); state.c1.fill(0); state.c2.fill(0);
+    state.n1 = 0; state.n2 = 0; state.waiting = 0;
+    for (const h of state.hits) {
+      const b = binOf(h.x);
+      state.cAll[b]++;
+      if (!h.o) { state.waiting++; dot(films[0], h.x, h.fy, COL.grey); continue; }
+      const c = h.o === 1 ? COL.d1 : COL.d2;
+      dot(films[0], h.x, h.fy, state.colour ? c : COL.grey);
+      if (h.o === 1) { state.c1[b]++; state.n1++; dot(films[1], h.x, h.fy, c); }
+      else { state.c2[b]++; state.n2++; dot(films[2], h.x, h.fy, c); }
+    }
+  }
+
+  function clearAll() {
+    state.hits = [];
+    state.flights = [];
+    rebuild();
+    updateReadouts();
+  }
+
+  // A new polarizer angle: hits already sorted at the old angle are removed so data never mixes.
+  // Twins still waiting in the delay line have not been measured, so their hits stay.
+  function dropSorted() {
+    state.hits = state.hits.filter((h) => !h.o);
+    rebuild();
+  }
+
+  // ---------- Firing ----------
+  const FLIGHT_MS = 1000;
+  function fire(animate) {
+    const x = sampleX();
+    if (animate && !Lab.reducedMotion && state.flights.length < 12) {
+      state.flights.push({ x, t: 0, stored: state.delay });
+    } else {
+      land(x);
+    }
+  }
+
+  // ---------- Drawing ----------
+  function label(text, x, y, align, colour) {
+    ctx.fillStyle = colour || COL.label;
+    ctx.textAlign = align || "center";
+    ctx.fillText(text, x, y);
+  }
+
+  function pathPoint(pts, u) {
+    let len = 0;
+    const segs = [];
+    for (let i = 1; i < pts.length; i++) {
+      const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      segs.push(l); len += l;
+    }
+    let d = Math.max(0, Math.min(1, u)) * len;
+    for (let i = 0; i < segs.length; i++) {
+      if (d <= segs[i] || i === segs.length - 1) {
+        const f = segs[i] ? Math.min(1, d / segs[i]) : 0;
+        return [pts[i][0] + f * (pts[i + 1][0] - pts[i][0]), pts[i][1] + f * (pts[i + 1][1] - pts[i][1])];
+      }
+      d -= segs[i];
+    }
+    return pts[pts.length - 1];
+  }
+
+  function drawApparatus() {
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+
+    // Beams
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = "rgba(169,139,255,0.55)";
+    ctx.beginPath(); ctx.moveTo(LASER.x + 14, LASER.y); ctx.lineTo(CRY.x - 10, CRY.y); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,111,94,0.28)";
+    ctx.beginPath();
+    ctx.moveTo(CRY.x + 6, CRY.y - 6); ctx.lineTo(170, SIG_Y); ctx.lineTo(BAR_X - 4, SIG_Y);
+    ctx.moveTo(CRY.x + 6, CRY.y + 6); ctx.lineTo(170, IDL_Y);
+    if (state.delay) { ctx.lineTo(COIL_X - 22, IDL_Y); ctx.moveTo(COIL_X + 22, IDL_Y); }
+    ctx.lineTo(PBS.x - 11, IDL_Y);
+    ctx.moveTo(PBS.x + 11, IDL_Y); ctx.lineTo(D1.x - 10, IDL_Y);
+    ctx.moveTo(PBS.x, IDL_Y + 11); ctx.lineTo(PBS.x, D2.y - 10);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+
+    // Laser and crystal
+    ctx.fillStyle = "#2a3550";
+    ctx.fillRect(LASER.x - 26, LASER.y - 10, 40, 20);
+    ctx.fillStyle = COL.pump;
+    ctx.fillRect(LASER.x + 12, LASER.y - 3, 4, 6);
+    label("PUMP", LASER.x - 6, LASER.y - 18);
+    ctx.save();
+    ctx.translate(CRY.x, CRY.y); ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = "rgba(143,166,255,0.25)"; ctx.strokeStyle = "#8fa6ff";
+    ctx.fillRect(-9, -9, 18, 18); ctx.strokeRect(-9, -9, 18, 18);
+    ctx.restore();
+    label("CRYSTAL", CRY.x, CRY.y + 30);
+    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+    label("makes twins", CRY.x, CRY.y + 43, "center", COL.dim);
+    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+
+    // Double slit
+    label("DOUBLE SLIT", BAR_X, 32);
+    ctx.fillStyle = COL.metal;
+    const hw = 3;
+    const sTop = SIG_Y - SLIT_GAP / 2, sBot = SIG_Y + SLIT_GAP / 2;
+    ctx.fillRect(BAR_X - 3, SCR_TOP - 10, 6, sTop - hw - (SCR_TOP - 10));
+    ctx.fillRect(BAR_X - 3, sTop + hw, 6, sBot - hw - sTop - hw);
+    ctx.fillRect(BAR_X - 3, sBot + hw, 6, SCR_BOT + 10 - sBot - hw);
+    if (state.tags) {
+      // Tag markers: H (horizontal arrow) on top slit, V (vertical arrow) on bottom
+      ctx.strokeStyle = COL.d1; ctx.fillStyle = COL.d1;
+      ctx.beginPath(); ctx.moveTo(BAR_X + 9, sTop); ctx.lineTo(BAR_X + 23, sTop); ctx.stroke();
+      ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+      label("H", BAR_X + 30, sTop + 4, "left", COL.d1);
+      ctx.strokeStyle = COL.d2;
+      ctx.beginPath(); ctx.moveTo(BAR_X + 16, sBot - 6); ctx.lineTo(BAR_X + 16, sBot + 7); ctx.stroke();
+      label("V", BAR_X + 30, sBot + 4, "left", COL.d2);
+      label("tags", BAR_X + 20, SCR_BOT + 26, "center", COL.dim);
+      ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    }
+
+    // Screen (side view) with the accumulated glow
+    label("SCREEN", SCR_X, 32);
+    ctx.fillStyle = "#1c2639";
+    ctx.fillRect(SCR_X - 3, SCR_TOP, 6, SCR_BOT - SCR_TOP);
+    const maxC = Math.max(1, ...state.cAll);
+    for (let b = 0; b < BINS; b++) {
+      if (!state.cAll[b]) continue;
+      const y0 = yOnScreen(-HALF + (b + 1) * 2 * HALF / BINS);
+      const y1 = yOnScreen(-HALF + b * 2 * HALF / BINS);
+      ctx.fillStyle = `rgba(201,212,227,${0.12 + 0.8 * state.cAll[b] / maxC})`;
+      ctx.fillRect(SCR_X - 3, y0, 6, y1 - y0 + 0.5);
+    }
+
+    // Twin path: delay coil, polarizer, detectors
+    label("TWIN", 170, IDL_Y - 14, "center");
+    if (state.delay) {
+      ctx.strokeStyle = state.coil > 0 ? `rgba(240,179,90,${0.5 + 0.4 * state.coil})` : "#5c6a86";
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath(); ctx.ellipse(COIL_X - 12 + i * 6, IDL_Y, 6, 16, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      label("DELAY LINE", COIL_X, IDL_Y - 26);
+      ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+      label(`${state.waiting.toLocaleString()} waiting`, COIL_X, IDL_Y + 32, "center", state.waiting ? COL.d2 : COL.dim);
+      ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    }
+    // Polarizing beam splitter, with a dial showing its axis
+    ctx.fillStyle = "rgba(143,166,255,0.18)"; ctx.strokeStyle = "#8fa6ff";
+    ctx.fillRect(PBS.x - 11, PBS.y - 11, 22, 22); ctx.strokeRect(PBS.x - 11, PBS.y - 11, 22, 22);
+    ctx.beginPath(); ctx.moveTo(PBS.x - 11, PBS.y + 11); ctx.lineTo(PBS.x + 11, PBS.y - 11); ctx.stroke();
+    const dial = { x: PBS.x, y: PBS.y - 38 };
+    ctx.strokeStyle = "#3a4760"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(dial.x, dial.y, 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "#8fa6ff"; ctx.lineWidth = 2.2;
+    const th = state.angle * DEG;
+    ctx.beginPath();
+    ctx.moveTo(dial.x - 11 * Math.cos(th), dial.y + 11 * Math.sin(th));
+    ctx.lineTo(dial.x + 11 * Math.cos(th), dial.y - 11 * Math.sin(th));
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    label(`POLARIZER ${state.angle}°`, dial.x, dial.y - 20);
+
+    drawDetector(D1, "D1", COL.d1, state.flash1);
+    drawDetector(D2, "D2", COL.d2, state.flash2);
+
+    // Sorter: matches each hit with its twin's detector
+    ctx.strokeStyle = "#2c3a55"; ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(SCR_X, SCR_BOT + 4); ctx.lineTo(SORT.x, SORT.y - 12);
+    ctx.moveTo(D1.x, D1.y - 12); ctx.lineTo(SORT.x, SORT.y + 12);
+    ctx.moveTo(D2.x + 12, D2.y - 6); ctx.quadraticCurveTo(D1.x + 30, D2.y - 10, SORT.x + 30, SORT.y + 8);
+    ctx.moveTo(SORT.x + 36, SORT.y); ctx.lineTo(PX - 8, SORT.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#0b1220"; ctx.strokeStyle = "#3a4760";
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(SORT.x - 36, SORT.y - 12, 72, 24, 5) : ctx.rect(SORT.x - 36, SORT.y - 12, 72, 24);
+    ctx.fill(); ctx.stroke();
+    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    label("SORTER", SORT.x, SORT.y + 4, "center", COL.white);
+    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+  }
+
+  function drawDetector(d, name, colour, flash) {
+    ctx.fillStyle = "#1c2639";
+    ctx.beginPath(); ctx.arc(d.x, d.y, 10, 0, Math.PI * 2); ctx.fill();
+    if (flash > 0) {
+      ctx.fillStyle = colour;
+      ctx.globalAlpha = flash;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = colour;
+    ctx.beginPath(); ctx.arc(d.x, d.y, 10, 0, Math.PI * 2); ctx.stroke();
+    label(name, d.x, d.y + 28, "center", colour);
+  }
+
+  function drawPanels() {
+    const nAll = state.hits.length, nSorted = state.n1 + state.n2;
+    let scale = Math.max(1, ...state.cAll, nAll * Math.max(...state.pAll)) * 1.08;
+    const panels = [
+      { title: "SCREEN: ALL HITS", sub: "the only thing the screen records", counts: state.cAll, n: nAll, pdf: state.pAll, nTheory: nAll, bar: "rgba(170,182,200,0.6)", film: films[0], colour: COL.white },
+      { title: "HITS WHOSE TWIN REACHED D1", sub: "", counts: state.c1, n: state.n1, pdf: state.p1, nTheory: nSorted, bar: "rgba(111,216,196,0.75)", film: films[1], colour: COL.d1 },
+      { title: "HITS WHOSE TWIN REACHED D2", sub: "", counts: state.c2, n: state.n2, pdf: state.p2, nTheory: nSorted, bar: "rgba(240,179,90,0.75)", film: films[2], colour: COL.d2 },
+    ];
+    const bw = PW / BINS;
+    panels.forEach((p, i) => {
+      const top = PANEL_TOP + i * (PANEL_H + PANEL_GAP);
+      ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+      label(p.title, PX, top - 6, "left", p.colour);
+      label(p.n.toLocaleString(), PX + PW, top - 6, "right", COL.label);
+      // Film strip
+      ctx.fillStyle = "#0a0f19";
+      ctx.fillRect(PX, top, PW, FILM_H);
+      ctx.drawImage(p.film.c, PX, top, PW, FILM_H);
+      ctx.strokeStyle = COL.rule;
+      ctx.strokeRect(PX + 0.5, top + 0.5, PW - 1, FILM_H - 1);
+      // Histogram
+      const base = top + FILM_H + 6 + HIST_H;
+      for (let b = 0; b < BINS; b++) {
+        const c = p.counts[b];
+        if (!c) continue;
+        const h = (c / scale) * HIST_H;
+        ctx.fillStyle = p.bar;
+        ctx.fillRect(PX + b * bw + 0.3, base - h, bw - 0.6, h);
+      }
+      ctx.strokeStyle = COL.rule;
+      ctx.beginPath(); ctx.moveTo(PX, base + 0.5); ctx.lineTo(PX + PW, base + 0.5); ctx.stroke();
+      if (p.nTheory > 0) {
+        ctx.strokeStyle = "rgba(233,238,247,0.85)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let b = 0; b < BINS; b++) {
+          const x = PX + (b + 0.5) * bw;
+          const y = base - (p.nTheory * p.pdf[b] / scale) * HIST_H;
+          b === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+      if (i > 0 && p.n === 0) {
+        ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
+        label(state.waiting ? "Twins not measured yet: nothing to sort" : "Waiting for photons…", PX + PW / 2, base - HIST_H / 2, "center", COL.dim);
+      }
+    });
+    // Axis note under the last panel
+    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+    const yAxis = PANEL_TOP + 3 * (PANEL_H + PANEL_GAP) - 2;
+    label("−12 mm", PX, yAxis, "left", COL.dim);
+    label("position on screen", PX + PW / 2, yAxis, "center", COL.dim);
+    label("+12 mm", PX + PW, yAxis, "right", COL.dim);
+  }
+
+  function drawFlights(dt) {
+    const done = [];
+    const sigPts = [[CRY.x + 6, CRY.y - 6], [170, SIG_Y], [BAR_X, SIG_Y]];
+    for (const f of state.flights) {
+      f.t += dt / FLIGHT_MS;
+      const legSlit = 0.55;
+      // Signal photon
+      let sp;
+      if (f.t < legSlit) sp = pathPoint(sigPts, f.t / legSlit);
+      else {
+        const u = (f.t - legSlit) / (1 - legSlit);
+        sp = [BAR_X + u * (SCR_X - BAR_X), SIG_Y + u * (yOnScreen(f.x) - SIG_Y)];
+        if (u < 0.25) {
+          // Brief glow at both slits: the photon's wave passes through both
+          ctx.fillStyle = `rgba(255,111,94,${0.6 * (1 - u / 0.25)})`;
+          ctx.beginPath(); ctx.arc(BAR_X, SIG_Y - SLIT_GAP / 2, 4, 0, Math.PI * 2); ctx.arc(BAR_X, SIG_Y + SLIT_GAP / 2, 4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.fillStyle = COL.photon;
+      ctx.beginPath(); ctx.arc(sp[0], sp[1], 3, 0, Math.PI * 2); ctx.fill();
+      // Twin photon
+      const idlPts = f.stored
+        ? [[CRY.x + 6, CRY.y + 6], [170, IDL_Y], [COIL_X - 18, IDL_Y]]
+        : [[CRY.x + 6, CRY.y + 6], [170, IDL_Y], [PBS.x, IDL_Y]];
+      if (f.t < 1) {
+        const ip = pathPoint(idlPts, f.t);
+        ctx.fillStyle = COL.photon;
+        ctx.beginPath(); ctx.arc(ip[0], ip[1], 3, 0, Math.PI * 2); ctx.fill();
+      }
+      if (f.t >= 1) done.push(f);
+    }
+    for (const f of done) {
+      state.flights.splice(state.flights.indexOf(f), 1);
+      land(f.x); // if the delay was switched mid-flight, land() follows the current setting
+      if (state.delay) state.coil = 1;
+      state.flashScreen = { y: yOnScreen(f.x), a: 1 };
+      updateReadouts();
+    }
+    if (state.flashScreen && state.flashScreen.a > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${state.flashScreen.a})`;
+      ctx.beginPath(); ctx.arc(SCR_X, state.flashScreen.y, 4, 0, Math.PI * 2); ctx.fill();
+      state.flashScreen.a -= dt / 300;
+    }
+  }
+
+  // ---------- Loop ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(100, now - last);
+    last = now;
+    if (state.running && state.rate > 0) {
+      state.pending += state.rate * dt / 1000;
+      let n = Math.min(200, Math.floor(state.pending));
+      state.pending -= n;
+      const animate = state.rate <= 40;
+      let landedNow = false;
+      while (n-- > 0) { fire(animate); landedNow = true; }
+      if (landedNow && !animate) updateReadouts();
+    }
+    state.flash1 = Math.max(0, state.flash1 - dt / 250);
+    state.flash2 = Math.max(0, state.flash2 - dt / 250);
+    state.coil = Math.max(0, state.coil - dt / 400);
+    drawApparatus();
+    drawPanels();
+    drawFlights(dt);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Controls ----------
+  function updateReadouts() {
+    $("count").textContent = state.hits.length.toLocaleString();
+    $("split").textContent = `${state.n1.toLocaleString()} · ${state.n2.toLocaleString()}`;
+    $("waiting").textContent = state.delay || state.waiting ? state.waiting.toLocaleString() : "delay off";
+    const v = state.tags ? Math.abs(Math.sin(2 * state.angle * DEG)) : 1;
+    $("vis").textContent = Math.round(v * 100) + "%";
+    $("visAll").textContent = state.tags ? "none" : "full";
+    let note = "";
+    if (state.tags) {
+      if (state.angle === 45) note = " · eraser";
+      else if (state.angle === 0 || state.angle === 90) note = " · reads the path";
+    }
+    $("angleOut").textContent = state.angle + "°" + note;
+    $("angle0").setAttribute("aria-pressed", String(state.angle === 0));
+    $("angle45").setAttribute("aria-pressed", String(state.angle === 45));
+    $("measure").disabled = state.waiting === 0;
+  }
+
+  function setAngle(a) {
+    state.angle = a;
+    $("angle").value = a;
+    computePdf();
+    dropSorted();
+    updateReadouts();
+  }
+
+  $("angle").addEventListener("input", (e) => setAngle(+e.target.value));
+  $("angle0").addEventListener("click", () => setAngle(0));
+  $("angle45").addEventListener("click", () => setAngle(45));
+  $("tags").addEventListener("change", (e) => {
+    state.tags = e.target.checked;
+    computePdf();
+    clearAll();
+  });
+  $("delay").addEventListener("change", (e) => {
+    state.delay = e.target.checked;
+    if (!state.delay && state.waiting) measureStored(); // the stored twins come out to the polarizer
+    updateReadouts();
+  });
+  $("measure").addEventListener("click", measureStored);
+  $("colour").addEventListener("change", (e) => { state.colour = e.target.checked; rebuild(); });
+  $("rate").addEventListener("input", (e) => {
+    state.rate = Math.max(1, Math.round(Math.pow(200, e.target.value / 100)));
+    $("rateOut").textContent = state.rate;
+  });
+  $("play").addEventListener("click", () => {
+    state.running = !state.running;
+    $("play").textContent = state.running ? "Pause" : "Resume";
+  });
+  $("clear").addEventListener("click", clearAll);
+
+  // Start with a sorted pattern already on screen so the first view tells the story.
+  state.rate = Math.max(1, Math.round(Math.pow(200, $("rate").value / 100)));
+  $("rateOut").textContent = state.rate;
+  computePdf();
+  for (let i = 0; i < 2400; i++) land(sampleX());
+  updateReadouts();
+  requestAnimationFrame(frame);
+})();

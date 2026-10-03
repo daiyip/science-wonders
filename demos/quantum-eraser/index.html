@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantum Eraser</title>
+<meta name="description" content="Tag which slit each photon used, erase the tag later with a polarizer, and see exactly where the fringes come back and where they never do.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum optics · Wheeler 1978 · Scully 1982 · Kim 2000 · Walborn 2002</div>
+    <h1>The delayed-choice quantum eraser</h1>
+    <p class="lede">Each photon has a twin that records which slit it used, so the screen shows no stripes. Measure the twin in a way that scrambles that record and the stripes come back, but only if you know where to look.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="500" aria-label="A crystal makes twin photons. One goes through a double slit to a screen; the other goes through a polarizer to detectors D1 and D2. Three panels show all screen hits, the hits whose twin reached D1, and the hits whose twin reached D2."></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Screen hits <b id="count">0</b></span>
+    <span>Twins at D1 · D2 <b id="split">0 · 0</b></span>
+    <span>Twins waiting in delay line <b id="waiting">0</b></span>
+    <span>Fringes on the bare screen <b id="visAll">none</b></span>
+    <span>Fringe visibility in each sorted group <b id="vis">100%</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Which-path tags</span>
+      <label class="switch" for="tags"><input type="checkbox" id="tags" checked> Each slit leaves a record in the twin</label>
+    </div>
+    <div class="control">
+      <label for="angle">Twin's polarizer <output id="angleOut">45°</output></label>
+      <input type="range" id="angle" min="0" max="90" step="1" value="45">
+    </div>
+    <div class="control">
+      <span class="label">Polarizer presets</span>
+      <div class="seg" role="group" aria-label="Polarizer presets">
+        <button id="angle0" aria-pressed="false">Read the path (0°)</button>
+        <button id="angle45" aria-pressed="true">Erase it (45°)</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Delay the choice</span>
+      <label class="switch" for="delay"><input type="checkbox" id="delay"> Hold twins in a fibre until I measure</label>
+      <div class="button-row"><button id="measure" disabled>Measure stored twins</button></div>
+    </div>
+    <div class="control">
+      <label for="rate">Photon pairs per second <output id="rateOut">24</output></label>
+      <input type="range" id="rate" min="0" max="100" value="60">
+    </div>
+    <div class="control">
+      <span class="label">Source</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="clear">Clear screen</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Screen view</span>
+      <label class="switch" for="colour"><input type="checkbox" id="colour" checked> Colour hits by their twin's result</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Look at the top panel: no stripes, whatever you do to the twin. Now turn on the delay, let grey dots pile up, pick an angle, and press Measure stored twins. The dots that are already on the screen get sorted into stripes and gaps.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>A crystal splits each laser photon into two twins. One goes through a double slit to the screen. In this version each slit marks its photon so that the twin ends up horizontally polarized (H) for the top slit and vertically polarized (V) for the bottom one. The twin now holds a which-path record, so the screen shows a plain blob.</p>
+      <p>The twin then meets a polarizer that sends it to detector D1 or D2. At 0° it reads the record: D1 means top slit, D2 means bottom. At 45° each outcome is equally likely from either slit, so the record is erased. A sorter matches every screen hit with its twin's detector.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Set the polarizer to 45°. The D1 hits form stripes, the D2 hits form the exact gaps between them, and together they rebuild the blob.</li>
+        <li>Set it to 0°. Both sorted groups are blobs. You learned the path, so no stripes anywhere.</li>
+        <li>Turn the tags off. Now the bare screen shows stripes and the twin is irrelevant.</li>
+        <li>Turn on the delay. Every hit lands grey and unsorted. Choose 0° or 45° afterwards and the same dots sort into blobs or into stripes.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>It looks as if a choice made later reaches back and decides whether earlier photons acted as waves. It doesn't. The top panel never changes: no setting, early or late, puts stripes on the bare screen. Stripes only appear after you sort the hits using the twin's result, and that list has to be carried over by ordinary means, no faster than light.</p>
+      <p>What is truly strange is the bookkeeping. The stripes and the anti-stripes were hiding inside the blob all along, and which way you are able to split it depends on how you question the twin.</p>
+      <p class="muted">Proposed by Scully and Drühl in 1982. Done with a delayed choice by Kim, Yu, Kulik, Shih and Scully (published 2000), and with polarization tags by Walborn and colleagues in 2002.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>When information decides what you can see</h2>
+      <p>The eraser is a clean lesson in one rule: interference needs the paths to be indistinguishable, and correlations only show up when you compare records. Engineers use both halves of that rule.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Security</span>
+        <h3>Quantum key distribution</h3>
+        <p>In the BB84 protocol (1984) each photon is measured in one of two polarization settings 45° apart. Measured the matching way, it gives a definite bit; measured the other way, it gives a random one. An eavesdropper can't know which setting to use, so tapping the line leaves detectable errors. Commercial systems already guard some bank and government fibre links.</p>
+        <span class="link"><b>In the demo:</b> 0° and 45° are those two settings; one reveals the path, the other makes it random.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Navigation</span>
+        <h3>Fibre-optic gyroscopes</h3>
+        <p>Aircraft, ships and spacecraft sense rotation by sending light both ways round a fibre coil and watching the interference shift. If the two beams' polarizations drift apart they become distinguishable and the fringes fade, so these gyros use polarization-maintaining fibre and polarizers to keep them identical.</p>
+        <span class="link"><b>In the demo:</b> H and V tags make the slits distinguishable and the stripes vanish.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Imaging</span>
+        <h3>Imaging with undetected photons</h3>
+        <p>In 2014 a Vienna team imaged a cat-shaped stencil using twin photons where the photons that passed the stencil were never detected. The image appeared only in their partners, through interference that depended on the twins being indistinguishable. It lets cheap cameras see objects lit at wavelengths those cameras can't detect.</p>
+        <span class="link"><b>In the demo:</b> the twin's detector decides which pattern the screen hits belong to.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Photonics</span>
+        <h3>Heralded single photons</h3>
+        <p>The same crystal trick, spontaneous parametric down-conversion, is the workhorse photon-pair source in quantum optics labs. Detecting one twin announces that the other exists, giving single photons on demand for experiments, quantum networks and photonic quantum computers.</p>
+        <span class="link"><b>In the demo:</b> every screen hit is paired with a twin; the sorter relies on it.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Uncomputing in quantum algorithms</h3>
+        <p>Quantum algorithms work by making computational paths interfere. Any scratch qubit left holding a record of which path was taken kills that interference, exactly like the tag here. So algorithms routinely run steps backwards to erase scratch records before the final measurement.</p>
+        <span class="link"><b>In the demo:</b> a leftover record means no stripes until it is erased.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Physics</span>
+        <h3>Delayed choice in orbit</h3>
+        <p>In 2017 an Italian team ran Wheeler's delayed-choice test with photons bounced off satellites thousands of kilometres up, choosing how to measure each photon only while it was already on its way. Quantum predictions held, with no sign of any influence running backwards in time.</p>
+        <span class="link"><b>In the demo:</b> turn on the delay; the totals are the same either way.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Simplified from Walborn et al. (2002), where quarter-wave plates in front of the slits did the tagging. Pairs are simulated in the state (|top⟩|H⟩ + |bottom⟩|V⟩)/√2 with 702 nm photons, 0.2 mm slit separation and the screen 1 m away; the side view is enlarged.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="quantum-eraser.js"></script>
+</body>
+</html>

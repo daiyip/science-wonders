@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Decoherence</title>
+<meta name="description" content="Put an object in two places at once, let gas molecules bump into it, and watch the quantum superposition leak away into the environment.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .scale-card {
+    margin-top: 36px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+  }
+  .scale-card .pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 22px; }
+  .control select {
+    font: inherit;
+    font-size: var(--step--1);
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .scale-result { display: grid; gap: 4px; }
+  .scale-result .big { font-family: var(--font-mono); font-size: var(--step-2); color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .scale-result .muted { font-size: var(--step--1); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum mechanics · Schrödinger 1935 · Zeh 1970 · Zurek 1981</div>
+    <h1>Schrödinger's cat and decoherence</h1>
+    <p class="lede">An object held in two places at once can interfere with itself. Then a gas molecule bounces off it and carries away a hint of where it was. A few such hints and the superposition is, for all practical purposes, gone.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="460" aria-label="An interferometer whose two paths run through a gas chamber, with the object shown in both paths at once. Gas particles bounce off it. Panels on the right show the density matrix, the interference fringes at the output, and coherence over time."></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Collisions this run <b id="hits">0</b></span>
+    <span>Off-diagonal |ρ₀₁| <b id="rho01">0.500</b></span>
+    <span>Fringe visibility <b id="vis">100%</b></span>
+    <span>Which-path info in the gas <b id="info">0%</b></span>
+    <span>Average decoherence time <b id="tau">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="pressure">Gas particles (pressure) <output id="pressureOut">40</output></label>
+      <input type="range" id="pressure" min="0" max="200" step="1" value="40">
+    </div>
+    <div class="control">
+      <label for="temp">Temperature <output id="tempOut">300 K</output></label>
+      <input type="range" id="temp" min="20" max="1200" step="10" value="300">
+    </div>
+    <div class="control">
+      <label for="coupling">Coupling per collision <output id="couplingOut">15% lost</output></label>
+      <input type="range" id="coupling" min="0" max="100" step="1" value="15">
+    </div>
+    <div class="control">
+      <span class="label">Experiment</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="reset">New superposition</button>
+        <button id="vacuum">Pump out the gas</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Average</span>
+      <label class="switch" for="avg"><input type="checkbox" id="avg" checked> Show the average over many runs</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Each run starts a fresh superposition. Watch the right-hand panels: every collision shrinks the off-diagonal squares and flattens the fringes a little. Then pump out the gas and see the superposition survive.</p>
+
+  <section class="scale-card" aria-labelledby="scaleTitle">
+    <h2 id="scaleTitle">Scale it up</h2>
+    <p class="muted">Real objects are hit far more often than the toy above. Pick an object and its surroundings. The estimate assumes one gas collision is enough to record which place the object is in, true once the two places are more than about 0.02 nm apart.</p>
+    <div class="pickers">
+      <div class="control">
+        <label for="object">Object in two places</label>
+        <select id="object">
+          <option value="c70">C₇₀ molecule (1 nm)</option>
+          <option value="virus">Virus (100 nm)</option>
+          <option value="dust" selected>Dust grain (10 µm)</option>
+          <option value="cat">Cat (about 30 cm)</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="environ">Surroundings</label>
+        <select id="environ">
+          <option value="air" selected>Air at room temperature</option>
+          <option value="hv">High vacuum (10⁻⁶ mbar)</option>
+          <option value="uhv">Ultra-high vacuum (10⁻¹⁰ mbar)</option>
+        </select>
+      </div>
+    </div>
+    <div class="scale-result" aria-live="polite">
+      <span class="eyebrow">Time until the first gas molecule hits</span>
+      <span class="big" id="scaleOut">–</span>
+      <span class="muted" id="scaleNote"></span>
+    </div>
+  </section>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>A beam splitter puts the object into a superposition of the upper and lower path. While it waits in the chamber, gas particles bounce off it. Each bounce happens in one branch and not the other, so the particle's new direction is a partial record of where the object was.</p>
+      <p>The 2×2 grid is the density matrix. The diagonal squares are the 50/50 odds of each path and never change. The off-diagonal squares measure how much the two branches can still interfere. The fringe panel shows what the output detectors would record if you recombined the paths now.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Pump out the gas. With no collisions, the coherence stays at full strength forever.</li>
+        <li>Set the coupling to 100%. A single collision now carries the complete which-path record, and the fringes vanish in one step.</li>
+        <li>Lower the coupling to 5% and raise the pressure. Many weak hints add up to the same result: the decay just becomes smooth.</li>
+        <li>Heat the gas. Faster particles hit more often, so coherence dies sooner.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Nothing pushed the object or forced it to choose. Each branch is still there. But the two branches are now entangled with different states of the gas, and to see interference you would have to bring every scattered particle back together too. That is hopeless, so the object behaves like an ordinary thing that is simply in one place or the other.</p>
+      <p>This is why we never see cats in superposition. A cat in air is hit by about 10²⁷ air molecules every second, so its superposition would vanish far faster than light can cross a single atom.</p>
+      <p class="muted">Watched step by step by Serge Haroche's team in Paris in 1996, using a few photons trapped between mirrors. Haroche shared the 2012 Nobel Prize.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Fighting decoherence, and using it</h2>
+      <p>Every quantum technology is a race against the leak you just watched. Some measure it to learn about the world; most spend enormous effort slowing it down.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Quantum computers</h3>
+        <p>Superconducting qubits keep their coherence for roughly 0.1 to 1 millisecond, and a two-qubit gate takes tens of nanoseconds. That leaves room for thousands of operations before coherence runs out, and today's best two-qubit gates still fail about once in every few hundred to a thousand tries.</p>
+        <span class="link"><b>In the demo:</b> the decoherence time sets how long you have before the fringes fade.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Quantum error correction</h3>
+        <p>Instead of stopping decoherence, error correction spreads one logical qubit across many physical ones and repeatedly checks for leaks without reading the data. In 2024 Google's Willow chip showed the logical error rate falling as the code grew, the long-sought sign that the approach can scale.</p>
+        <span class="link"><b>In the demo:</b> each collision is a small error that a code would have to catch.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Engineering</span>
+        <h3>Fridges colder than space</h3>
+        <p>Superconducting quantum processors sit in dilution refrigerators at around 10 millikelvin, inside vacuum cans and magnetic shields. Stray heat, radio noise, even cosmic rays and natural radioactivity have been shown to cause bursts of qubit errors.</p>
+        <span class="link"><b>In the demo:</b> lower the temperature and pump out the gas.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>MRI contrast</h3>
+        <p>In an MRI scanner, proton spins are put into a superposition and their shared rhythm then fades as each spin is jostled by its neighbours. How fast it fades, called T2, is typically tens to hundreds of milliseconds and differs between tissues, so T2-weighted scans make tumours, swelling and fluid stand out.</p>
+        <span class="link"><b>In the demo:</b> T2 decay is the off-diagonal squares shrinking.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Timekeeping</span>
+        <h3>Atomic clocks</h3>
+        <p>Atomic clocks read time from interference fringes in a superposition of two energy levels. The longer the superposition survives, the narrower the fringes and the better the clock, which is why the best clocks hold atoms or ions in ultra-high vacuum, often for a second or more.</p>
+        <span class="link"><b>In the demo:</b> fewer collisions means sharper fringes for longer.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Physics</span>
+        <h3>Weighing the quantum world</h3>
+        <p>Vienna groups send big molecules through interferometers to find where quantum behaviour ends. In 2003 they let a little gas into the chamber and watched C₇₀ fringes fade with pressure; in 2004 they heated the molecules until their own glow gave them away. They have since seen interference with molecules of about 2,000 atoms.</p>
+        <span class="link"><b>In the demo:</b> raise the pressure and watch the fringes go.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. The chamber is a toy in two dimensions: each collision multiplies the coherence by the overlap you set, so the average decays as e<sup>−Γ(1−overlap)t</sup>, where Γ is the collision rate. The scale-up estimate uses geometric cross-sections and nitrogen at 293 K; it ignores light and heat radiation, which only make big objects decohere faster.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="decoherence.js"></script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Natural Selection</title>
+<meta name="description" content="Watch a population of small creatures adapt to their background as predators eat the easiest ones to spot, then change the environment and watch them adapt again.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Evolutionary biology · Darwin &amp; Wallace 1858 · Peppered moths 1848 to today</div>
+    <h1>Natural selection you can watch</h1>
+    <p class="lede">Nobody designs these creatures. Hawks eat whichever ones they happen to spot, the rest have offspring that are almost but not quite copies of their parents. Within a few dozen generations the population matches its background.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="460" aria-label="A patch of ground with small creatures of varying shade and hawks hunting them, next to histograms of creature colour and speed and a chart of how the average traits change over generations"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Generation <b id="gen">0</b></span>
+    <span>Alive <b id="alive">0</b></span>
+    <span>Eaten this generation <b id="eaten">0</b></span>
+    <span>Average colour <b id="meanShade">–</b></span>
+    <span>Average speed <b id="meanSpeed">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Background</span>
+      <div class="seg" role="group" aria-label="Background">
+        <button id="envSand" aria-pressed="true">Pale sand</button>
+        <button id="envLitter" aria-pressed="false">Leaf litter</button>
+        <button id="envSoot" aria-pressed="false">Sooty bark</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Environment</span>
+      <div class="button-row">
+        <button id="envChange" class="primary">Change the environment</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="predators">Predation pressure <output id="predatorsOut">3 hawks</output></label>
+      <input type="range" id="predators" min="0" max="6" step="1" value="3">
+    </div>
+    <div class="control">
+      <label for="mutation">Mutation size <output id="mutationOut">± 0.030</output></label>
+      <input type="range" id="mutation" min="0" max="0.1" step="0.005" value="0.03">
+    </div>
+    <div class="control">
+      <label for="speed">Simulation speed <output id="speedOut">6×</output></label>
+      <input type="range" id="speed" min="1" max="30" step="1" value="6">
+    </div>
+    <div class="control">
+      <span class="label">Run</span>
+      <div class="button-row">
+        <button id="play">Pause</button>
+        <button id="skip">Skip 10 generations</button>
+        <button id="reset">New population</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">The creatures start out mostly mid-toned on pale sand. Watch the colour histogram slide toward the sand marker, then press Change the environment.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each creature has two inherited traits: its shade, from near black to pale cream, and how fast it can run. Hawks wander the ground. Every moment a hawk glances at one creature in range and notices it with a chance that grows with how much it stands out from the ground. A noticed creature runs; if the hawk closes in before it tires, it eats.</p>
+      <p>At the end of each generation the survivors breed back to 100. Each baby copies one parent's traits with a small random error. Running fast burns energy, so faster creatures raise fewer young. Nothing else is programmed.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Let the colours settle, then change the environment. The population tracks the new background within about 20 to 40 generations.</li>
+        <li>Set mutation to zero and change the environment twice. Selection can only pick from variation that already exists, and once it is used up the population is stuck.</li>
+        <li>Take all the hawks away. Colour stops tracking the background and drifts at random, and speed slowly falls because nothing pays for its cost.</li>
+        <li>Add hawks and watch average speed climb: escape is now worth the energy.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>No creature changes during its life and none is trying to adapt. Random copying errors have no direction at all. Direction appears only because the hawks remove some variants more often than others, and that bias, repeated every generation, builds something that looks designed.</p>
+      <p class="muted">This happened in real moths. Dark peppered moths were first recorded near Manchester in 1848 and made up about 98% of the local population by 1895 as soot blackened the trees. After clean-air laws they became rare again.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where selection matters today</h2>
+      <p>Anything that copies itself with variation, under pressure, evolves. That includes the germs and pests we fight, and the molecules and designs we deliberately breed.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>Antibiotic resistance</h3>
+        <p>An antibiotic is a very efficient predator. The few bacteria that happen to resist it survive and multiply. Alexander Fleming warned of this in his 1945 Nobel lecture. A 2022 study in The Lancet estimated that resistant bacterial infections directly caused 1.27 million deaths in 2019.</p>
+        <span class="link"><b>In the demo:</b> raise predation pressure and the population shifts faster.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Agriculture</span>
+        <h3>Pests that beat pesticides</h3>
+        <p>More than 500 insect and mite species have evolved resistance to at least one pesticide. Farmers growing insect-resistant Bt crops are required to plant "refuges" of ordinary crops, so susceptible insects survive to breed with resistant ones and slow the spread.</p>
+        <span class="link"><b>In the demo:</b> survivors are the parents; remove the variation they rely on and adaptation stalls.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Chemistry</span>
+        <h3>Directed evolution</h3>
+        <p>Frances Arnold won the 2018 Nobel Prize in Chemistry for breeding enzymes the way farmers breed crops: mutate the gene, test thousands of variants, keep the best, repeat. Evolved enzymes now make drugs and work in cold-wash laundry detergents.</p>
+        <span class="link"><b>In the demo:</b> mutation plus a selection rule, run over and over.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Engineering</span>
+        <h3>Evolved designs</h3>
+        <p>Genetic algorithms apply the same loop to designs inside a computer. NASA's Space Technology 5 satellites, launched in 2006, carried an antenna whose odd bent-wire shape was evolved by software rather than drawn by an engineer. It was the first evolved hardware flown in space.</p>
+        <span class="link"><b>In the demo:</b> the histograms are a population searching for a good answer.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Oncology</span>
+        <h3>Tumours that evolve</h3>
+        <p>A tumour is a population of varied cells. Full-dose chemotherapy can kill the sensitive ones and leave resistant ones with no competition. "Adaptive therapy" trials dose more gently on purpose, keeping sensitive cells around to hold the resistant ones in check.</p>
+        <span class="link"><b>In the demo:</b> heavy predation with low variation leaves a population that is hard to shift back.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Conservation</span>
+        <h3>Hunting as a selective force</h3>
+        <p>During Mozambique's civil war, ivory poachers killed most of the elephants in Gorongosa National Park. Tuskless females were more likely to be spared. A 2021 study found that about 18% of females were tuskless before the war, but about half of the females who survived it were. Heavy fishing has likewise pushed some fish to mature younger and smaller.</p>
+        <span class="link"><b>In the demo:</b> the hawks are the hunters; whatever they find easiest, they remove.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Real populations are larger and evolve more slowly, and most traits depend on many genes, but the loop of variation, inheritance and selection is the same.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="evolution.js"></script>
+</body>
+</html>

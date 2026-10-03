@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Emergence From Simple Rules</title>
+<meta name="description" content="Three rules for cells on a grid, three rules for birds in the sky. Watch gliders, guns and flocks appear that nobody programmed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .mode-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+  .mode-bar .seg button { font-size: var(--step-0); padding: 9px 18px; }
+  .mode-bar p { font-size: var(--step--1); color: var(--ink-soft); }
+  .controls .wide { grid-column: 1 / -1; }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Complexity science · Conway's Life 1970 · Reynolds' boids 1986</div>
+    <h1>Complexity from simple rules</h1>
+    <p class="lede">Give every cell on a grid three rules about its neighbours, or every bird in a sky three rules about the birds nearby. Nothing tells the whole what to do, yet travelling shapes, factories and flocks appear on their own.</p>
+  </div>
+
+  <div class="mode-bar">
+    <div class="seg" role="group" aria-label="Simulation">
+      <button id="modeLife" aria-pressed="true">Game of Life</button>
+      <button id="modeBoids" aria-pressed="false">Flocking</button>
+    </div>
+    <p id="modeNote">Cells on a grid, updated all at once, one generation at a time.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="520" aria-label="The simulation world on the left, and on the right the complete list of rules it follows with live counts of what is happening"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Rules in play <b id="ruleCount">3</b></span>
+    <span data-mode="life">Generation <b id="lifeGen">0</b></span>
+    <span data-mode="life">Live cells <b id="lifeCells">0</b></span>
+    <span data-mode="boids" hidden>Birds <b id="boidCount">0</b></span>
+    <span data-mode="boids" hidden>Separate flocks <b id="flocks">–</b></span>
+    <span data-mode="boids" hidden>Alignment <b id="order">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control wide" data-mode="life">
+      <span class="label">Start from</span>
+      <div class="button-row">
+        <button id="presetGlider">Glider</button>
+        <button id="presetGun">Glider gun</button>
+        <button id="presetR">R-pentomino</button>
+        <button id="presetRandom">Random soup</button>
+        <button id="clear">Clear</button>
+      </div>
+    </div>
+    <div class="control" data-mode="life">
+      <label for="lifeSpeed">Generations per second <output id="lifeSpeedOut">15</output></label>
+      <input type="range" id="lifeSpeed" min="1" max="60" step="1" value="15">
+    </div>
+    <div class="control" data-mode="boids" hidden>
+      <label for="sep">Separation <output id="sepOut">1.5</output></label>
+      <input type="range" id="sep" min="0" max="3" step="0.1" value="1.5">
+    </div>
+    <div class="control" data-mode="boids" hidden>
+      <label for="ali">Alignment <output id="aliOut">1.0</output></label>
+      <input type="range" id="ali" min="0" max="3" step="0.1" value="1">
+    </div>
+    <div class="control" data-mode="boids" hidden>
+      <label for="coh">Cohesion <output id="cohOut">1.0</output></label>
+      <input type="range" id="coh" min="0" max="3" step="0.1" value="1">
+    </div>
+    <div class="control" data-mode="boids" hidden>
+      <label for="boidN">Number of birds <output id="boidNOut">200</output></label>
+      <input type="range" id="boidN" min="20" max="400" step="10" value="200">
+    </div>
+    <div class="control" data-mode="boids" hidden>
+      <span class="label">Predator</span>
+      <label class="switch" for="predator"><input type="checkbox" id="predator"> Add a hawk (and a fourth rule: flee it)</label>
+    </div>
+    <div class="control">
+      <span class="label">Run</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="step">Step</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Click or drag on the grid to draw cells. Try the glider gun: a pattern of 36 cells that builds a new glider every 30 generations, forever.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p><b>Game of Life.</b> Each square is alive or dead. Every generation, all cells update at once: a dead cell with exactly three live neighbours is born, a live cell with two or three survives, and every other cell dies or stays empty. Bright cells are newborn; they dim as they age.</p>
+      <p><b>Flocking.</b> Each bird sees only neighbours within a short distance. It steers away from any that are too close, turns toward their average heading, and drifts toward their average position. Birds are coloured by the direction they fly, so a flock shows up as one colour.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Draw three cells in a row. It flips between horizontal and vertical forever: a "blinker".</li>
+        <li>Start the R-pentomino. Five cells churn for over a thousand generations on an unlimited grid before settling down.</li>
+        <li>In Flocking, set alignment to zero. The birds still clump, but each clump swirls instead of flying off together.</li>
+        <li>Turn on the hawk. Flocks split around it and re-form behind it, much like starlings around a falcon.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Nothing in the rules mentions gliders, guns or flocks. Those are patterns in the behaviour of the whole, and you can only find them by running the rules and watching. Even with the rules in hand, there is in general no shortcut to predicting the future: Life is powerful enough to run any computer program, so asking whether a pattern ever dies out is as hard as the unsolvable halting problem.</p>
+      <p class="muted">John Conway's game first appeared in Martin Gardner's column in Scientific American in October 1970. Bill Gosper found the glider gun weeks later and won Conway's $50 prize.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Simple rules at work</h2>
+      <p>When a crowd, a swarm or a traffic stream is too complex to describe from the top down, it is often easier to write down what each member does and let the computer run it.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Film</span>
+        <h3>Swarms and crowds on screen</h3>
+        <p>Batman Returns (1992) used a boids-style model to fill scenes with swarming bats and marching penguins. Later tools such as Massive, built for the Lord of the Rings battles, give each digital extra simple rules and let the crowd act out the scene.</p>
+        <span class="link"><b>In the demo:</b> nobody animates the flock; each bird follows three rules.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Robotics</span>
+        <h3>Swarm robots</h3>
+        <p>In 2014 a Harvard team had 1,024 coin-sized "Kilobots" arrange themselves into a star and a letter K. Each robot only talked to its neighbours and followed the same few rules. Swarm rules like these are being tested for search and rescue and for teams of drones.</p>
+        <span class="link"><b>In the demo:</b> local rules only, yet the whole group moves as one.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Transport</span>
+        <h3>Phantom traffic jams</h3>
+        <p>The Nagel and Schreckenberg traffic model of 1992 is a cellular automaton: cars on a grid of road cells, with a rule to speed up, keep a gap, and sometimes brake at random. It produces jams with no cause. In a 2008 Japanese experiment, 22 cars on a circular track did the same.</p>
+        <span class="link"><b>In the demo:</b> Life's cells, swapped for cars on a road.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Environment</span>
+        <h3>Modelling fires and growth</h3>
+        <p>Cellular automata in which each patch of land can catch fire from burning neighbours are used to study how wildfires spread. Similar grids model how cities grow, how tumours invade tissue and how patterns form in shells and animal coats.</p>
+        <span class="link"><b>In the demo:</b> each cell's next state depends only on its neighbours.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Safety</span>
+        <h3>Planning for crowds</h3>
+        <p>Pedestrian simulations give each walker a goal and a sense of personal space, then watch where pressure builds. Engineers use them to size exits and walkways for stadiums, stations and large pilgrimages before anyone walks through them.</p>
+        <span class="link"><b>In the demo:</b> separation is personal space; turn it down and crowds pack tight.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Computers made of gliders</h3>
+        <p>Gliders can carry signals, and streams of them can be crossed to make logic gates. People have built working Turing machines inside Life, and even a Life pattern that simulates Life. Stephen Wolfram's one-dimensional Rule 30 automaton has been used as a random number generator.</p>
+        <span class="link"><b>In the demo:</b> the glider gun is a clock that emits one signal every 30 ticks.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Life runs on a large hidden grid around the visible window, so escaping gliders vanish far away rather than crashing at the edge. Birds wrap around the edges.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="emergence.js"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Benford's Law</title>
+<meta name="description" content="Count the leading digits of powers of 2, Fibonacci numbers, factorials, growing populations or your own data, and see why 1 comes first about 30% of the time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  select {
+    font: inherit;
+    font-size: var(--step--1);
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+    width: 100%;
+    min-width: 0;
+  }
+  .paste { grid-column: 1 / -1; }
+  .paste textarea {
+    width: 100%;
+    min-height: 92px;
+    resize: vertical;
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .paste textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .verdict-good { color: var(--good); }
+  .verdict-bad { color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Statistics · Newcomb 1881 / Benford 1938</div>
+    <h1>Benford's law</h1>
+    <p class="lede">In many real collections of numbers, about 30% start with the digit 1 and fewer than 5% start with 9. Count the first digits of a few famous sequences, a simulated economy, or your own data, and see who follows the rule.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="470" aria-label="Bar chart of how often each leading digit 1 to 9 appears in the chosen data, with Benford's predicted share marked on each bar, and below it every number placed on a logarithmic strip from 1 to 10"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Numbers counted <b id="count">0</b></span>
+    <span>Spread <b id="spread">–</b></span>
+    <span>Start with 1 <b id="share1">–</b></span>
+    <span>Mean abs. deviation <b id="mad">–</b></span>
+    <span>χ² vs Benford <b id="chi">–</b></span>
+    <span>Verdict <b id="verdict">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="dataset">Data</label>
+      <select id="dataset">
+        <option value="pow2">Powers of 2: 2, 4, 8, 16, …</option>
+        <option value="fib">Fibonacci: 1, 1, 2, 3, 5, 8, …</option>
+        <option value="fact">Factorials: 1, 2, 6, 24, 120, …</option>
+        <option value="growth" selected>Growing populations (random growth)</option>
+        <option value="uniform">Uniform random, 1 to 9,999 (control)</option>
+        <option value="custom">Your numbers (paste below)</option>
+      </select>
+    </div>
+    <div class="control">
+      <label for="size">How many numbers <output id="sizeOut">1,000</output></label>
+      <input type="range" id="size" min="20" max="3000" step="10" value="1000">
+    </div>
+    <div class="control">
+      <span class="label">Counting</span>
+      <div class="button-row">
+        <button id="replay" class="primary">Count again</button>
+        <button id="reroll">New random data</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Prediction</span>
+      <label class="switch" for="showBenford"><input type="checkbox" id="showBenford" checked> Show Benford's share</label>
+    </div>
+    <div class="control paste">
+      <label for="custom">Paste your own numbers <output id="customOut">0 found</output></label>
+      <textarea id="custom" spellcheck="false" placeholder="Paste numbers separated by spaces, commas or new lines: invoice totals, city populations, river lengths, file sizes…"></textarea>
+      <div class="button-row"><button id="useCustom">Count my numbers</button></div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Switch to the uniform control and watch every digit settle near 11%. Then try the growing populations: start them all at the same size and they spread across many powers of ten before Benford appears.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>The bars show what share of the numbers begin with each digit. The white marks are Benford's prediction: digit d leads with probability log<sub>10</sub>(1 + 1/d), which is 30.1% for 1, 17.6% for 2, down to 4.6% for 9.</p>
+      <p>The strip below places every number on a logarithmic scale and folds it into one decade, from 1 to 10. The nine bands are the stretches where each digit leads. On a log scale, the 1 band is six and a half times wider than the 9 band.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Shrink the size to 20. Small samples wobble a lot; the law is about proportions in the long run.</li>
+        <li>Compare powers of 2 with the uniform control. Both look "random", but only one spreads evenly on the log strip.</li>
+        <li>Paste prices from a receipt, then paste populations of countries. Which spans more powers of ten?</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>You might expect each digit to lead one time in nine. But if a set of numbers has no preferred scale, so that measuring in dollars or yen or doubling everything leaves the pattern unchanged, then the numbers must be spread evenly on a log scale. Benford's law is the only first-digit rule with that property.</p>
+      <p>It needs data spanning several orders of magnitude. Heights of adults, dice rolls, or prices capped at $10 don't follow it, and that is fine.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where first digits give the game away</h2>
+      <p>People who invent numbers tend to spread first digits too evenly. That makes Benford's law a cheap screening test. It flags data worth a closer look; it never proves wrongdoing on its own.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Forensic accounting</span>
+        <h3>Spotting invented expenses</h3>
+        <p>From the 1990s accountant Mark Nigrini turned Benford's law into a standard audit test. Auditors compare the first digits of invoices, payments or expense claims with the expected curve, then pull the records behind the digits that stick out.</p>
+        <span class="link"><b>In the demo:</b> the mean absolute deviation and its conformity bands come from Nigrini.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Tax</span>
+        <h3>Tax fraud detection</h3>
+        <p>Nigrini's 1992 doctoral work applied the test to tax returns, and digit analysis is now part of the toolkit tax and audit agencies use to choose which returns to examine. A spike of amounts just under an approval limit is a classic warning sign.</p>
+        <span class="link"><b>In the demo:</b> paste a column of amounts and see which digits stand out.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Politics</span>
+        <h3>Election screening, with caveats</h3>
+        <p>Benford tests have been run on vote counts, including after Iran's 2009 election. Statisticians warn that precinct totals often span only one or two powers of ten, so honest results can fail the test and rigged ones can pass. Most now treat it as weak evidence at best.</p>
+        <span class="link"><b>In the demo:</b> the uniform control fails without any cheating at all.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Science · Economics</span>
+        <h3>Screening reported data</h3>
+        <p>Researchers have used first-digit tests to look for fabricated numbers in published studies, and a 2011 study of EU economic statistics found Greece's figures deviated most from Benford's law. Like any screen, it raises questions rather than answering them.</p>
+        <span class="link"><b>In the demo:</b> χ² grows with sample size; MAD does not.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Image forensics</span>
+        <h3>Edited photos</h3>
+        <p>The coefficients inside a JPEG file follow a Benford-like first-digit pattern. Saving an image twice, which happens when it is edited, disturbs that pattern, so forensic tools can use it as one clue that a picture has been altered.</p>
+        <span class="link"><b>In the demo:</b> a process that rescales numbers can push them off the log strip's even spread.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Floating-point arithmetic</h3>
+        <p>Numbers inside a computer are stored as a mantissa times a power of two. Richard Hamming showed in 1970 that results of long calculations tend toward the log-even spread behind Benford's law, which matters when engineers estimate how rounding errors build up.</p>
+        <span class="link"><b>In the demo:</b> repeated multiplication (populations) drifts toward Benford.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Very large terms such as 3000! are handled by their logarithms, which is all a first digit needs. Your pasted numbers stay in your browser.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="benford.js"></script>
+</body>
+</html>

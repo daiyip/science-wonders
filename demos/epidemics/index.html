@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How Outbreaks Spread</title>
+<meta name="description" content="Watch an infection spread dot to dot, chart it against the SIR equations, and find the vaccination level where the outbreak simply fizzles out.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .controls .wide { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Epidemiology · Kermack &amp; McKendrick 1927 · Smallpox eradicated 1980</div>
+    <h1>How an outbreak spreads, and stops</h1>
+    <p class="lede">Each dot is a person. Infection jumps when people meet, and every sick person recovers after a while. One number, R0, decides whether a handful of cases fizzles or sweeps through everyone, and vaccination can push it below the tipping point.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="460" aria-label="A crowd of moving dots coloured susceptible, infected, recovered or vaccinated, next to a chart of how many people are in each group day by day and a bar comparing vaccination to the herd-immunity threshold"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Day <b id="day">0</b></span>
+    <span>Susceptible <b id="nS">0</b></span>
+    <span>Infected <b id="nI">0</b></span>
+    <span>Recovered <b id="nR">0</b></span>
+    <span>Vaccinated <b id="nV">0</b></span>
+    <span>Peak infected <b id="peak">0</b></span>
+    <span>Herd-immunity threshold <b id="herd">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control wide">
+      <span class="label">Disease</span>
+      <div class="button-row">
+        <button id="presetFlu">Seasonal flu (R0 1.3)</button>
+        <button id="presetCovid">Early COVID-19 (R0 2.5)</button>
+        <button id="presetMeasles">Measles (R0 15)</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="r0">R0, cases caused by one case <output id="r0Out">3.0</output></label>
+      <input type="range" id="r0" min="1" max="18" step="0.1" value="3">
+    </div>
+    <div class="control">
+      <label for="vax">Vaccinated before the outbreak <output id="vaxOut">0%</output></label>
+      <input type="range" id="vax" min="0" max="98" step="1" value="0">
+    </div>
+    <div class="control">
+      <label for="distance">Social distancing: share staying put <output id="distanceOut">0%</output></label>
+      <input type="range" id="distance" min="0" max="90" step="5" value="0">
+    </div>
+    <div class="control">
+      <label for="speed">Simulation speed <output id="speedOut">2×</output></label>
+      <input type="range" id="speed" min="1" max="8" step="1" value="2">
+    </div>
+    <div class="control">
+      <span class="label">Theory</span>
+      <label class="switch" for="ode"><input type="checkbox" id="ode" checked> Overlay the SIR equations</label>
+    </div>
+    <div class="control">
+      <span class="label">Run</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="restart">New outbreak</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Five people start out infected in a crowd with no immunity. Let it run, then set vaccination just above the herd-immunity threshold and start a new outbreak.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>400 people wander about. Blue are susceptible, red are infected, grey have recovered and are immune, green were vaccinated. Each time an infected person meets a susceptible one there is a fixed chance of passing it on, set so that one case in a fully susceptible crowd infects R0 others on average. Each infected person recovers at random, after 10 days on average.</p>
+      <p>On the chart, solid lines are the dots and dashed lines are the 1927 SIR equations for the same R0, which treat the crowd as perfectly mixed.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Watch the dashed line at 1/R0. Infections peak exactly when the susceptible share falls through it, because from then on each case infects fewer than one new person.</li>
+        <li>Set vaccination a little below the threshold, then a little above. Below, the outbreak still spreads. Above, it sputters out with a few cases.</li>
+        <li>Pick Measles. The threshold jumps to 93%. Compare 90% and 95% vaccinated: at 90% the equations still predict an outbreak.</li>
+        <li>Turn up social distancing. The peak drops and arrives later: the curve flattens, and the dots fall well below the equations, which know nothing about distancing.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Vaccinating enough people protects people who are not vaccinated. Once more than 1 − 1/R0 of the crowd is immune, each case infects fewer than one other on average, so chains of infection die out before they reach most unprotected people. The threshold is a tipping point, not a gradual slope: a few percent either side of it changes everything.</p>
+      <p class="muted">The threshold formula assumes a well-mixed crowd and a vaccine that fully blocks infection. Real vaccines and real social networks move the number, which is why targets are set a little above it.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Models that change policy</h2>
+      <p>The same ideas, made more detailed with real data on ages, households and travel, guide vaccination targets and outbreak responses around the world.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Public health</span>
+        <h3>Vaccination targets</h3>
+        <p>Measles is one of the most contagious diseases known, with an R0 of about 12 to 18. Plugging that into 1 − 1/R0 gives roughly 92 to 94%, which is why health agencies aim for about 95% coverage with two doses. When local coverage slips below that, outbreaks return.</p>
+        <span class="link"><b>In the demo:</b> choose Measles and find the vaccination level that stops it.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">History</span>
+        <h3>Eradicating smallpox</h3>
+        <p>Smallpox was declared eradicated by the World Health Organization in 1980, the first human disease ever wiped out. The final push used ring vaccination: find each case and vaccinate everyone around it, cutting the chains of infection without needing to reach every person on Earth.</p>
+        <span class="link"><b>In the demo:</b> chains that cannot reach susceptible people die out.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Pandemics</span>
+        <h3>Flattening the curve</h3>
+        <p>In March 2020, an Imperial College London model that simulated individual people moving between homes, schools and workplaces projected how many COVID-19 deaths different policies might prevent. It helped shift UK and US policy toward distancing measures to keep hospitals from being overwhelmed.</p>
+        <span class="link"><b>In the demo:</b> social distancing lowers and delays the red peak.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Outbreak response</span>
+        <h3>Ebola</h3>
+        <p>During the 2014 to 2016 West African Ebola epidemic, case projections helped decide how many treatment beds to build. In 2015 a trial in Guinea used ring vaccination with a new Ebola vaccine and found it highly protective. That vaccine is now licensed.</p>
+        <span class="link"><b>In the demo:</b> a lower R0 and fewer susceptible contacts shrink the outbreak.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Forecasting</span>
+        <h3>Flu season forecasts</h3>
+        <p>Each winter the US Centers for Disease Control and Prevention collects forecasts of flu hospitalisations from many research teams in its FluSight project, running since the 2013 to 2014 season. Many of the models are descendants of the SIR equations, fitted to the latest data.</p>
+        <span class="link"><b>In the demo:</b> the dashed curves are the simplest such forecast.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Computer worms</h3>
+        <p>Self-spreading computer programs follow the same maths. In July 2001 the Code Red worm infected more than 359,000 computers in under 14 hours, and its rise fitted an epidemic curve. Patching works like vaccination: a machine that cannot be infected also stops passing it on.</p>
+        <span class="link"><b>In the demo:</b> vaccinated dots are patched machines.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. One simulated day is a fraction of a second. The infection chance per meeting is tuned so a case in a fully susceptible crowd infects R0 others on average; individual runs vary by chance, especially when cases are few.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="epidemics.js"></script>
+</body>
+</html>

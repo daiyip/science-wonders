@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Speed of Light</title>
+<meta name="description" content="Send a pulse of light from Earth to the Moon, Mars, the Sun, Voyager 1 and the nearest star, in real time or sped up. Then time Jupiter's moons like Rømer and try to drive a Mars rover.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .control select {
+    font: inherit;
+    font-size: var(--step--1);
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .control.wide { grid-column: 1 / -1; }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .grid2 { align-items: start; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 36px; }
+  .grid2 > * { min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 18px; display: grid; gap: 12px; align-content: start; }
+  .card .bench { padding: 10px; }
+  .card .stats { margin-top: 0; }
+  .verdict { font-size: var(--step--1); min-height: 3.2em; }
+  .verdict.bad { color: var(--warn); font-weight: 600; }
+  .verdict.ok { color: var(--good); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Light and space · Rømer 1676 · Michelson 1879 · Metre defined by light 1983</div>
+    <h1>The speed of light</h1>
+    <p class="lede">Light covers 299,792 km every second, fast enough to circle Earth seven times. Yet space is so big that even light has to wait. Send a pulse and feel how long the universe makes it travel.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="430" aria-label="Top: a logarithmic ruler of light travel time from one second to thirty years, marking the Moon, the Sun, Mars, Voyager 1 and Proxima Centauri. Below: a light pulse travelling from Earth to the chosen destination, drawn to scale with a scale bar and a running clock."></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Destination <b id="destName">–</b></span>
+    <span>Distance <b id="distKm">–</b></span>
+    <span>Light time <b id="lightTime">–</b></span>
+    <span>Pulse has flown <b id="elapsed">–</b></span>
+    <span>Playback <b id="playback">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control wide">
+      <span class="label">Send light to</span>
+      <div class="seg" role="group" aria-label="Destination">
+        <button id="destMoon" aria-pressed="true">Moon</button>
+        <button id="destMars" aria-pressed="false">Mars</button>
+        <button id="destSun" aria-pressed="false">Sun</button>
+        <button id="destVoyager" aria-pressed="false">Voyager 1</button>
+        <button id="destProxima" aria-pressed="false">Proxima Centauri</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="speed">Playback speed</label>
+      <select id="speed">
+        <option value="1">Real time</option>
+        <option value="10">10× faster</option>
+        <option value="60">1 minute per second</option>
+        <option value="3600">1 hour per second</option>
+        <option value="86400">1 day per second</option>
+        <option value="2629800">1 month per second</option>
+        <option value="31557600">1 year per second</option>
+      </select>
+    </div>
+    <div class="control">
+      <label for="marsDist">Earth to Mars <output id="marsDistOut">225 million km</output></label>
+      <input type="range" id="marsDist" min="55" max="401" step="1" value="225">
+    </div>
+    <div class="control">
+      <span class="label">Pulse</span>
+      <div class="button-row">
+        <button id="send" class="primary">Send again</button>
+        <button id="pause">Pause</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Echo</span>
+      <label class="switch" for="roundTrip"><input type="checkbox" id="roundTrip"> Wait for it to bounce back</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">The pulse to the Moon runs in real time: 1.28 seconds, every time. Pick a farther destination and the speed jumps up so you don't wait all day. Set it back to Real time to feel the full wait.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Rømer, 1676: Io is late</h2>
+      <p class="muted">Jupiter's moon Io slips into Jupiter's shadow every 42.5 hours, regular as a clock. Ole Rømer noticed the eclipses ran late when Earth was far from Jupiter and early when it was near. The extra time is light crossing the extra distance.</p>
+      <div class="bench"><canvas id="romer" width="560" height="300" aria-label="Left: the Sun, Earth's orbit and Jupiter with its moon Io. Right: how late each eclipse is seen, in minutes, over a year."></canvas></div>
+      <div class="stats">
+        <span>Earth to Jupiter <b id="ejDist">–</b></span>
+        <span>Latest eclipse seen <b id="ioLate">–</b></span>
+      </div>
+      <div class="button-row">
+        <button id="romerPlay">Pause</button>
+        <button id="romerReset">Clear plot</button>
+        <label class="switch" for="romerInstant"><input type="checkbox" id="romerInstant"> Pretend light is instant</label>
+      </div>
+      <p class="muted">Rømer predicted the eclipse of 9 November 1676 would come 10 minutes late, and it did. His numbers implied about 22 minutes for light to cross Earth's orbit; the true value is 16.6.</p>
+    </div>
+    <div class="card">
+      <h2>Drive a Mars rover</h2>
+      <p class="muted">Steer the rover by radio and stop it before the boulder. Your camera picture is old by the light time, and your stop command takes just as long to get there. Time runs 60× fast here: one second is one minute.</p>
+      <div class="bench"><canvas id="rover" width="560" height="300" aria-label="Signals travelling between Earth and Mars, the rover as mission control sees it, and where the rover really is now."></canvas></div>
+      <div class="button-row">
+        <button id="roverDrive" class="primary">Send "drive"</button>
+        <button id="roverStop">Send "stop"</button>
+        <button id="roverReset">Reset</button>
+      </div>
+      <label class="switch" for="roverAuto"><input type="checkbox" id="roverAuto"> Let the rover use its own hazard cameras</label>
+      <p class="verdict" id="roverVerdict" aria-live="polite">Light time to Mars right now: 12.5 minutes each way. Press Send "drive".</p>
+    </div>
+  </div>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each trip is drawn to scale between Earth on the left and the destination on the right, and the pulse moves at exactly the speed of light, sped up by the playback factor. The ruler at the top uses a log scale so a 1-second trip and a 4-year trip fit side by side.</p>
+      <p>Mars is the odd one out: its distance changes by a factor of seven as Earth and Mars swing around the Sun, so radio messages take between 3 and 22 minutes.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Turn on the echo for the Moon. 2.56 seconds is what lunar laser ranging stations time, to a few millimetres.</li>
+        <li>Send light to the Sun in real time and make a cup of tea. The sunlight on your face left the Sun about 8 minutes 20 seconds ago.</li>
+        <li>Try to stop the rover with Mars at its farthest. You can't: it reaches the boulder before your picture of it starting even arrives.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Every observer, however they move, measures the same speed for light. That one fact forces time and space to bend to keep it constant, which is Einstein's special relativity.</p>
+      <p>It also means there is no universal "now". You see the Moon as it was a second ago, the Sun 8 minutes ago and Proxima Centauri over 4 years ago. Looking out is always looking back.</p>
+      <p class="muted">Since 1983 the metre has been defined as the distance light travels in 1/299,792,458 of a second, so the speed of light is now exact by definition.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where the speed limit shows up</h2>
+      <p>Light is fast enough to feel instant and slow enough to measure. Much of modern technology lives in that gap.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Geophysics</span>
+        <h3>Lunar laser ranging</h3>
+        <p>Apollo 11, 14 and 15 and two Soviet rovers left reflectors on the Moon. Observatories fire laser pulses at them and time the echo, measuring the distance to millimetres. It shows the Moon drifting away by 3.8 cm a year and tests general relativity.</p>
+        <span class="link"><b>In the demo:</b> Moon with the echo on, 2.56 seconds there and back.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Navigation</span>
+        <h3>GPS</h3>
+        <p>Your phone times signals from several satellites about 20,000 km up. Each nanosecond of timing error is 30 cm of position error, so the satellites carry atomic clocks and even correct for relativity.</p>
+        <span class="link"><b>In the demo:</b> distance = speed of light × travel time, with times in billionths of a second.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Finance</span>
+        <h3>The race between exchanges</h3>
+        <p>Trading firms built straight microwave links between Chicago and New York because light in glass fibre travels about a third slower than through air. Firms spent hundreds of millions of dollars on new routes to shave a few milliseconds off the 1,200 km trip.</p>
+        <span class="link"><b>In the demo:</b> at 1 ms per 300 km, only the route and medium are left to improve.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Internet</span>
+        <h3>Why far-away servers feel slow</h3>
+        <p>London to Sydney is about 17,000 km. Even at the speed of light in fibre, a round trip takes well over 100 milliseconds. That is why video calls lag across oceans and why companies copy websites to servers near you.</p>
+        <span class="link"><b>In the demo:</b> turn on the echo: every question waits for a round trip.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Spaceflight</span>
+        <h3>The Deep Space Network</h3>
+        <p>NASA's big dishes in California, Spain and Australia keep every deep-space probe in view as Earth turns. Commands to Voyager 1 take nearly a day to arrive, and the reply takes nearly a day to return, at a data rate of about 160 bits per second.</p>
+        <span class="link"><b>In the demo:</b> choose Voyager 1 and wait for the echo.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Robotics</span>
+        <h3>Autonomous rovers</h3>
+        <p>Nobody can joystick a rover across a 20-minute delay. Engineers send a day's plan at once, and Curiosity and Perseverance use their own hazard cameras and AutoNav software to pick safe paths between waypoints.</p>
+        <span class="link"><b>In the demo:</b> switch on the hazard cameras and the rover stops itself.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Distances: Moon 384,400 km (average), Sun 1 AU, Mars 55 to 401 million km, Voyager 1 about 25.5 billion km from Earth in 2026, Proxima Centauri 4.24 light-years. Planets and the Sun are drawn to scale when big enough to see, otherwise as dots. The Rømer orbit picture is squeezed to fit; the delays use the real distances.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="speed-of-light.js"></script>
+</body>
+</html>

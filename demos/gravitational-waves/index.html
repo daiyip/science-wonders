@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gravitational Waves</title>
+<meta name="description" content="Watch two black holes spiral together, see a ring of particles stretched and squeezed by the passing wave, and hear the chirp LIGO heard in 2015.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .button-row button.preset { padding: 6px 11px; font-family: var(--font-mono); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">General relativity · Einstein 1916 · LIGO 2015 · Nobel Prize 2017</div>
+    <h1>Gravitational waves</h1>
+    <p class="lede">Two black holes circle each other, faster and closer, until they merge. The collision shakes space itself. A ripple crosses a billion light-years and stretches everything it passes, Earth included, by less than the width of a proton.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="520" aria-label="Left: two black holes orbiting and merging, with ripples spreading out. Right: a ring of test particles stretched and squeezed by the passing wave. Bottom: the strain waveform rising in frequency and amplitude, then ringing down."></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Chirp mass <b id="chirpMass">–</b></span>
+    <span>Wave frequency <b id="freq">–</b></span>
+    <span>Strain now <b id="strain">–</b></span>
+    <span>Peak strain <b id="peak">–</b></span>
+    <span>Time to merger <b id="tmerge">–</b></span>
+    <span>Slow motion <b id="slowmo">–</b></span>
+    <span>Mass turned into waves <b id="erad">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="m1">First black hole <output id="m1Out">36 M☉</output></label>
+      <input type="range" id="m1" min="5" max="80" step="1" value="36">
+    </div>
+    <div class="control">
+      <label for="m2">Second black hole <output id="m2Out">29 M☉</output></label>
+      <input type="range" id="m2" min="5" max="80" step="1" value="29">
+    </div>
+    <div class="control">
+      <label for="dist">Distance <output id="distOut">1.3 billion ly</output></label>
+      <input type="range" id="dist" min="2" max="4" step="0.01" value="3.11">
+    </div>
+    <div class="control">
+      <span class="label">Presets</span>
+      <div class="button-row">
+        <button id="presetGW150914" class="preset">GW150914</button>
+        <button id="presetLight" class="preset">10 + 8 M☉</button>
+        <button id="presetHeavy" class="preset">80 + 70 M☉</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Polarization on the ring</span>
+      <div class="seg" role="group" aria-label="Polarization">
+        <button id="polPlus" aria-pressed="true">Plus</button>
+        <button id="polCross" aria-pressed="false">Cross</button>
+        <button id="polBoth" aria-pressed="false">Both</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Animation</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="replay">Replay</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Sound</span>
+      <div class="button-row">
+        <button id="chirp">Play the chirp</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Pitch</span>
+      <label class="switch" for="audioShift"><input type="checkbox" id="audioShift" checked> Raise 2 octaves for small speakers</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Load the GW150914 preset and press Play the chirp: that rising "whoop" is the sound of the first gravitational wave ever detected, as heard in LIGO's data on 14 September 2015.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>On the left, two black holes orbit their shared centre of mass. Their separation is drawn to scale, and so are their event horizons. Every orbit sends out two crests of gravitational wave, which carry energy away, so the pair sinks closer and orbits faster.</p>
+      <p>On the right, a ring of free-floating particles feels the wave go by, face-on. Space stretches one way while it squeezes the other, then swaps, twice per orbit. Below, the strain h(t) is the fractional stretch a detector records: the "chirp" of rising pitch and loudness, then a fast ringdown as the merged black hole settles.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Switch between Plus and Cross. They are the same stretch rotated by 45°. Both together, as seen from above the orbit, make the ellipse spin.</li>
+        <li>Make the black holes lighter. The chirp sweeps to higher frequencies and lasts longer, because lighter objects can orbit closer before they touch.</li>
+        <li>Double the distance and the peak strain halves. Wave amplitude falls as 1/distance, not 1/distance², which is why detectors can hear so far.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Nothing physical moves between the black holes and the ring. Space itself changes length, and rulers stretch with it, so LIGO measures the wave with light: a laser crossing each 4 km arm takes a slightly different time. For GW150914 the arms changed length by about 4 × 10⁻¹⁸ m, a few thousandths of a proton.</p>
+      <p>In a fifth of a second, three Suns' worth of mass vanished into waves. For that moment the merger outshone all the stars in the observable universe combined, yet it emitted no light at all.</p>
+      <p class="muted">Einstein predicted the waves in 1916 and doubted they could ever be measured.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>A new way to observe the universe</h2>
+      <p>Since 2015 gravitational waves have become an astronomy of their own. They pass through dust and stars untouched and come from objects that give off no light.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Astronomy</span>
+        <h3>LIGO, Virgo and KAGRA</h3>
+        <p>Laser interferometers in the USA, Italy and Japan run as one network. Through their fourth observing run, which ended in 2025, they have caught hundreds of merging black holes and neutron stars. Comparing arrival times between sites locates each source on the sky.</p>
+        <span class="link"><b>In the demo:</b> the ring's horizontal and vertical diameters are the two arms of a detector.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Astrophysics</span>
+        <h3>Where gold comes from</h3>
+        <p>On 17 August 2017 detectors caught GW170817, two neutron stars merging. A gamma-ray burst arrived 1.7 seconds after the merger signal, and telescopes then watched a kilonova glow for weeks. Its light showed heavy elements being made, including gold and platinum.</p>
+        <span class="link"><b>In the demo:</b> lighter objects chirp longer; GW170817 stayed in LIGO's band for about 100 seconds.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Cosmology</span>
+        <h3>Standard sirens</h3>
+        <p>The chirp's frequency sweep gives the chirp mass, and its loudness then gives the distance directly, with no cosmic distance ladder. GW170817 plus its host galaxy's redshift gave an independent measurement of the Hubble constant.</p>
+        <span class="link"><b>In the demo:</b> peak strain is set by chirp mass and distance alone.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Radio astronomy</span>
+        <h3>Pulsar timing arrays</h3>
+        <p>Millisecond pulsars tick with clock-like regularity. In 2023 NANOGrav, EPTA, PPTA and others reported evidence for a background hum of waves with periods of years, probably from supermassive black hole pairs across the universe.</p>
+        <span class="link"><b>In the demo:</b> the same stretch and squeeze, but on a galaxy-sized ring.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Space missions</span>
+        <h3>LISA</h3>
+        <p>ESA's Laser Interferometer Space Antenna, adopted in 2024 and planned for launch around 2035, will fly three spacecraft 2.5 million km apart. It will hear millihertz waves from merging supermassive black holes that ground detectors cannot.</p>
+        <span class="link"><b>In the demo:</b> heavier pairs sing lower; millions of solar masses sing far below any sound.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Fundamental physics</span>
+        <h3>Testing gravity itself</h3>
+        <p>GW170817 showed gravity travels at the speed of light to about one part in 10¹⁵. Ringdowns check that merged black holes have exactly the "Kerr" shape relativity demands, set only by mass and spin.</p>
+        <span class="link"><b>In the demo:</b> the ringdown frequency comes from the final mass and spin alone.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Inspiral uses the leading-order (quadrupole) chirp, f ∝ (t<sub>c</sub> − t)<sup>−3/8</sup>, cut off near merger; ringdown uses fitted values for the remnant's mass, spin and ringing. Strain is for an average sky position and orientation, and cosmic redshift is ignored.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="gravitational-waves.js"></script>
+</body>
+</html>

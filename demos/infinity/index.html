@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Infinities of Different Sizes</title>
+<meta name="description" content="Check new guests into a hotel with infinitely many full rooms, then use Cantor's diagonal argument to build a number no infinite list can contain.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .part-head { display: grid; gap: 8px; margin: 44px 0 16px; }
+  .part-head p { color: var(--ink-soft); max-width: 66ch; }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .sizes {
+    margin-top: 44px;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: grid;
+    gap: 12px;
+  }
+  .sizes-scroll { overflow-x: auto; }
+  .sizes table { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
+  .sizes th, .sizes td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .sizes th { color: var(--ink-soft); font-weight: 500; }
+  .sizes td.mono { white-space: nowrap; }
+  .size-tag { font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
+  .size-tag.big { color: var(--warn); }
+  .size-tag.small { color: var(--good); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Mathematics · Cantor 1874 / 1891 · Hilbert 1924</div>
+    <h1>Infinities of different sizes</h1>
+    <p class="lede">A hotel with infinitely many rooms, all full, can always fit more guests, even infinitely many busloads. But there is a kind of infinity no hotel can hold. Move the guests, then build a number that escapes every list.</p>
+  </div>
+
+  <div class="part-head">
+    <div class="eyebrow">Part 1</div>
+    <h2>Hilbert's Grand Hotel</h2>
+    <p>Rooms are numbered 1, 2, 3, and so on forever, and every room has a guest. Nobody may share a room, and nobody is left outside. You can only show the first sixteen rooms, but the rule you announce applies to every room at once.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="hotel" width="960" height="440" aria-label="A row of hotel rooms 1 to 16, each holding a guest, with arriving guests waiting below and the room-change rule written beside them"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Rule <b id="rule">–</b></span>
+    <span>Guests turned away <b id="turnedAway">0</b></span>
+    <span>Empty rooms <b id="emptyRooms">none</b></span>
+    <span>Check-ins so far <b id="checkins">0</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Arrivals</span>
+      <div class="button-row">
+        <button id="oneGuest">1 new guest</button>
+        <button id="oneBus">A bus of infinitely many guests</button>
+        <button id="manyBuses" class="primary">Infinitely many buses</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Method for infinitely many buses</span>
+      <div class="seg" role="group" aria-label="Method for infinitely many buses">
+        <button id="methodDiag" aria-pressed="true">Diagonal zigzag</button>
+        <button id="methodPrime" aria-pressed="false">Prime powers</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Hotel</span>
+      <div class="button-row">
+        <button id="resetHotel">Start over with a full hotel</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hotelHint">Every move sends each guest to a room with a definite number, so anyone can work out where to go without waiting for anyone else. The zigzag is exactly how you list every fraction p/q, which is why there are no more fractions than whole numbers.</p>
+
+  <div class="sizes">
+    <h2>Same size or bigger?</h2>
+    <p class="muted">Two sets are the same size if their members can be paired off one to one, with nothing left over. Any set you can arrange in a list (first, second, third, …) is "countable" and the same size as the counting numbers.</p>
+    <div class="sizes-scroll">
+      <table>
+        <thead><tr><th>Set</th><th>A list that catches every member</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td>Counting numbers</td><td>1, 2, 3, 4, …</td><td><span class="size-tag small">countable, ℵ₀</span></td></tr>
+          <tr><td>Even numbers</td><td>2, 4, 6, 8, … (room n → room 2n)</td><td><span class="size-tag small">countable, ℵ₀</span></td></tr>
+          <tr><td>All integers</td><td>0, 1, −1, 2, −2, 3, …</td><td><span class="size-tag small">countable, ℵ₀</span></td></tr>
+          <tr><td>Fractions (rationals)</td><td>zigzag through the grid of p/q, skipping repeats: 1/1, 2/1, 1/2, 1/3, 3/1, …</td><td><span class="size-tag small">countable, ℵ₀</span></td></tr>
+          <tr><td>Real numbers</td><td>impossible: the diagonal below escapes any list you try</td><td><span class="size-tag big">uncountable, 2<sup>ℵ₀</sup></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="part-head">
+    <div class="eyebrow">Part 2</div>
+    <h2>Cantor's diagonal argument</h2>
+    <p>Suppose someone hands you a numbered list that, they claim, contains every infinite string of digits. Go down the diagonal: change the 1st digit of row 1, the 2nd digit of row 2, and so on. The result differs from every row in at least one place, so it was never on the list.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="cantor" width="960" height="440" aria-label="A grid of infinite digit strings, one per row, with the diagonal highlighted and a new string built underneath by changing each diagonal digit"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Diagonal digits changed <b id="steps">0</b></span>
+    <span>Rows ruled out <b id="ruledOut">–</b></span>
+    <span>New string starts <b id="newStart">–</b></span>
+    <span>Times you added it to the list <b id="inserted">0</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Digits</span>
+      <div class="seg" role="group" aria-label="Digits">
+        <button id="modeBinary" aria-pressed="true">Binary 0 / 1</button>
+        <button id="modeDecimal" aria-pressed="false">Decimal 0.d₁d₂…</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Diagonal</span>
+      <div class="button-row">
+        <button id="playDiag" class="primary">Pause</button>
+        <button id="stepDiag">Next digit</button>
+        <button id="restartDiag">Restart</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">The list</span>
+      <div class="button-row">
+        <button id="insertNew">Add the new string to the top</button>
+        <button id="newList">New random list</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="cantorHint">Click any digit in the list to change it; the new string updates to dodge it. Then try "Add the new string to the top": the list shifts down, the diagonal runs again, and out comes another string the list missed.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>In the hotel, every rule is a one-to-one pairing between guests and room numbers. "1 new guest" uses n → n + 1. "A bus" uses n → 2n for current guests and the odd rooms 2k − 1 for passengers. For infinitely many buses, the zigzag walks the grid of (bus, seat) along its diagonals; the prime-power plan sends current guests to 2<sup>n</sup> and bus b's passengers to the b-th odd prime raised to the seat number.</p>
+      <p>In the diagonal grid, row k is the k-th string on the list. Binary digits are flipped. Decimal digits become 5, or 4 if they were already 5, which avoids the 0.0999… = 0.1000… double-spelling problem.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Fit one bus, then another, then infinitely many. The guests turned away stays at 0.</li>
+        <li>Compare the two bus methods. Prime powers leave infinitely many rooms empty, like room 6, and still fit everyone.</li>
+        <li>Add the diagonal string to the list three times. Each time a brand new escapee appears.</li>
+        <li>Change a digit that lies on the diagonal and watch the matching digit of the new string change too.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>For finite sets, a part is always smaller than the whole. For infinite sets that fails: the even numbers are half of the counting numbers, yet pair off with them perfectly. Galileo noticed this with square numbers in 1638 and concluded infinite sets can't be compared. Cantor showed they can, and that they don't all match.</p>
+      <p>His 1874 paper proved the real numbers can't be listed; the diagonal argument of 1891 made it a one-line idea and showed there is no largest infinity at all. Whether any size sits between the countable and the reals (the continuum hypothesis) turned out to be unprovable either way from the standard axioms (Gödel 1940, Cohen 1963).</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where the diagonal sets hard limits</h2>
+      <p>Cantor's trick turned into one of the most useful ideas in logic and computer science. Wherever you can list all the things of one kind, the diagonal builds something outside the list, and that marks out what computers and proofs can never do.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Computer science</span>
+        <h3>The halting problem</h3>
+        <p>In 1936 Alan Turing proved no program can decide, for every program and input, whether it will eventually stop. List all programs; a "contrarian" program that does the opposite of what the checker predicts for program k on input k differs from every program on the list. Every program analyser lives with this limit.</p>
+        <span class="link"><b>In the demo:</b> row k, digit k, flipped.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Security</span>
+        <h3>No perfect virus scanner</h3>
+        <p>Fred Cohen showed in 1987 that deciding whether any given program is a virus is undecidable, by the same diagonal reasoning. Rice's theorem extends it to any non-trivial question about what a program does. Real scanners use signatures and heuristics, and accept missing some threats or flagging some safe files.</p>
+        <span class="link"><b>In the demo:</b> whatever list of verdicts you write, the diagonal dodges it.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Logic</span>
+        <h3>Gödel's incompleteness</h3>
+        <p>In 1931 Kurt Gödel coded every formula as a single number using products of prime powers, then built a statement that in effect says "I am not provable". Any consistent system strong enough for arithmetic has true statements it cannot prove.</p>
+        <span class="link"><b>In the demo:</b> the prime-power plan packs many sequences into one numbering.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Numerics</span>
+        <h3>Uncomputable numbers</h3>
+        <p>Every program is a finite string of symbols, so programs can be listed, and the numbers some program can print digit by digit are countable. The reals are not. So almost every real number has no program that computes it, and computers only ever work with a thin, countable slice of the number line.</p>
+        <span class="link"><b>In the demo:</b> fill the list with every computable number; the diagonal is still missing.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Programming</span>
+        <h3>Pairing functions</h3>
+        <p>The zigzag gives a formula that turns any pair of whole numbers into one whole number and back, known as the Cantor pairing function. Programmers use it and its cousins to key a table by two numbers at once, such as grid coordinates, and logicians use it to encode pairs, lists and programs as single numbers.</p>
+        <span class="link"><b>In the demo:</b> bus b, seat k → one room number.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Data</span>
+        <h3>Compression limits</h3>
+        <p>There are 2<sup>n</sup> files of n bits but fewer than 2<sup>n</sup> shorter files, so no lossless compressor can shrink every file; some must stay the same size or grow. It is the same counting-by-pairing idea Cantor used, applied to finite sets, and why zipping a zip file doesn't help.</p>
+        <span class="link"><b>In the demo:</b> sizes are compared by pairing members off.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Only the first rooms, rows and digits can be drawn; every rule shown applies to all of them.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="infinity.js"></script>
+</body>
+</html>
