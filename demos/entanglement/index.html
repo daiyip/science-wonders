@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantum Entanglement</title>
+<meta name="description" content="Measure entangled photon pairs at angles you choose and watch them beat every hidden-instruction theory in a Bell test.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .grid2 { align-items: start; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 36px; }
+  .grid2 > * { min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 18px; display: grid; gap: 12px; align-content: start; }
+  .bell-table { width: 100%; border-collapse: collapse; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  .bell-table th, .bell-table td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--rule); }
+  .bell-table th:first-child, .bell-table td:first-child { text-align: left; }
+  .bell-table td { font-family: var(--font-mono); }
+  .score-row { display: grid; grid-template-columns: 9.5em 1fr 4.2em; gap: 10px; align-items: center; font-size: var(--step--1); }
+  .score-row b { font-family: var(--font-mono); font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+  .gauge { position: relative; height: 14px; background: var(--paper); border: 1px solid var(--rule); border-radius: 999px; }
+  .gauge .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--ink-soft); width: 0; transition: width .4s ease; }
+  .gauge .fill.q { background: var(--accent); }
+  .gauge .mark { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--warn); }
+  .gauge-scale { position: relative; height: 1.4em; font-size: 0.75rem; color: var(--ink-soft); font-family: var(--font-mono); }
+  .gauge-scale span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+  .verdict { font-size: var(--step--1); }
+  .verdict.broken { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../double-slit/">Double slit</a>
+      <a href="./" aria-current="page">Entanglement</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum mechanics · Bell 1964 · Nobel Prize 2022</div>
+    <h1>Quantum entanglement</h1>
+    <p class="lede">Two photons fly apart to Alice and Bob, who each measure polarization at an angle they pick. Each result alone is a coin flip. Together they agree more often than any pre-arranged plan could manage.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="330" aria-label="A source sends photon pairs to two polarizers, Alice's on the left and Bob's on the right, with each detector's recent results shown below it"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Pairs at these angles <b id="nHere">0</b></span>
+    <span>Results agree <b id="agreeHere">–</b></span>
+    <span>Quantum predicts <b id="qPred">–</b></span>
+    <span>Best hidden-instruction plan <b id="cPred">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="alice">Alice's polarizer <output id="aliceOut">0°</output></label>
+      <input type="range" id="alice" min="0" max="180" step="2.5" value="0">
+    </div>
+    <div class="control">
+      <label for="bob">Bob's polarizer <output id="bobOut">30°</output></label>
+      <input type="range" id="bob" min="0" max="180" step="2.5" value="30">
+    </div>
+    <div class="control">
+      <span class="label">The universe runs on</span>
+      <div class="seg" role="group" aria-label="Model">
+        <button id="modelQ" aria-pressed="true">Quantum rules</button>
+        <button id="modelC" aria-pressed="false">Hidden instructions</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Source</span>
+      <div class="button-row">
+        <button id="auto" class="primary">Pause</button>
+        <button id="one">Send one pair</button>
+        <button id="burst">Send 500</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>How often do they agree?</h2>
+      <p class="muted">Each dot is your measured agreement rate at one angle difference. Sweep Bob's polarizer to fill in the curve.</p>
+      <div class="bench"><canvas id="chart" width="560" height="320" aria-label="Agreement rate against angle difference, with the quantum prediction curve and the hidden-instruction straight line"></canvas></div>
+      <div class="button-row"><button id="sweep">Sweep all angles</button><button id="clearData">Clear data</button></div>
+    </div>
+
+    <div class="card">
+      <h2>The Bell test</h2>
+      <p class="muted">Alice randomly picks 0° or 45°, Bob randomly picks 22.5° or 67.5°, for 20,000 pairs. Score each setting by how much results agree (+1 all agree, −1 all disagree), then combine: S = E(0°,22.5°) + E(45°,22.5°) + E(45°,67.5°) − E(0°,67.5°). Any theory where photons carry instructions from the source scores at most 2.</p>
+      <div class="button-row"><button id="runBell" class="primary">Run the Bell test</button></div>
+      <div class="table-wrap">
+        <table class="bell-table">
+          <thead><tr><th>Alice, Bob</th><th>Quantum E</th><th>Hidden-instr. E</th></tr></thead>
+          <tbody id="bellBody"></tbody>
+        </table>
+      </div>
+      <div style="display:grid; gap:10px">
+        <div class="score-row"><span>Quantum rules</span><div class="gauge"><div class="fill q" id="gq"></div><div class="mark" style="left:66.67%"></div></div><b id="sq">–</b></div>
+        <div class="score-row"><span>Hidden instructions</span><div class="gauge"><div class="fill" id="gc"></div><div class="mark" style="left:66.67%"></div></div><b id="sc">–</b></div>
+        <div class="score-row"><span></span><div class="gauge-scale"><span style="left:0%">0</span><span style="left:33.33%">1</span><span style="left:66.67%">2 · limit</span><span style="left:94.28%">2.83</span></div><span></span></div>
+      </div>
+      <p class="verdict" id="verdict">Press the button to run both universes side by side.</p>
+    </div>
+  </div>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>A polarizer lets a photon through or blocks it. For one photon on its own, it's always 50/50. For an entangled pair, if Alice and Bob set the same angle they always agree. Set them 90° apart and they always disagree. In between, quantum mechanics says they agree with probability cos²(angle difference).</p>
+      <p>The "hidden instructions" universe is Einstein's hope: each pair leaves the source carrying a shared secret, say a preferred angle, and each photon just follows it. That plan can match the 0° and 90° cases perfectly, but in between it can only manage a straight line.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Set both polarizers equal. Watch the two tapes match, flip for flip.</li>
+        <li>Put them 22.5° apart. Quantum gives 85% agreement, instructions give 75%.</li>
+        <li>Switch universes and press Sweep. The cos² curve bulges above the straight line, and that bulge is what no local theory can produce.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>John Bell proved in 1964 that no theory with local hidden instructions can score above 2. Experiments starting with Clauser (1972) and Aspect (1982), and loophole-free tests in 2015, keep getting about 2.8. Nature is not running on hidden instructions.</p>
+      <p>It still can't be used to send a message: Bob's own results are pure coin flips whatever Alice does. The correlation only shows up when they compare notes.</p>
+    </section>
+  </div>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Pairs are simulated in the state (|HH⟩ + |VV⟩)/√2, where agreement is cos²(a − b).</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="entanglement.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Double-Slit Experiment</title>
+<meta name="description" content="Fire photons one at a time through two slits and watch a wave pattern appear, then look at which slit they used and watch it vanish.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="./" aria-current="page">Double slit</a>
+      <a href="../entanglement/">Entanglement</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum mechanics · 1801 / 1961 / 1989</div>
+    <h1>The double-slit experiment</h1>
+    <p class="lede">Each photon lands as a single dot. Yet thousands of them, sent one at a time, draw stripes that only a wave passing through both slits could make. Then try watching which slit each one uses.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="460" aria-label="Side view of a light source, a barrier with two slits and a detection screen, with the screen's accumulated hits shown face-on and as a histogram"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Photons detected <b id="count">0</b></span>
+    <span>Fringe spacing <b id="spacing">–</b></span>
+    <span>Which-path detector <b id="detState">off</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Which-path detector</span>
+      <label class="switch" for="detector"><input type="checkbox" id="detector"> Watch which slit each photon uses</label>
+    </div>
+    <div class="control">
+      <span class="label">Slits open</span>
+      <div class="seg" role="group" aria-label="Slits open">
+        <button id="slitsBoth" aria-pressed="true">Both</button>
+        <button id="slitsTop" aria-pressed="false">Top only</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="rate">Photons per second <output id="rateOut">20</output></label>
+      <input type="range" id="rate" min="0" max="100" value="45">
+    </div>
+    <div class="control">
+      <span class="label">Source</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="one">Fire one</button>
+        <button id="clear">Clear screen</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="lambda">Wavelength <output id="lambdaOut">520 nm</output></label>
+      <input type="range" id="lambda" min="400" max="680" step="5" value="520">
+    </div>
+    <div class="control">
+      <label for="sep">Slit separation <output id="sepOut">0.25 mm</output></label>
+      <input type="range" id="sep" min="0.10" max="0.60" step="0.01" value="0.25">
+    </div>
+    <div class="control">
+      <label for="width">Slit width <output id="widthOut">0.05 mm</output></label>
+      <input type="range" id="width" min="0.02" max="0.12" step="0.005" value="0.05">
+    </div>
+    <div class="control">
+      <span class="label">Prediction</span>
+      <label class="switch" for="theory"><input type="checkbox" id="theory" checked> Overlay the quantum prediction</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Let a few hundred photons land, then switch on the which-path detector. Changing a setting clears the screen so patterns don't mix.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>A source sends single photons toward a barrier with two narrow slits, one metre in front of a screen. Each photon arrives at one random spot. The odds of each spot follow the wave formula: two waves, one from each slit, add up where their crests meet and cancel where a crest meets a trough.</p>
+      <p>With the detector on, every photon is tagged with the slit it went through. The stripes disappear and you get two overlapping blobs, exactly what tiny bullets would make.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Slow the source to 1 per second. Each dot is unpredictable, yet the pattern is not.</li>
+        <li>Close one slit. Some spots that were dark with two slits are now bright. Opening a second path made light <em>stop</em> arriving there.</li>
+        <li>Shorten the wavelength or widen the slit separation and the stripes squeeze together: spacing = wavelength × distance ÷ separation.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>No photon is ever split; detectors always click whole. But whenever the universe holds no record of which slit was used, the photon behaves as if it explored both. Gaining that record, even without disturbing the photon's direction, destroys the interference. This is wave-particle duality, and Feynman called it "the only mystery" of quantum mechanics.</p>
+      <p class="muted">Done for real with single electrons by Tonomura's team at Hitachi in 1989.</p>
+    </section>
+  </div>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. The slit geometry in the side view is enlarged so you can see it; the screen pattern uses the real numbers.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="double-slit.js"></script>
+</body>
+</html>
