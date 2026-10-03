@@ -24,6 +24,14 @@ Twenty experiments in four categories, each with controls to play with, a short 
 
 The site also has a web manifest and service worker (`sw.js`) so it can be installed and used offline. Link-preview images live in `assets/og/`.
 
+## Languages
+
+English, Simplified Chinese and Spanish, chosen from the menu in the top bar (remembered per browser), or with `?lang=zh-CN` / `?lang=es` in a link. The first visit follows the browser's language.
+
+Pages are written in English. `assets/i18n.js` (loaded first on every page) swaps text as it appears, including canvas text, using dictionaries in `i18n/<lang>/common.js` and `i18n/<lang>/<page>.js`. Keys are the English strings; numbers inside a string become `{0}`, `{1}`, so `"t = {0} fs"` covers every value. A key starting with `<html>` translates a short element with inline markup as a whole.
+
+To find strings a dictionary is missing, open a page with `?lang=zh-CN` and run `[...I18N.missed]` in the console. When you add or change English text, add the same key to both dictionaries.
+
 ## Run locally
 
 ```sh
@@ -32,6 +40,8 @@ python3 -m http.server 8000
 ```
 
 ## Adding an experiment
+
+New pages also need `<script src="../../assets/i18n.js" data-page="<slug>"></script>` first in `<head>` and `i18n/zh-CN/<slug>.js` + `i18n/es/<slug>.js` dictionaries.
 
 1. Create `demos/<name>/index.html` and copy the header, `.bench`, `.controls` and `.explain` structure from an existing demo.
 2. Link `../../assets/style.css` and `../../assets/lab.js` (canvas sizing, wavelength colours).

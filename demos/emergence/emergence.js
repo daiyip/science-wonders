@@ -290,10 +290,14 @@
   // Rules panel (shared)
   // =====================================================================
   function wrapText(text, x, y, maxW, lh) {
-    const words = text.split(" ");
+    // Translate the whole sentence before wrapping; Chinese wraps per character.
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
     let line = "";
     for (const w of words) {
-      const t = line ? line + " " + w : w;
+      const t = line ? line + sep + w : w;
       if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
       else line = t;
     }
