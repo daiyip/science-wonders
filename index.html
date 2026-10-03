@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Science Wonders</title>
 <meta name="description" content="Interactive experiments with the strangest, most beautiful ideas in science.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Science Wonders">
+<meta property="og:description" content="Twenty hands-on experiments with the strangest, most beautiful ideas in science.">
+<meta property="og:url" content="https://daiyip.github.io/science-wonders/">
+<meta property="og:image" content="https://daiyip.github.io/science-wonders/assets/og/home.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
@@ -17,6 +27,15 @@
   .strip canvas { height: 92px; width: 100%; border-radius: var(--radius); }
 
   .shelf-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-block: 36px 14px; }
+  .finder { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-block: 8px 4px; }
+  .finder .filters { margin: 0; }
+  .search { flex: 1 1 220px; max-width: 340px; font: inherit; font-size: var(--step--1); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
+  .progress-line { font-size: var(--step--1); color: var(--ink-soft); margin-top: 10px; }
+  .progress-line:empty { display: none; }
+  .no-results { color: var(--ink-soft); padding-block: 24px; }
+  .tour-teaser { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 36px; padding: 18px 20px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); }
+  .tour-teaser p { color: var(--ink-soft); max-width: 60ch; }
+  .demo-card .card-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 8px 4px; }
   .chip { display: inline-flex; align-items: center; gap: 8px; }
   .chip span { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-soft); }
@@ -63,6 +82,8 @@
     <div class="bench strip"><canvas id="strip" aria-label="Single photon hits slowly building an interference pattern"></canvas></div>
   </section>
 
+  <div class="finder">
+  <input type="search" id="search" class="search" placeholder="Search experiments" aria-label="Search experiments">
   <div class="filters" role="group" aria-label="Filter experiments by category">
     <button class="chip" data-filter="all" aria-pressed="true">All <span>20</span></button>
     <button class="chip" data-filter="quantum" aria-pressed="false">Quantum world <span>6</span></button>
@@ -70,6 +91,9 @@
     <button class="chip" data-filter="complexity" aria-pressed="false">Life and complexity <span>5</span></button>
     <button class="chip" data-filter="math" aria-pressed="false">Mind-bending math <span>4</span></button>
   </div>
+  </div>
+  <p class="progress-line" id="progressLine" role="status"></p>
+  <p class="no-results" id="noResults" hidden>No experiments match that search.</p>
 
   <section class="shelf" id="quantum" data-cat="quantum">
     <div class="shelf-label">
@@ -108,7 +132,7 @@
         <span class="eyebrow">Wave-particle duality</span>
         <h3>The double-slit experiment</h3>
         <p class="muted">Fire photons one at a time and watch stripes appear that only a wave could draw. Then peek at which slit they took.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="quantum" href="demos/entanglement/index.html">
@@ -133,7 +157,7 @@
         <span class="eyebrow">Bell's theorem</span>
         <h3>Quantum entanglement</h3>
         <p class="muted">Measure linked photon pairs at angles you choose, then run the Bell test that rules out Einstein's hidden instructions.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="quantum" href="demos/tunneling/index.html">
@@ -150,7 +174,7 @@
         <span class="eyebrow">Quantum tunneling</span>
         <h3>Walking through walls</h3>
         <p class="muted">Send a wave packet at a barrier it can't climb and watch part of it appear on the other side.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="quantum" href="demos/quantum-eraser/index.html">
@@ -168,7 +192,7 @@
         <span class="eyebrow">Delayed choice</span>
         <h3>The quantum eraser</h3>
         <p class="muted">Tag which slit each photon took, erase the tag later, and see the stripes reappear only when you sort the hits.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="quantum" href="demos/decoherence/index.html">
@@ -185,7 +209,7 @@
         <span class="eyebrow">Schrödinger's cat</span>
         <h3>Decoherence</h3>
         <p class="muted">Watch a quantum superposition fade into an ordinary either-or as its surroundings learn which way it went.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="quantum" href="demos/stern-gerlach/index.html">
@@ -206,7 +230,7 @@
         <span class="eyebrow">Quantum spin</span>
         <h3>Stern–Gerlach magnets</h3>
         <p class="muted">Send silver atoms through a chain of magnets and see spin come in two values, and measurements undo each other.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     </div>
@@ -237,7 +261,7 @@
         <span class="eyebrow">Special relativity</span>
         <h3>Time dilation and the twins</h3>
         <p class="muted">Fly to a nearby star near light speed and come home younger than the twin you left behind.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="cosmos" href="demos/curved-spacetime/index.html">
@@ -256,7 +280,7 @@
         <span class="eyebrow">General relativity</span>
         <h3>Curved spacetime</h3>
         <p class="muted">Launch planets and light rays around a heavy mass and watch Einstein's orbits drift where Newton's close.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="cosmos" href="demos/gravitational-waves/index.html">
@@ -272,7 +296,7 @@
         <span class="eyebrow">Gravitational waves</span>
         <h3>Black holes colliding</h3>
         <p class="muted">Two black holes spiral together, stretching space as they go. Hear the chirp LIGO detected in 2015.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="cosmos" href="demos/expanding-universe/index.html">
@@ -288,7 +312,7 @@
         <span class="eyebrow">Cosmology</span>
         <h3>The expanding universe</h3>
         <p class="muted">Stretch a universe of galaxies and find that every one sees the rest rushing away, faster the farther they are.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="cosmos" href="demos/speed-of-light/index.html">
@@ -305,7 +329,7 @@
         <span class="eyebrow">The cosmic speed limit</span>
         <h3>How fast is light?</h3>
         <p class="muted">Race a light pulse to the Moon, Mars and the nearest star in real time, and talk to a Mars rover.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     </div>
@@ -334,7 +358,7 @@
         <span class="eyebrow">Chaos theory</span>
         <h3>The butterfly effect</h3>
         <p class="muted">Start two pendulums a billionth of a radian apart and watch them part ways completely.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="complexity" href="demos/entropy/index.html">
@@ -350,7 +374,7 @@
         <span class="eyebrow">Thermodynamics</span>
         <h3>Entropy and the arrow of time</h3>
         <p class="muted">Let gas spread through a box, then run time backwards and see why it almost never un-mixes.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="complexity" href="demos/evolution/index.html">
@@ -367,7 +391,7 @@
         <span class="eyebrow">Natural selection</span>
         <h3>Evolution in action</h3>
         <p class="muted">Hungry predators pick off the easiest-to-spot creatures, and the survivors' camouflage improves with no designer.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="complexity" href="demos/emergence/index.html">
@@ -382,7 +406,7 @@
         <span class="eyebrow">Emergence</span>
         <h3>Life from simple rules</h3>
         <p class="muted">Three rules make birds flock, and four make Conway's Game of Life grow gliders and machines.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="complexity" href="demos/epidemics/index.html">
@@ -401,7 +425,7 @@
         <span class="eyebrow">Epidemiology</span>
         <h3>How epidemics spread</h3>
         <p class="muted">Watch an outbreak spread dot to dot, then vaccinate enough people that it fizzles out on its own.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     </div>
@@ -432,7 +456,7 @@
         <span class="eyebrow">Probability</span>
         <h3>The Monty Hall problem</h3>
         <p class="muted">Pick a door, watch the host reveal a goat, and find out why switching wins two times out of three.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="math" href="demos/infinity/index.html">
@@ -448,7 +472,7 @@
         <span class="eyebrow">Set theory</span>
         <h3>Bigger infinities</h3>
         <p class="muted">Fit infinitely many new guests into a full hotel, then prove some infinities are bigger than others.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="math" href="demos/birthday-paradox/index.html">
@@ -466,7 +490,7 @@
         <span class="eyebrow">Probability</span>
         <h3>The birthday paradox</h3>
         <p class="muted">With just 23 people in a room, two probably share a birthday. Fill the room and see why.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     <a class="demo-card" data-cat="math" href="demos/benford/index.html">
@@ -481,11 +505,19 @@
         <span class="eyebrow">Statistics</span>
         <h3>Benford's law</h3>
         <p class="muted">Real-world numbers start with 1 about 30% of the time. See why, and test your own data.</p>
-        <span class="go">Run the experiment →</span>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>
     </div>
   </section>
+
+  <aside class="tour-teaser">
+    <div>
+      <h2>Not sure where to start?</h2>
+      <p>Take a guided tour: a few experiments linked into one story, with a goal at each step.</p>
+    </div>
+    <a class="btn primary" href="tours/index.html">See the guided tours →</a>
+  </aside>
 
   <footer class="footer">Static site, no backend. Every experiment runs in your browser.</footer>
 </div>
@@ -521,21 +553,54 @@
 })();
 </script>
 <script>
-// Category filter: chips show one shelf or all; a #category link opens filtered.
+// Category chips, search and per-browser progress badges.
 (function () {
   const chips = [...document.querySelectorAll(".chip")];
   const shelves = [...document.querySelectorAll(".shelf")];
-  function apply(cat) {
-    if (!shelves.some((s) => s.id === cat)) cat = "all";
+  const cards = [...document.querySelectorAll(".demo-card")];
+  const search = document.getElementById("search");
+  let cat = "all";
+  function apply() {
+    const q = search.value.trim().toLowerCase();
+    let shown = 0;
     chips.forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.filter === cat)));
-    shelves.forEach((s) => { s.hidden = cat !== "all" && s.id !== cat; });
+    for (const card of cards) {
+      const hit = !q || card.textContent.toLowerCase().includes(q);
+      card.hidden = !hit;
+    }
+    for (const s of shelves) {
+      const any = [...s.querySelectorAll(".demo-card")].some((c) => !c.hidden);
+      s.hidden = (cat !== "all" && s.id !== cat) || !any;
+      if (!s.hidden) shown += [...s.querySelectorAll(".demo-card")].filter((c) => !c.hidden).length;
+    }
+    document.getElementById("noResults").hidden = shown > 0;
   }
+  function setCat(c) { cat = shelves.some((s) => s.id === c) ? c : "all"; apply(); }
   chips.forEach((c) => c.addEventListener("click", () => {
-    apply(c.dataset.filter);
-    try { history.replaceState(null, "", c.dataset.filter === "all" ? location.pathname : "#" + c.dataset.filter); } catch (e) {}
+    setCat(c.dataset.filter);
+    try { history.replaceState(null, "", cat === "all" ? location.pathname : "#" + cat); } catch (e) {}
   }));
-  window.addEventListener("hashchange", () => apply(location.hash.slice(1)));
-  apply(location.hash.slice(1));
+  search.addEventListener("input", apply);
+  window.addEventListener("hashchange", () => setCat(location.hash.slice(1)));
+  setCat(location.hash.slice(1));
+
+  let p = {};
+  try { p = JSON.parse(localStorage.getItem("science-wonders-progress")) || {}; } catch (e) {}
+  const visited = p.visited || {}, quiz = p.quiz || {};
+  let n = 0;
+  for (const card of cards) {
+    const slug = card.getAttribute("href").split("/")[1];
+    const badge = card.querySelector(".badge");
+    if (quiz[slug] != null) badge.textContent = `Quiz ${quiz[slug]}/3`;
+    else if (visited[slug]) badge.textContent = "Visited";
+    if (visited[slug]) n++;
+  }
+  if (n) document.getElementById("progressLine").textContent =
+    `You've explored ${n} of ${cards.length} experiments` + (n === cards.length ? ". All of them!" : ".");
+
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 })();
 </script>
 </body>

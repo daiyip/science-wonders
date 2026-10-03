@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guided Tours · Science Wonders</title>
+<meta name="description" content="Short guided paths through the Science Wonders experiments, each step with a goal to reach.">
+<meta property="og:title" content="Guided Tours · Science Wonders">
+<meta property="og:description" content="Short guided paths through the Science Wonders experiments, each step with a goal to reach.">
+<meta property="og:image" content="https://daiyip.github.io/science-wonders/assets/og/home.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .tours { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  .tour { display: grid; gap: 12px; align-content: start; padding: 20px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); min-width: 0; }
+  .tour p { color: var(--ink-soft); }
+  .tour ol { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+  .tour ol a { color: var(--ink); text-decoration: none; }
+  .tour ol a:hover { color: var(--accent); }
+  .tour .done { font-family: var(--font-mono); font-size: 0.75rem; color: var(--good); margin-left: 6px; }
+  .tour .start { justify-self: start; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../index.html">Science <span>Wonders</span></a>
+    <nav><a href="../index.html">All experiments</a><a href="../about.html">About</a></nav>
+  </header>
+  <div class="demo-head">
+    <div class="eyebrow">Guided tours</div>
+    <h1>Follow a path through the strangeness</h1>
+    <p class="lede">Each tour links a few experiments into one story. Every step gives you a goal to reach before you move on, and a bar at the top of the page keeps your place.</p>
+  </div>
+  <div class="tours" id="tours"></div>
+  <footer class="footer">Your progress is stored only in this browser.</footer>
+</div>
+<script src="../assets/catalog.js"></script>
+<script src="../assets/tours.js"></script>
+<script>
+(function () {
+  const W = window.WONDERS, by = Object.fromEntries(W.catalog.map((c) => [c.slug, c]));
+  let p = {}; try { p = JSON.parse(localStorage.getItem("science-wonders-progress")) || {}; } catch (e) {}
+  const visited = p.visited || {}, finished = p.tours || {};
+  const root = document.getElementById("tours");
+  for (const t of W.tours) {
+    const seen = t.steps.filter((s) => visited[s.slug]).length;
+    const card = document.createElement("section");
+    card.className = "tour";
+    card.innerHTML = `<div class="eyebrow">${t.steps.length} experiments${finished[t.id] ? " · finished" : seen ? ` · ${seen} visited` : ""}</div>
+      <h2></h2><p></p><ol></ol>
+      <a class="btn primary start" href="../demos/${t.steps[0].slug}/index.html?tour=${t.id}">${finished[t.id] ? "Take it again" : seen ? "Continue the tour" : "Start the tour"} →</a>`;
+    card.querySelector("h2").textContent = t.title;
+    card.querySelector("p").textContent = t.blurb;
+    const ol = card.querySelector("ol");
+    for (const s of t.steps) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = `../demos/${s.slug}/index.html?tour=${t.id}`;
+      a.textContent = by[s.slug].title;
+      li.append(a);
+      if (visited[s.slug]) { const d = document.createElement("span"); d.className = "done"; d.textContent = "visited"; li.append(d); }
+      ol.append(li);
+    }
+    if (seen && !finished[t.id]) {
+      const next = t.steps.find((s) => !visited[s.slug]) || t.steps[0];
+      card.querySelector(".start").href = `../demos/${next.slug}/index.html?tour=${t.id}`;
+    }
+    root.append(card);
+  }
+})();
+</script>
+</body>
+</html>
