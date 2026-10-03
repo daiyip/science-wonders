@@ -182,8 +182,39 @@
     say(t || (bench && bench.querySelector("canvas") ? bench.querySelector("canvas").getAttribute("aria-label") : "") || "", true);
   } });
 
-  const toolbar = el("div", { class: "toolbar" }, describeBtn, shareBtn, embedBtn, recordBtn, presentBtn, soundBtn, quizLink, teachLink, depthCtl, shareStatus);
+  // When space is short the secondary tools fold into a "More" menu so the toolbar keeps one row.
+  const more = el("div", { class: "tool-more", id: "wMore" }, embedBtn, recordBtn, presentBtn, soundBtn, quizLink, teachLink);
+  const moreBtn = el("button", { type: "button", class: "tool-more-btn", "aria-label": "More tools", "aria-expanded": "false", "aria-controls": "wMore" });
+  moreBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="3.5" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="14.5" cy="9" r="1.6" fill="currentColor"/></svg>';
+  const setMore = (on) => { more.classList.toggle("open", on); moreBtn.setAttribute("aria-expanded", String(on)); };
+  moreBtn.addEventListener("click", (e) => { e.stopPropagation(); setMore(!more.classList.contains("open")); });
+  more.addEventListener("click", (e) => { if (e.target.closest("button, a")) setMore(false); });
+  document.addEventListener("click", (e) => { if (!more.contains(e.target)) setMore(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && more.classList.contains("open")) { setMore(false); moreBtn.focus(); } });
+  const toolbar = el("div", { class: "toolbar" }, describeBtn, shareBtn, moreBtn, more, depthCtl, shareStatus);
   if (head) head.after(toolbar);
+  // Pick the roomiest layout that keeps the tools on one row.
+  const wraps = () => {
+    const mids = [...toolbar.children].filter((n) => n !== shareStatus && n.offsetParent && n.offsetHeight)
+      .map((n) => { const r = n.getBoundingClientRect(); return r.top + r.height / 2; });
+    return mids.length > 1 && Math.max(...mids) - Math.min(...mids) > 12 || toolbar.scrollWidth > toolbar.clientWidth + 1;
+  };
+  const fitTools = () => {
+    toolbar.classList.remove("compact", "tight", "stack");
+    const tr = window.I18N ? window.I18N.t : (x) => x;
+    shareBtn.textContent = tr("Copy link to this setup");
+    if (!wraps()) return setMore(false);
+    toolbar.classList.add("compact");
+    if (!wraps()) return;
+    toolbar.classList.add("tight");
+    shareBtn.textContent = tr("Share");
+    // Very narrow screens: let the explanation switch drop to its own row.
+    if (toolbar.scrollWidth > toolbar.clientWidth + 1) toolbar.classList.add("stack");
+  };
+  fitTools();
+  addEventListener("resize", fitTools);
+  addEventListener("load", fitTools);
+  if (document.fonts) document.fonts.ready.then(fitTools);
 
   let lastSaid = 0, pending = null, pendingTimer = null;
   function say(text, now) {

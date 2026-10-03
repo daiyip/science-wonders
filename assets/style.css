@@ -115,6 +115,7 @@ code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
   margin-bottom: 36px;
 }
 .brand {
+  white-space: nowrap;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--step-1);
@@ -315,12 +316,54 @@ button[aria-pressed="true"] { background: var(--ink); color: var(--paper); borde
 a.btn { display: inline-block; text-decoration: none; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .lang-select { font: inherit; font-size: var(--step--1); padding: 4px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); }
-.topbar nav { align-items: center; }
+.topbar nav { align-items: center; flex-wrap: nowrap; position: relative; }
+.topbar { position: relative; z-index: 20; }
+.nav-links { display: flex; gap: 18px; align-items: center; white-space: nowrap; }
+.nav-toggle { display: none; align-items: center; justify-content: center; width: 40px; height: 36px; padding: 0; border-radius: 10px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer; }
+/* Menu button replaces the links whenever they don't fit on one row (set by i18n.js). */
+.topbar.compact .nav-toggle { display: inline-flex; }
+.topbar.compact .nav-links { display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 220px; max-width: calc(100vw - 32px);
+  flex-direction: column; align-items: stretch; gap: 0; padding: 6px; white-space: normal;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.14); }
+.topbar.compact nav.open .nav-links { display: flex; }
+.topbar.compact .nav-links a { padding: 12px; border-radius: 8px; font-size: 1rem; color: var(--ink); }
+.topbar.compact .nav-links a:hover, .topbar.compact .nav-links a:focus-visible { background: var(--paper); }
+.topbar.compact nav { gap: 8px; }
+@media (max-width: 700px) {
+  .topbar { gap: 10px; padding-block: 12px; margin-bottom: 24px; }
+  .brand { font-size: 1.15rem; }
+  .lang-select { padding: 6px 8px; min-height: 36px; }
+}
+@media (max-width: 360px) { .brand { font-size: 1rem; } .topbar { gap: 8px; } }
+
 :lang(zh-CN) { --font-display: "Spectral", "Noto Serif SC", "Songti SC", "SimSun", serif; --font-body: "IBM Plex Sans", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
 :lang(zh-CN) .eyebrow { letter-spacing: 0.04em; }
 
 /* Explanation depth (Simple / Deeper toggle in the toolbar) */
 .depth-ctl { display: flex; align-items: center; gap: 8px; }
+.tool-more { display: contents; }
+.tool-more-btn { display: none; align-items: center; justify-content: center; width: 44px; padding: 0; }
+.tool-status:empty { display: none; }
+/* Set by wonders.js when the tools would wrap: secondary tools fold into "More". */
+.toolbar.compact { position: relative; z-index: 15; flex-wrap: nowrap; }
+.toolbar.compact .tool-more-btn { display: inline-flex; align-self: stretch; }
+.toolbar.compact .tool-more { display: none; }
+.toolbar.compact .tool-more.open { display: flex; position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; max-width: calc(100vw - 32px);
+  flex-direction: column; align-items: stretch; gap: 4px; padding: 6px;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.14); }
+.toolbar.compact > *, .toolbar.compact .depth-ctl > * { flex-shrink: 0; white-space: nowrap; }
+.toolbar.compact .tool-status { flex-shrink: 1; white-space: normal; }
+.toolbar.compact .tool-more.open > * { text-align: left; white-space: normal; border-color: transparent; background: transparent; border-radius: 8px; padding: 10px 14px; color: var(--ink); text-decoration: none; }
+.toolbar.compact .tool-more.open > :hover, .toolbar.compact .tool-more.open > :focus-visible { background: var(--paper); }
+/* Keep the stop button reachable while a clip records. */
+.toolbar.compact .tool-more:not(.open):has(.recording) { display: contents; }
+.toolbar.compact .tool-more:not(.open) > :not(.recording) { display: none; }
+.toolbar.compact .depth-ctl { margin-left: auto; }
+.toolbar.compact .tool-status { flex-basis: 100%; }
+.toolbar.compact:has(.tool-status:not(:empty)) { flex-wrap: wrap; }
+.toolbar.tight .depth-ctl .eyebrow { display: none; }
+.toolbar.compact.stack { flex-wrap: wrap; }
+
 [data-depth="deep"] { display: none !important; }
 .depth-deep [data-depth="deep"] { display: revert !important; }
 .depth-deep [data-depth="simple"] { display: none !important; }

@@ -186,5 +186,40 @@ document.addEventListener("DOMContentLoaded", () => {
     if (u.href === location.href) location.reload();
     else location.replace(u.href);
   });
-  nav.append(sel);
+  // Short labels on phones so the menu stays narrow.
+  const SHORT = { en: "EN", "zh-CN": "中文", es: "ES" };
+  const narrow = matchMedia("(max-width: 700px)");
+  const label = () => { for (const o of sel.options) o.textContent = narrow.matches ? SHORT[o.value] || o.value : I.langs[o.value]; };
+  label();
+  narrow.addEventListener ? narrow.addEventListener("change", label) : narrow.addListener(label);
+
+  // Collapse the page links behind a menu button on phones, so the bar keeps one row.
+  const links = document.createElement("div");
+  links.className = "nav-links";
+  links.id = "navLinks";
+  links.append(...nav.childNodes);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "nav-toggle";
+  btn.setAttribute("aria-label", "Menu");
+  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-controls", "navLinks");
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 4.5h14M2 9h14M2 13.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const setOpen = (on) => { nav.classList.toggle("open", on); btn.setAttribute("aria-expanded", String(on)); };
+  btn.addEventListener("click", (e) => { e.stopPropagation(); setOpen(!nav.classList.contains("open")); });
+  links.addEventListener("click", (e) => { if (e.target.closest("a")) setOpen(false); });
+  document.addEventListener("click", (e) => { if (!nav.contains(e.target)) setOpen(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && nav.classList.contains("open")) { setOpen(false); btn.focus(); } });
+  nav.append(links, sel, btn);
+  const bar = nav.closest(".topbar");
+  const fit = () => {
+    if (!bar) return;
+    bar.classList.remove("compact");
+    if (bar.scrollWidth > bar.clientWidth + 1) bar.classList.add("compact");
+    else setOpen(false);
+  };
+  fit();
+  addEventListener("resize", fit);
+  addEventListener("load", fit);
+  if (document.fonts) document.fonts.ready.then(fit);
 });
