@@ -95,7 +95,7 @@
   // A block of text with inline markup (a sentence with a <b> in it) is
   // translated as a whole, so word order can change. Never for elements that
   // hold ids or controls, because page scripts keep references to those.
-  const BLOCKS = new Set(["P", "LI", "H1", "H2", "H3", "H4", "TD", "TH", "LABEL", "FIGCAPTION", "DT", "DD", "FOOTER", "SPAN", "SMALL"]);
+  const BLOCKS = new Set(["P", "LI", "A", "H1", "H2", "H3", "H4", "TD", "TH", "LABEL", "FIGCAPTION", "DT", "DD", "FOOTER", "SPAN", "SMALL"]);
   function isBlock(el) {
     if (!BLOCKS.has(el.tagName) || !el.firstElementChild) return false;
     if (el.querySelector("[id], input, select, textarea, button, canvas, svg")) return false;
