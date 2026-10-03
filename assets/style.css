@@ -214,3 +214,25 @@ button[aria-pressed="true"] { background: var(--ink); color: var(--paper); borde
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Real-world applications */
+.apps { margin-top: 48px; display: grid; gap: 18px; }
+.apps-head { display: grid; gap: 6px; }
+.apps-head p { color: var(--ink-soft); max-width: 66ch; }
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0 28px;
+  border-top: 1px solid var(--rule);
+}
+.app {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding-block: 18px;
+  border-bottom: 1px solid var(--rule);
+  min-width: 0;
+}
+.app p { font-size: 0.95rem; }
+.app .link { font-size: var(--step--1); color: var(--ink-soft); }
+.app .link b { color: var(--accent); font-weight: 600; }
