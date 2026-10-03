@@ -114,7 +114,41 @@
     filmCtx.fillStyle = rgba(0.9);
     dot(h);
     $("count").textContent = state.hits.length.toLocaleString();
+    if (ready && (state.rate <= 40 || !state.running)) WONDERS.sound("tick", { pitch: (x + HALF) / (2 * HALF) });
+    milestones();
   }
+
+  // ---------- Narration and challenges ----------
+  const spacingMM = () => state.lambda * 1e-6 * L_MM / state.d;
+  const fringesOn = () => state.bothOpen && !state.detector;
+  const STEPS = [100, 500, 1000, 3000, 10000];
+  let ready = false;   // no narration for the photons seeded on load
+  function milestones() {
+    if (!ready) return;
+    const n = state.hits.length;
+    if (STEPS.includes(n)) {
+      const msg = fringesOn()
+        ? `${n.toLocaleString()} photons detected. Bright and dark stripes are building up, ${spacingMM().toFixed(2)} mm apart.`
+        : state.bothOpen
+          ? `${n.toLocaleString()} photons detected. With the detector on there are no stripes, only two overlapping blobs.`
+          : `${n.toLocaleString()} photons detected. With one slit open there is a single smooth blob, no stripes.`;
+      WONDERS.describe(msg, { now: n >= 1000 });
+      if (n >= 500) WONDERS.sound("event", { pitch: 0.6 });
+    }
+    if (state.detector && state.bothOpen && n >= 300) WONDERS.challenge("which-path");
+    if (fringesOn() && spacingMM() > 4 && n >= 500) WONDERS.challenge("wide-fringes");
+    if (fringesOn() && Math.abs(state.d / state.a - 3) < 0.01 && n >= 1000) WONDERS.challenge("missing-stripe");
+  }
+  function describeScene() {
+    const n = state.hits.length.toLocaleString();
+    const setup = `Wavelength ${state.lambda} nm, slit separation ${state.d.toFixed(2)} mm, slit width ${state.a.toFixed(3)} mm.`;
+    let what;
+    if (!state.bothOpen) what = `Only the top slit is open. ${n} photons have landed in one smooth blob with no stripes.`;
+    else if (state.detector) what = `Both slits are open and the which-path detector is on. ${n} photons have landed in two overlapping blobs with no stripes.`;
+    else what = `Both slits are open and nothing records the path. ${n} photons have landed in bright and dark stripes ${spacingMM().toFixed(2)} mm apart.`;
+    return what + " " + setup + (state.running ? "" : " The source is paused.");
+  }
+  WONDERS.describer(describeScene);
 
   function fire(animate) {
     const x = samplePosition();
@@ -379,7 +413,12 @@
   $("lambda").addEventListener("input", (e) => { state.lambda = +e.target.value; paramsChanged(); });
   $("sep").addEventListener("input", (e) => { state.d = +e.target.value; paramsChanged(); });
   $("width").addEventListener("input", (e) => { state.a = +e.target.value; paramsChanged(); });
-  $("detector").addEventListener("change", (e) => { state.detector = e.target.checked; paramsChanged(); });
+  $("detector").addEventListener("change", (e) => {
+    state.detector = e.target.checked;
+    paramsChanged();
+    WONDERS.describe(state.detector ? "Which-path detector on. The screen was cleared; watch whether stripes form." : "Which-path detector off. The screen was cleared; watch whether stripes form.", { now: true });
+    WONDERS.sound("event", { pitch: state.detector ? 0.7 : 0.4 });
+  });
   $("theory").addEventListener("change", (e) => { state.showTheory = e.target.checked; });
   $("rate").addEventListener("input", (e) => {
     state.rate = Math.max(1, Math.round(Math.pow(400, e.target.value / 100)));
@@ -390,13 +429,14 @@
     $("play").textContent = state.running ? "Pause" : "Resume";
   });
   $("one").addEventListener("click", () => fire(true));
-  $("clear").addEventListener("click", clearScreen);
+  $("clear").addEventListener("click", () => { clearScreen(); WONDERS.describe("Screen cleared.", { now: true }); });
   function setSlits(both) {
     state.bothOpen = both;
     if (!both) { state.detector = false; $("detector").checked = false; }
     $("slitsBoth").setAttribute("aria-pressed", String(both));
     $("slitsTop").setAttribute("aria-pressed", String(!both));
     paramsChanged();
+    WONDERS.describe(both ? "Both slits open. The screen was cleared." : "Only the top slit is open. The screen was cleared.", { now: true });
   }
   $("slitsBoth").addEventListener("click", () => setSlits(true));
   $("slitsTop").addEventListener("click", () => setSlits(false));
@@ -424,5 +464,6 @@
   computePdf();
   updateReadouts();
   for (let i = 0; i < 250; i++) land(samplePosition());
+  ready = true;
   requestAnimationFrame(frame);
 })();

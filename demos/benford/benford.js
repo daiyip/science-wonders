@@ -155,6 +155,7 @@
 
   // ---------- Start / reset ----------
   function start() {
+    state.finished = false;
     state.items = build();
     state.gen = 0;
     state.growing = state.dataset === "growth";
@@ -359,6 +360,45 @@
     }
   }
 
+  // ---------- Narration and challenges ----------
+  const tr = (x) => (window.I18N ? I18N.t(x) : x);
+  function verdictOf(n, mad) {
+    if (n < 50) return "too few numbers to judge";
+    if (mad < 0.006) return "close conformity";
+    if (mad < 0.012) return "acceptable conformity";
+    if (mad < 0.015) return "marginal";
+    return "does not follow Benford";
+  }
+  function summary() {
+    const n = state.shown, c = tally();
+    let mad = 0;
+    for (let d = 1; d <= 9; d++) mad += Math.abs(c[d] / Math.max(1, n) - BENFORD[d]);
+    mad /= 9;
+    return { n, c, mad, verdict: verdictOf(n, mad) };
+  }
+  // Called once each time the counting (or the growth) finishes.
+  function finished() {
+    const { n, c, mad, verdict } = summary();
+    if (n < 2) return;
+    WONDERS.sound(mad < 0.012 && n >= 50 ? "success" : "event");
+    WONDERS.describe(tr("Counted " + n.toLocaleString("en-US") + " numbers: " + (100 * c[1] / n).toFixed(1) + "% start with 1 and " + (100 * c[9] / n).toFixed(1) + "% start with 9, against Benford's 30.1% and 4.6%.") + " " + tr("Verdict: " + verdict + "."));
+    const famous = state.dataset === "pow2" || state.dataset === "fib" || state.dataset === "fact";
+    if (state.dataset === "uniform" && n >= 50 && mad >= 0.015) WONDERS.challenge("uniform-fails");
+    if (famous && n >= 500 && mad < 0.006) WONDERS.challenge("sequence-close");
+    if (state.dataset === "custom" && n >= 50) WONDERS.challenge("own-data");
+  }
+  WONDERS.describer(() => {
+    const { n, c, verdict } = summary();
+    const names = { pow2: "powers of 2", fib: "Fibonacci numbers", fact: "factorials", growth: "town populations that grew randomly", uniform: "uniform random numbers from 1 to 9,999", custom: "numbers you pasted" };
+    const out = ["The chart shows the leading digits of " + n.toLocaleString("en-US") + " " + names[state.dataset] + "."];
+    if (state.dataset === "growth") out.push("Growth has reached generation " + state.gen + " of " + GENERATIONS + ".");
+    if (n >= 2) {
+      out.push("Digit 1 leads " + (100 * c[1] / n).toFixed(1) + "% of the time, digit 2 " + (100 * c[2] / n).toFixed(1) + "% and digit 9 " + (100 * c[9] / n).toFixed(1) + "%. Benford's law predicts 30.1%, 17.6% and 4.6%.");
+      out.push("Verdict: " + verdict + ".");
+    }
+    return out.map(tr).join(" ");
+  });
+
   // ---------- Loop ----------
   const REVEAL_MS = 2400;
   function frame(now) {
@@ -373,6 +413,7 @@
       if (state.gen >= GENERATIONS) state.growing = false;
       updateStats();
     }
+    if (!state.finished && !state.growing && state.shown >= state.items.length) { state.finished = true; finished(); }
     draw();
     requestAnimationFrame(frame);
   }
@@ -386,7 +427,7 @@
   $("size").addEventListener("change", start);
   $("replay").addEventListener("click", () => {
     if (state.dataset === "growth" || state.dataset === "uniform") start();
-    else { state.shown = Lab.reducedMotion ? state.items.length : 0; state.revealStart = performance.now(); updateStats(); }
+    else { state.finished = false; state.shown = Lab.reducedMotion ? state.items.length : 0; state.revealStart = performance.now(); updateStats(); }
   });
   $("reroll").addEventListener("click", start);
   $("showBenford").addEventListener("change", (e) => { state.showBenford = e.target.checked; });

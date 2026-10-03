@@ -110,6 +110,7 @@
     let seeded = 0;
     for (let k = nV; k < N && seeded < SEEDS; k++) { state.people[order[k]].s = I; seeded++; }
     state.tick = 0; state.over = false; state.everInfected = seeded; state.peak = seeded;
+    lastDaySaid = -1;
     lastTouch.fill(-10);
     state.hist = [counts()];
     updateInfectChance();
@@ -138,8 +139,8 @@
         const fresh = lastTouch[k] !== t - 1;
         lastTouch[k] = t;
         if (!fresh) continue;
-        if (a.s === I && b.s === S && Math.random() < pI) { b.s = I; b.newly = true; state.everInfected++; }
-        else if (b.s === I && a.s === S && Math.random() < pI) { a.s = I; a.newly = true; state.everInfected++; }
+        if (a.s === I && b.s === S && Math.random() < pI) { b.s = I; b.newly = true; state.everInfected++; infected(b); }
+        else if (b.s === I && a.s === S && Math.random() < pI) { a.s = I; a.newly = true; state.everInfected++; infected(a); }
       }
     }
     // Recovery: each tick an infected person recovers with chance 1/D (average 10 days).
@@ -152,6 +153,7 @@
       const c = counts();
       state.hist.push(c);
       state.peak = Math.max(state.peak, c[I]);
+      narrateDay();
       if (c[I] === 0 && !state.over) { state.over = true; announceEnd(c); }
     }
   }
@@ -374,7 +376,47 @@
   }
 
   function hint(t) { $("hint").textContent = t; }
+  // ---------- Accessibility and challenges ----------
+  const W_ = window.WONDERS;
+  let live = false;
+  function infected(p) {
+    if (live) W_.sound("tick", { pitch: 0.3 + 0.5 * (1 - (p.y - AY) / AH), pan: ((p.x - AX) / AW) * 2 - 1 });
+  }
+  function checkEnd(c) {
+    if (!live) return;
+    const herd = 1 - 1 / state.r0;
+    const cases = state.everInfected - Math.min(SEEDS, N - Math.round(N * state.vax / 100));
+    if (state.vax / 100 > herd && cases < 20) W_.challenge("herd");
+    if (state.vax === 0 && state.r0 >= 3 && state.peak < 60 && cases >= 20) W_.challenge("flatten");
+    if (state.r0 >= 15 && cases < 10) W_.challenge("measles");
+  }
+  let lastDaySaid = -1;
+  function narrateDay() {
+    const day = Math.floor(state.tick / TICKS_PER_DAY);
+    if (!live || state.over || day % 10 !== 0 || day === lastDaySaid) return;
+    lastDaySaid = day;
+    const c = counts();
+    W_.describe("Day " + day + ": " + c[I] + " infected, " + c[S] + " susceptible, " + c[R] + " recovered.");
+  }
+  W_.describer(() => {
+    const t = (x) => (window.I18N ? I18N.t(x) : x);
+    const c = counts();
+    const day = Math.floor(state.tick / TICKS_PER_DAY);
+    const herd = Math.round(Math.max(0, 1 - 1 / state.r0) * 100);
+    return [
+      "A crowd of " + N + " people. R0 is " + state.r0.toFixed(1) + ", " + state.vax + "% are vaccinated and " + state.distance + "% stay put.",
+      "Day " + day + ": " + c[S] + " susceptible, " + c[I] + " infected, " + c[R] + " recovered and " + c[V] + " vaccinated. The peak so far is " + Math.max(state.peak, c[I]) + " infected at once.",
+      state.over ? "The outbreak is over; " + state.everInfected + " people caught it." : "The outbreak is still going.",
+      state.vax > herd ? "Vaccination is above the herd-immunity threshold of " + herd + "%." : "Vaccination is below the herd-immunity threshold of " + herd + "%.",
+    ].map(t).join(" ");
+  });
+
   function announceEnd(c) {
+    if (live) {
+      W_.sound("event", { pitch: 0.7 });
+      W_.describe("The outbreak ended on day " + Math.floor(state.tick / TICKS_PER_DAY) + ". " + state.everInfected + " people caught it and the peak was " + state.peak + " infected at once.", { now: true });
+    }
+    checkEnd(c);
     const unvax = N - c[V];
     const share = unvax ? Math.round(100 * state.everInfected / unvax) : 0;
     const day = Math.floor(state.tick / TICKS_PER_DAY);
@@ -461,6 +503,7 @@
   } else {
     setRunning(true);
   }
+  live = true;
   draw();
   updateReadouts();
   requestAnimationFrame(frame);

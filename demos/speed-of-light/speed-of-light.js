@@ -301,8 +301,23 @@
     const before = state.elapsed;
     state.elapsed = Math.min(tt, state.elapsed + dt * state.speed);
     const lt = lightTime();
-    if (before < lt && state.elapsed >= lt) { state.flash = Lab.reducedMotion ? 0 : 1; state.flashX = TX; }
-    if (state.roundTrip && state.elapsed >= tt && before < tt) { state.flash = Lab.reducedMotion ? 0 : 1; state.flashX = EX; }
+    if (before < lt && state.elapsed >= lt) {
+      state.flash = Lab.reducedMotion ? 0 : 1; state.flashX = TX;
+      if (state.dest === "sun") W8.challenge("sun");
+    }
+    // Narrate and chime once per send, not on every automatic repeat.
+    if (before < lt && state.elapsed >= lt && !state.saidArrive) {
+      state.saidArrive = true;
+      W8.describe("The light pulse reached " + (state.dest === "moon" || state.dest === "sun" ? "the " : "") + dest().name + " after " + fmtDur(lt) + ".", { now: true });
+      W8.sound("event", { pitch: 0.75 });
+    }
+    if (state.roundTrip && state.elapsed >= tt && before < tt) {
+      state.flash = Lab.reducedMotion ? 0 : 1; state.flashX = EX;
+      if (state.saidEcho) return;
+      state.saidEcho = true;
+      W8.describe("The echo is back on Earth after " + fmtDur(tt) + ".", { now: true });
+      W8.sound("event", { pitch: 0.35 });
+    }
   }
 
   function updateMainStats() {
@@ -480,6 +495,19 @@
     }
     return 0;
   }
+  // ---------- Narration, sound and challenges ----------
+  const W8 = window.WONDERS;
+  W8.describer(() => {
+    const stats = [...document.querySelectorAll(".stats")[0].children].map((s) => s.textContent.replace(/\s+/g, " ").trim()).join(". ") + ".";
+    return tr("A light pulse travelling from Earth, drawn to scale, above a logarithmic ruler of light travel times.") + " " + stats + " " + tr("Mars rover:") + " " + $("roverVerdict").textContent;
+  });
+  function roverOutcome(done) {
+    if (done.kind === "crash") { W8.sound("fail"); return; }
+    W8.sound("success");
+    if (done.kind !== "stopped") return;
+    W8.challenge("rover-stop");
+    if (DESTS.mars.km >= 300e6 && done.x >= ROCK - 10) W8.challenge("rover-far");
+  }
   function advanceRover(dt) {
     rover.gt += dt;
     const g = rover.gt;
@@ -508,6 +536,7 @@
     // News of the outcome reaches Earth one light time later.
     if (rover.done && !rover.reported && g >= rover.done.t + oneWay()) {
       rover.reported = true;
+      roverOutcome(rover.done);
       const lag = fmtDur(oneWay() * 60);
       if (rover.done.kind === "crash") {
         setVerdict("Crunch. The rover hit the boulder " + lag + " before your screen showed it." + (rover.stopSentAt != null ? " Your stop command was still in space." : ""), "bad");
@@ -627,12 +656,14 @@
       proxima: "The nearest star after the Sun. Even sped up to a year per second the trip takes over 4 seconds. At real time you would wait 4 years and 3 months.",
     };
     $("hint").textContent = hints[key];
+    W8.describe(hints[key]);
   }
   function setSpeed(v) {
     state.speed = v;
     $("speed").value = String(v);
   }
   function send() {
+    state.saidArrive = state.saidEcho = false;
     state.elapsed = 0;
     state.hold = 0;
     state.flash = 0;

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="fourier"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Every sound is sines · Science Wonders</title>
+<meta name="description" content="Build square, sawtooth and triangle waves, or your own drawing, out of pure sine waves. Watch rotating circles add them up, see the stubborn 9% overshoot at every jump, and hear the difference.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Every sound is sines">
+<meta property="og:description" content="Stack rotating circles to build any wave or any drawing out of pure sine waves, and hear why a square wave and a sine wave sound different at the same pitch.">
+<meta property="og:url" content="https://science.daiyip.com/demos/fourier/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/fourier.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  [hidden] { display: none !important; }
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  select {
+    font: inherit;
+    font-size: var(--step--1);
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+    width: 100%;
+    min-width: 0;
+  }
+  #listen.on { background: var(--warn); border-color: var(--warn); color: var(--accent-ink); }
+  .bench canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls button { min-height: 38px; }
+    select { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Mathematics · Fourier 1807 / Gibbs 1899</div>
+    <h1>Every sound is sines</h1>
+    <p class="lede">A square wave has sharp corners and sudden jumps. A sine wave has neither. Yet stack enough sine waves, each one a circle turning at its own speed, and the corners appear. Almost: next to every jump the sum overshoots by about 9%, and no number of extra terms makes that go away.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="610" tabindex="0" aria-label="Rotating circles whose tip traces a sum of sine waves, next to a plot of that sum against the target wave, with the first harmonics drawn separately and a bar chart of every harmonic's size. Drag on the wave to redraw it; with the picture focused, arrow keys move a pen and reshape the wave, and plus or minus change the number of terms."></canvas>
+  </div>
+  <div class="stats">
+    <span data-mode="wave">Terms used <b id="termsNow">5</b></span>
+    <span data-mode="wave">Highest harmonic <b id="highest">n = 9</b></span>
+    <span data-mode="wave">Overshoot at the jump <b id="overshoot">–</b></span>
+    <span data-mode="wave">Error (RMS) <b id="rms">–</b></span>
+    <span data-mode="wave">Sound <b id="soundState">off</b></span>
+    <span data-mode="draw" hidden>Circles <b id="circlesNow">–</b></span>
+    <span data-mode="draw" hidden>Redraw error (RMS) <b id="drawErr">–</b></span>
+    <span data-mode="draw" hidden>Shape <b id="shapeNow">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Mode</span>
+      <div class="seg" role="group" aria-label="Mode">
+        <button id="modeWave" aria-pressed="true">Build a wave</button>
+        <button id="modeDraw" aria-pressed="false">Redraw a shape</button>
+      </div>
+    </div>
+    <div class="control" data-mode="wave">
+      <label for="target">Target wave</label>
+      <select id="target">
+        <option value="sine">Pure sine</option>
+        <option value="square" selected>Square wave</option>
+        <option value="sawtooth">Sawtooth wave</option>
+        <option value="triangle">Triangle wave</option>
+        <option value="custom">Your own drawn wave</option>
+      </select>
+    </div>
+    <div class="control" data-mode="wave">
+      <label for="terms">Terms (sine waves added) <output id="termsOut">5</output></label>
+      <input type="range" id="terms" min="1" max="50" step="1" value="5">
+    </div>
+    <div class="control" data-mode="wave">
+      <span class="label">Hear it</span>
+      <div class="button-row">
+        <button id="listen" class="primary">Play sound</button>
+      </div>
+    </div>
+    <div class="control" data-mode="wave">
+      <label for="volume">Volume <output id="volumeOut">40%</output></label>
+      <input type="range" id="volume" min="0" max="100" step="1" value="40">
+    </div>
+    <div class="control" data-mode="wave">
+      <label for="pitch">Pitch <output id="pitchOut">220 Hz</output></label>
+      <input type="range" id="pitch" min="110" max="660" step="1" value="220">
+    </div>
+    <div class="control" data-mode="draw" hidden>
+      <label for="shape">Shape</label>
+      <select id="shape">
+        <option value="heart" selected>Heart</option>
+        <option value="star">Star</option>
+        <option value="square">Square</option>
+        <option value="custom">Your drawing</option>
+      </select>
+    </div>
+    <div class="control" data-mode="draw" hidden>
+      <label for="circles">Circles <output id="circlesOut">10</output></label>
+      <input type="range" id="circles" min="1" max="255" step="1" value="10">
+    </div>
+    <div class="control" data-mode="draw" hidden>
+      <span class="label">Your shape</span>
+      <div class="button-row">
+        <button id="clearShape">Clear and draw</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Motion</span>
+      <div class="button-row">
+        <button id="play">Pause</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Add terms to the square wave and watch the spike next to each jump: it gets thinner, never shorter. Drag on the wave to draw your own. With the picture focused, the arrow keys move a pen and reshape the wave, and + or − change the number of terms.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each circle is one sine wave. Its radius is the wave's size, and it turns n times for every single turn of the first circle. Chain the circles end to end and the height of the last tip is the sum of all their heights. That height is drawn across to the right as the bright curve; the faint curve is the wave you are trying to build.</p>
+      <p>Underneath, the first few harmonics are drawn on their own, and the bars give the size of every harmonic. Those bars are the wave's recipe. In the second mode the same idea runs in two dimensions: circles turning at whole-number speeds trace any closed outline.</p>
+      <p data-depth="deep">The square, sawtooth and triangle use their exact textbook coefficients. A wave you draw is stored as 512 heights over one period, and each coefficient is computed by multiplying those heights by a sine or cosine and averaging, which is the integral in the math section done as a sum. A drawn shape is first resampled to 256 points spaced evenly along its outline, then given a discrete Fourier transform.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>On the square wave, set Terms to 1, then 3, 10 and 50. The corners sharpen and the ripples squeeze toward the jumps, but the highest spike stays about 9% of the jump above the top.</li>
+        <li>Switch to the triangle wave. It has corners but no jumps, its harmonics shrink much faster, and three terms already look almost perfect.</li>
+        <li>Press Play sound, then switch between Pure sine and Square wave. The pitch stays the same; only the harmonics change. That difference is what your ear calls the colour, or timbre, of a sound.</li>
+        <li>In Redraw a shape, pick the star. Its sharp points need far more circles than the smooth heart.</li>
+      </ul>
+      <p data-depth="deep">With 5 terms the square wave's highest point is about 1.18, an overshoot of 9.1% of the jump of 2. With 50 terms the peak is still 1.18, at 8.95%, but it now sits ten times closer to the jump. The mean error keeps falling, roughly as one over the square root of the number of terms, while the largest error does not fall at all.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>In 1807 Joseph Fourier claimed that any wave, even one with corners and jumps, is a sum of smooth sine waves. Lagrange objected: how can curves with no corners add up to a corner? Both had a point. The sum does approach the jump, but with any finite number of terms it rings and overshoots right next to it, and the overshoot never shrinks below about 9%.</p>
+      <p class="muted">Henry Wilbraham noticed the overshoot in 1848. It became famous in 1898, when Albert Michelson's 80-term harmonic analyser drew it and Josiah Willard Gibbs explained it in letters to Nature in 1898 and 1899.</p>
+      <p data-depth="deep">Mathematicians say the series converges in the mean but not uniformly. The area between the sum and the target goes to zero, because the overshoot gets narrower in proportion to 1/N, but its height stays fixed. Your ear runs a version of the same analysis: the cochlea responds to different frequencies at different places along its length, so you hear a square wave as a fundamental plus a set of fainter, higher tones.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">f(t) = a₀/2 + Σ<sub>n=1</sub><sup>∞</sup> [ a<sub>n</sub> cos nωt + b<sub>n</sub> sin nωt ]<br>a<sub>n</sub> = (2/T) ∫<sub>0</sub><sup>T</sup> f(t) cos nωt dt<br>b<sub>n</sub> = (2/T) ∫<sub>0</sub><sup>T</sup> f(t) sin nωt dt<br>ω = 2π/T</div>
+      <p>The Fourier series of a wave with period T. Each pair a<sub>n</sub>, b<sub>n</sub> becomes one circle of radius √(a<sub>n</sub>² + b<sub>n</sub>²) turning n times per period, and the Terms slider keeps the first N circles whose radius is not zero. For a drawn wave the page replaces each integral by an average over the 512 stored heights.</p>
+      <div class="eq" data-depth="deep" translate="no">f<sub>1</sub>(t) = (4/π) Σ<sub>n = 1, 3, 5, …</sub> sin(nωt) / n<br>f<sub>2</sub>(t) = (2/π) Σ<sub>n = 1, 2, 3, …</sub> (−1)<sup>n+1</sup> sin(nωt) / n<br>f<sub>3</sub>(t) = (8/π²) Σ<sub>n = 1, 3, 5, …</sub> (−1)<sup>(n−1)/2</sup> sin(nωt) / n²</div>
+      <p>The square wave f<sub>1</sub>, the sawtooth f<sub>2</sub> and the triangle f<sub>3</sub>, each running between −1 and +1. These are the coefficients the page uses. The two waves with jumps have harmonics that shrink only as 1/n; the triangle, which is continuous, has harmonics that shrink as 1/n², which is why it converges so much faster and shows no lasting overshoot.</p>
+      <div class="eq" data-depth="deep" translate="no">max S<sub>N</sub> → (2/π) Si(π) ≈ 1.1790<br>Si(x) = ∫<sub>0</sub><sup>x</sup> (sin u / u) du<br>(1.1790 − 1) ÷ 2 ≈ 0.0895</div>
+      <p>The Gibbs overshoot. As the number of terms N grows, the highest point of the square wave's partial sum S<sub>N</sub> approaches (2/π) Si(π), so the overshoot approaches 8.95% of the jump. The Overshoot readout finds the highest and lowest points of the partial sum on a grid of 2,048 points per period and compares them with the target's range.</p>
+      <div class="eq" data-depth="deep" translate="no">c<sub>k</sub> = (1/M) Σ<sub>m=0</sub><sup>M−1</sup> z<sub>m</sub> e<sup>−2πikm/M</sup><br>z(t) ≈ Σ<sub>k ∈ K</sub> c<sub>k</sub> e<sup>2πikt</sup><br>ε² = Σ<sub>k ∉ K</sub> |c<sub>k</sub>|² ÷ Σ<sub>k ≠ 0</sub> |c<sub>k</sub>|²</div>
+      <p>For shapes, each point is a complex number z = x + iy and the M = 256 resampled points are transformed with the discrete Fourier transform. Each c<sub>k</sub> is a circle of radius |c<sub>k</sub>| turning k times per loop, clockwise when k is negative. The page keeps the set K of the largest circles, as many as the Circles slider says, and by Parseval's theorem the squared redraw error ε² is simply the share of |c<sub>k</sub>|² left out. With all 255 circles the redraw passes exactly through every point.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Thinking in frequencies</h2>
+      <p>Splitting a signal into sine waves turns hard problems into easy ones: you can see which frequencies matter, keep those and throw the rest away.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Audio</span>
+        <h3>MP3 and streaming music</h3>
+        <p>Audio formats such as MP3 and AAC cut sound into short slices, turn each slice into frequencies with a cousin of the Fourier transform, and spend bits only on the components a listener can actually hear. A 128 kbit/s MP3 is about one eleventh the size of CD audio.</p>
+        <span class="link"><b>In the demo:</b> drop the small bars and the wave barely changes.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Images</span>
+        <h3>JPEG photos</h3>
+        <p>JPEG splits a photo into 8 × 8 pixel blocks and writes each block as a sum of 64 two-dimensional cosine patterns. Fine patterns that the eye barely notices are stored roughly or not at all, which is where most of the saving comes from and why heavy compression blurs sharp edges into ripples.</p>
+        <span class="link"><b>In the demo:</b> cutting high harmonics rounds off corners and adds ringing.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>MRI scanners</h3>
+        <p>An MRI scanner does not take a picture directly. Its coils record how strongly the body's signal contains each spatial frequency, filling a grid called k-space, and a computer turns that grid into an image with an inverse Fourier transform. Ringing lines next to sharp edges in MRI scans are the Gibbs phenomenon.</p>
+        <span class="link"><b>In the demo:</b> the 9% overshoot at a jump, in a medical image.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Communications</span>
+        <h3>Wi-Fi and 4G</h3>
+        <p>Modern radio links use OFDM: data is spread over dozens to thousands of closely spaced sine-wave carriers sent at once. The transmitter builds the combined signal with an inverse fast Fourier transform and the receiver separates the carriers again with a forward one, many thousands of times a second.</p>
+        <span class="link"><b>In the demo:</b> the spectrum bars, each one carrying its own data.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Oceans</span>
+        <h3>Tide-predicting machines</h3>
+        <p>Tides are a sum of regular cycles set by the Moon and Sun. In 1872 Lord Kelvin built a machine of pulleys and gears that added ten such cycles to draw a year of tides for a port. Later machines summed about 40 and were used to plan the D-Day landings in 1944.</p>
+        <span class="link"><b>In the demo:</b> rotating circles adding up, built in brass.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Music</span>
+        <h3>Tuners, synthesisers and song recognition</h3>
+        <p>A guitar tuner finds the fundamental frequency in the sound. Additive synthesisers build instrument tones by stacking harmonics, just like the circles here. Song-recognition apps such as Shazam match a fingerprint made from the strongest peaks of a short recording's frequency content over time.</p>
+        <span class="link"><b>In the demo:</b> same pitch, different harmonics, different instrument.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Square, sawtooth and triangle waves use their exact Fourier coefficients. Drawn waves are stored as 512 samples per period, and drawn shapes are resampled to 256 points evenly spaced along the outline and transformed with a direct discrete Fourier transform. The sound is synthesised by the browser from the same coefficients and scaled so every wave has the same peak level, which makes waves with strong harmonics sound a little louder.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="fourier.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/fourier.js"></script>
+<script src="../../assets/wonders.js" data-slug="fourier"></script>
+</body>
+</html>

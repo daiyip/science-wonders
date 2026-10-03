@@ -101,6 +101,7 @@
     state.seenAll = 0; state.wasMixed = false; state.nudged = -1;
     state.hist = [];
     state.message = null;
+    lastSpoken = -1;
     countLeft();
     setHint("The wall has just been pulled out. Let the gas spread for a few seconds, then press Reverse time.");
     updateOdds();
@@ -160,7 +161,7 @@
     countLeft();
     if (!state.partition && state.dir === 1) {
       if (state.nLeft < state.N) state.wasMixed = true;
-      else if (state.wasMixed) { state.seenAll++; state.wasMixed = false; }
+      else if (state.wasMixed) { state.seenAll++; state.wasMixed = false; onAllLeft(); }
     }
   }
 
@@ -171,12 +172,38 @@
     state.nLeft = n;
   }
 
+  // ---------- Accessibility and challenges ----------
+  const W_ = window.WONDERS;
+  function onAllLeft() {
+    W_.sound("event", { pitch: 0.2, pan: -0.6 });
+    W_.describe("All " + state.N + " particles are in the left half on their own, with no reversal.", { now: true });
+    if (state.N >= 10) W_.challenge("by-chance");
+  }
+  let lastSpoken = -1;
+  function narrate() {
+    // A milestone every time the split settles near even.
+    if (state.dir === 1 && !state.partition && lastSpoken !== state.N && Math.abs(state.nLeft / state.N - 0.5) < 0.05 && state.clock > STEPS_PER_SECOND) {
+      lastSpoken = state.N;
+      W_.describe("The gas has spread out: " + state.nLeft + " of " + state.N + " particles are in the left half.");
+    }
+  }
+  W_.describer(() => {
+    const t = (x) => (window.I18N ? I18N.t(x) : x);
+    const a = state.N + " gas particles in a box" + (state.partition ? " with the wall in place." : " with no wall.") ;
+    const b = state.nLeft + " are in the left half and " + (state.N - state.nLeft) + " in the right. The entropy is " + lnC(state.N, state.nLeft).toFixed(1) + " of a possible " + sMax().toFixed(1) + ".";
+    const c = state.dir === 1
+      ? "Time runs forward; the clock reads " + (state.clock / STEPS_PER_SECOND).toFixed(1) + " seconds."
+      : "Time runs backward; the clock reads " + (state.clock / STEPS_PER_SECOND).toFixed(1) + " seconds and is heading for zero.";
+    return [a, b, c].map(t).join(" ");
+  });
+
   function reverse() {
     [X, XP] = [XP, X];
     [Y, YP] = [YP, Y];
     state.clock -= state.dir;
     state.dir = -state.dir;
     state.nudged = -1;
+    W_.sound("event", { pitch: state.dir === -1 ? 0.2 : 0.7 });
     if ($("nudge").checked) {
       // Shift one random particle by a single unit: 1/65,536 of a pixel.
       const k = Math.floor(Math.random() * state.N);
@@ -191,6 +218,9 @@
     } else {
       setHint("Time is running forward again, away from the start.");
     }
+    W_.describe(state.dir === -1
+      ? (state.nudged >= 0 ? "Time reversed, with one particle nudged by 1/65,536 of a pixel." : "Time reversed. Every velocity has been flipped.")
+      : "Time is running forward again.", { now: true });
     if (!state.running) setRunning(true);
     countLeft();
     updateReadouts();
@@ -439,11 +469,14 @@
       wait = "about " + (yrs < 9 ? Math.round(Math.pow(10, yrs)).toLocaleString("en-US") : sci(yrs, 1)) + " years";
       if (yrs > AGE) wait += ", roughly " + (yrs - AGE < 6 ? Math.round(Math.pow(10, yrs - AGE)).toLocaleString("en-US") : sci(yrs - AGE, 1)) + " times the age of the universe";
     }
-    $("odds").innerHTML =
+    // Swap in a fresh paragraph so the translator sees the whole sentence at once.
+    const old = $("odds"), odds = old.cloneNode(false);
+    odds.innerHTML =
       "<b>Could it happen by itself?</b> Each particle is equally likely to be in either half, so the chance that all " + N +
       " are on the left at a given moment is (1/2)<sup>" + N + "</sup> = " + p + ", or " + oddsLine(N) +
       ". Taking one fresh look every second, you would expect to wait " + wait +
       ". A real room holds around 10<sup>27</sup> air molecules.";
+    old.replaceWith(odds);
   }
 
   function setHint(text, alert) {
@@ -482,11 +515,17 @@
     setRunning(false);
     const N = state.N, n = state.nLeft;
     if (n === N) {
+      W_.sound("success");
+      W_.describe("Back at t = 0: all " + N + " particles are on the left again. Every particle retraced its path.", { now: true });
+      W_.challenge("unmix");
       state.message = { good: true, a: "Back at t = 0: all " + N + " on the left", b: "Every particle retraced its path exactly." };
       setHint(state.nudged >= 0
         ? "Even with the nudge, all " + N + " particles made it back. With so few collisions the tiny error never had the chance to grow. Try it with a few hundred particles."
         : "Back at the start: all " + N + " particles are on the left, exactly where they began. The laws ran backwards without complaint. Press Play to keep going past t = 0, or Reverse time to run forward again.");
     } else {
+      W_.sound("fail");
+      W_.describe("Back at t = 0, but only " + n + " of " + N + " particles are on the left. A tiny error grew until the reversal failed.", { now: true });
+      if (state.nudged >= 0) W_.challenge("nudge");
       state.message = { good: false, a: "Back at t = 0, but only " + n + " of " + N + " on the left", b: "A tiny error grew until the reversal failed." };
       setHint("The clock is back at zero but the gas is still mixed: only " + n + " of " + N + " particles made it back. The nudge was 1/65,536 of a pixel. Each collision multiplied the error and spread it to new particles until the reversed motion no longer matched the original.", true);
     }
@@ -498,6 +537,7 @@
     if (state.running) {
       advance(state.speed);
       sample();
+      narrate();
     }
     draw();
     if (++frameNo % 6 === 0 || !state.running) updateReadouts();

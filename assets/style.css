@@ -355,3 +355,35 @@ a.btn { display: inline-block; text-decoration: none; }
 .depth-seg button + button { border-left: 1px solid var(--rule); }
 .explain .deep-math { grid-column: 1 / -1; }
 @media (pointer: coarse) { input[type="range"] { height: 32px; } }
+
+/* Accessibility helpers */
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.sr-only-focusable:not(:focus):not(:focus-visible) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* Challenges */
+.challenges {
+  margin-top: 22px; padding: 16px 20px; display: grid; gap: 10px;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.challenges-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.challenge-count { font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-soft); }
+.challenge-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.challenge { display: grid; grid-template-columns: 1.4em 1fr; gap: 8px; align-items: start; max-width: 72ch; }
+.challenge-mark { color: var(--ink-soft); font-size: 1.1em; line-height: 1.4; }
+.challenge.done .challenge-mark { color: var(--good); }
+.challenge.done .challenge-text > span:first-child { color: var(--ink-soft); }
+.challenge.just-done { animation: challenge-pop 1.2s ease 2; }
+@keyframes challenge-pop { 50% { background: color-mix(in srgb, var(--good) 18%, transparent); } }
+.challenge details { font-size: var(--step--1); color: var(--ink-soft); }
+.challenge summary { cursor: pointer; width: fit-content; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  z-index: 20; max-width: min(92vw, 520px); padding: 10px 16px; border-radius: var(--radius);
+  background: var(--ink); color: var(--paper); font-size: var(--step--1); box-shadow: 0 6px 24px rgba(0,0,0,.25);
+  transition: opacity .5s, transform .5s;
+}
+.toast.out { opacity: 0; transform: translate(-50%, 10px); }
+.embed .challenges, .presenting .challenges { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .challenge.just-done { animation: none; } .toast { transition: none; } }

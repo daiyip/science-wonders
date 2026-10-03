@@ -198,10 +198,19 @@
     if (op.kind === "buses" && op.method === "prime") hotel.gaps = true;
     hotel.tally[op.kind]++;
     updateHotelStats();
+    if (op.kind === "buses" && op.method === "prime") WONDERS.challenge("prime");
+    const said = {
+      guest: "1 new guest checked in. Every guest moved from room n to room n + 1, room 1 went to the newcomer, and no one was turned away.",
+      bus: "A bus of infinitely many guests checked in. Old guests moved to the even rooms, passengers took the odd rooms, and no one was turned away.",
+      diag: "Infinitely many buses checked in using the diagonal zigzag. Every guest has a room, no room is empty, and no one was turned away.",
+      prime: "Infinitely many buses checked in using prime powers. Every guest has a room, infinitely many rooms such as room 6 stay empty, and no one was turned away.",
+    }[op.kind === "buses" ? op.method : op.kind];
+    WONDERS.describe(said);
   }
 
   function runOp(kind) {
     commit();
+    WONDERS.sound("event", { pitch: kind === "guest" ? 0.2 : kind === "bus" ? 0.5 : 0.8 });
     hotel.op = buildOp(kind);
     if (Lab.reducedMotion) commit();
     updateHotelStats();
@@ -231,7 +240,7 @@
     hc.fillStyle = g.colour;
     hc.beginPath(); hc.arc(x, y, r, 0, Math.PI * 2); hc.fill();
     hc.fillStyle = "#05080e";
-    hc.font = (HN ? "600 11px " : g.label.length > 2 ? "600 9px " : "600 11px ") + MONO;
+    hc.font = (HN ? "600 11px " : g.label.length > 2 ? "600 10px " : "600 11px ") + MONO;
     hc.textAlign = "center";
     hc.textBaseline = "middle";
     hc.fillText(g.label, x, y + 0.5);
@@ -496,6 +505,7 @@
   function step() {
     cantor.flash = cantor.k;
     cantor.flashAt = performance.now();
+    WONDERS.sound("tick", { pitch: newDigit(cantor.k) / (cantor.base - 1) });
     cantor.k++;
     updateCantorStats();
   }
@@ -657,6 +667,15 @@
       }
     }
 
+    // Keyboard cursor
+    if (document.activeElement === cv && cantor.cursor) {
+      const [ci, cj] = clampCursor();
+      cc.strokeStyle = "#ffffff";
+      cc.lineWidth = 2;
+      cc.strokeRect(cx(cj) - COLW / 2 + 1, cy(ci) - ROWH / 2 + 1, COLW - 2, ROWH - 2);
+      cc.lineWidth = 1;
+    }
+
     // Caption
     cc.font = "13px " + SANS;
     cc.textAlign = "left";
@@ -692,13 +711,55 @@
     const j = Math.floor(cantor.view + (x - GX) / COLW);
     return i >= 0 && j >= 0 ? [i, j] : null;
   }
-  cv.addEventListener("click", (e) => {
-    const c = cellAt(e);
-    if (!c) return;
-    const [i, j] = c;
+  function editCell(i, j) {
     const d = digitOf(cantor.list, i, j);
     cantor.list.edits.set(i + "," + j, cantor.base === 2 ? 1 - d : (d + 1) % 10);
     updateCantorStats();
+    const nd = digitOf(cantor.list, i, j);
+    WONDERS.sound("tick", { pitch: nd / (cantor.base - 1) });
+    if (i === j && j < cantor.k) {
+      WONDERS.challenge("dodge");
+      WONDERS.describe("Row " + (i + 1) + ", digit " + (j + 1) + " is now " + nd + ", so the new string's digit " + (j + 1) + " changed to " + newDigit(j) + ".", { now: true });
+    } else {
+      WONDERS.describe("Row " + (i + 1) + ", digit " + (j + 1) + " is now " + nd + ".", { now: true });
+    }
+  }
+  cv.addEventListener("click", (e) => {
+    const c = cellAt(e);
+    if (!c) return;
+    cantor.cursor = c;
+    editCell(c[0], c[1]);
+  });
+  // Keyboard: a cursor cell inside the visible part of the grid.
+  function clampCursor() {
+    const f = Math.floor(cantor.view + 0.5);
+    const maxCol = f + Math.max(1, VC - Math.ceil(FADE / COLW)) - 1;
+    if (!cantor.cursor) cantor.cursor = [f, f];
+    let [i, j] = cantor.cursor;
+    i = Math.max(f, Math.min(f + VR - 1, i));
+    j = Math.max(f, Math.min(maxCol, j));
+    cantor.cursor = [i, j];
+    return cantor.cursor;
+  }
+  function sayCursor() {
+    const [i, j] = cantor.cursor;
+    const d = digitOf(cantor.list, i, j);
+    WONDERS.describe(i === j ? "Row " + (i + 1) + ", digit " + (j + 1) + ": " + d + ", on the diagonal." : "Row " + (i + 1) + ", digit " + (j + 1) + ": " + d + ".", { now: true });
+  }
+  cv.addEventListener("focus", () => { clampCursor(); sayCursor(); });
+  cv.addEventListener("keydown", (e) => {
+    const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    if (moves[e.key]) {
+      e.preventDefault();
+      const [i, j] = clampCursor();
+      cantor.cursor = [i + moves[e.key][0], j + moves[e.key][1]];
+      clampCursor();
+      sayCursor();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const [i, j] = clampCursor();
+      editCell(i, j);
+    }
   });
   cv.addEventListener("mousemove", (e) => { cv.style.cursor = cellAt(e) ? "pointer" : "default"; });
 
@@ -747,6 +808,9 @@
     cantor.list = { prefix: [flipOld].concat(old.prefix), edits, seed: old.seed };
     cantor.inserted++;
     restartDiag(true);
+    WONDERS.sound("event");
+    WONDERS.describe("The new string is now row 1 and every other row moved down one. The diagonal runs again and builds another string the list missed.", { now: true });
+    if (cantor.inserted >= 3) WONDERS.challenge("three-escapees");
   });
 
   /* =========================================================
@@ -759,6 +823,7 @@
       if (cantor.k >= 60) {
         cantor.playing = false;
         $("playDiag").textContent = "Play";
+        WONDERS.describe("The diagonal has passed 60 rows. The new string differs from each of them, and the same holds for every row, forever.");
       }
     }
     drawHotel(now);
@@ -777,6 +842,24 @@
     });
     ro.observe(hcv.parentElement); ro.observe(cv.parentElement);
   }
+
+  // ---------- Screen-reader description ----------
+  const tr = (x) => (window.I18N ? I18N.t(x) : x);
+  WONDERS.describer(() => {
+    const out = [];
+    const t = hotel.tally;
+    const empties = [];
+    for (let r = 1; r <= ROOMS; r++) if (!hotel.rooms[r]) empties.push(r);
+    out.push("Hilbert's hotel check-ins so far: single guests " + t.guest + ", buses " + t.bus + ", fleets of infinitely many buses " + t.buses + ". No guest was turned away.");
+    out.push(hotel.gaps ? "Infinitely many rooms are empty, starting with room " + (empties[0] || 1) + "." : "Every room is full.");
+    const k = cantor.k;
+    let s = cantor.base === 10 ? "0." : "";
+    for (let j = 0; j < Math.min(k, 12); j++) s += newDigit(j);
+    out.push(cantor.base === 10 ? "Cantor's list holds decimal numbers between 0 and 1." : "Cantor's list holds infinite strings of 0s and 1s.");
+    out.push(k ? "The diagonal has changed " + k + " digits, so the new string, which starts " + s + ", differs from rows 1 to " + k + "." : "The diagonal has not started yet.");
+    if (cantor.inserted) out.push("You have added the new string to the top " + cantor.inserted + " times.");
+    return out.map(tr).join(" ");
+  });
 
   fullHotel();
   updateHotelStats();

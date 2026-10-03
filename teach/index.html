@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../assets/i18n.js" data-page="@e"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Teacher Packs · Science Wonders</title>
+<meta name="description" content="Printable worksheets and lesson plans for every Science Wonders experiment.">
+<meta property="og:title" content="Teacher Packs · Science Wonders">
+<meta property="og:description" content="Printable worksheets and lesson plans for every Science Wonders experiment.">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/home.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .pack-actions { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: -6px 0 26px; }
+  .pack-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-mono); font-size: var(--step--1); color: var(--ink-soft); margin-bottom: 18px; }
+  .sheet { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 26px 28px; margin-bottom: 28px; display: grid; gap: 18px; min-width: 0; }
+  .sheet h2 { font-family: var(--font-display); font-size: var(--step-2); }
+  .sheet h3 { font-family: var(--font-display); font-size: var(--step-1); margin-bottom: 6px; }
+  .sheet ol, .sheet ul { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+  .sheet p, .sheet li { max-width: 75ch; }
+  .sheet-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; border-bottom: 1px solid var(--rule); padding-bottom: 12px; }
+  .name-line { display: flex; gap: 24px; flex-wrap: wrap; font-size: var(--step--1); color: var(--ink-soft); }
+  .name-line span { min-width: 180px; border-bottom: 1px solid var(--ink-soft); padding-bottom: 2px; }
+  .lines { display: grid; gap: 22px; margin-top: 8px; }
+  .opts { list-style: none; padding-left: 0.2em !important; gap: 2px !important; }
+  .lines i { display: block; border-bottom: 1px solid var(--rule); height: 1px; }
+  .record { width: 100%; border-collapse: collapse; font-size: var(--step--1); margin-top: 8px; }
+  .record th, .record td { border: 1px solid var(--rule); padding: 6px 8px; text-align: left; }
+  .record td { height: 30px; }
+  .table-wrap { overflow-x: auto; max-width: 100%; }
+  .plan { width: 100%; border-collapse: collapse; }
+  .plan td { border-top: 1px solid var(--rule); padding: 8px 8px 8px 0; vertical-align: top; }
+  .plan td:first-child { font-family: var(--font-mono); white-space: nowrap; color: var(--ink-soft); width: 6em; }
+  .vocab dt { font-weight: 600; }
+  .vocab dd { margin: 0 0 8px; color: var(--ink-soft); }
+  .packs { display: grid; gap: 28px; }
+  .pack-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+  .pack-list a { display: grid; gap: 2px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); text-decoration: none; color: var(--ink); min-width: 0; }
+  .pack-list a:hover { border-color: var(--accent); }
+  .pack-list .muted { font-size: var(--step--1); }
+  .sequence { padding: 18px 20px; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); display: grid; gap: 8px; }
+  .sequence ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+  .sheet a { overflow-wrap: anywhere; }
+  .sheet > * { min-width: 0; }
+  .print-only { display: none; overflow-wrap: anywhere; }
+  @media print {
+    @page { margin: 16mm; }
+    :root { color-scheme: light; }
+    body { background: #fff !important; color: #000; }
+    .topbar, .pack-actions, .footer, .demo-head .lede, .no-print { display: none !important; }
+    .sheet { border: 0; padding: 0; background: none; break-after: page; }
+    .print-worksheet .sheet.plan-sheet, .print-plan .sheet.work-sheet { display: none; }
+    .print-only { display: block; }
+    a { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../index.html">Science <span>Wonders</span></a>
+    <nav><a href="../index.html">All experiments</a><a href="../tours/index.html">Guided tours</a></nav>
+  </header>
+  <div class="demo-head">
+    <div class="eyebrow" id="eyebrow">Teacher packs</div>
+    <h1 id="title">Worksheets and lesson plans</h1>
+    <p class="lede" id="lede">Every experiment has a printable student worksheet and a one-page lesson plan. The guided tours make ready-made sequences of lessons.</p>
+  </div>
+  <main id="pack"></main>
+  <footer class="footer">Part of <a href="../index.html">Science Wonders</a>. Free to print and share for teaching.</footer>
+</div>
+<script src="../assets/catalog.js"></script>
+<script src="../assets/tours.js"></script>
+<script src="../assets/content/quantum.js"></script>
+<script src="../assets/content/cosmos.js"></script>
+<script src="../assets/content/complexity.js"></script>
+<script src="../assets/content/math.js"></script>
+<script src="../assets/content/path-integral.js"></script>
+<script src="../assets/content/ladder-paradox.js"></script>
+<script src="../assets/content/mandelbrot.js"></script>
+<script src="../assets/content/fourier.js"></script>
+<script src="../assets/content/prime-spirals.js"></script>
+<script>
+(function () {
+  const W = window.WONDERS || {};
+  const t = (s) => (window.I18N ? window.I18N.t(s) : s);
+  const main = document.getElementById("pack");
+  const el = (tag, attrs, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v);
+    }
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  };
+  const bySlug = Object.fromEntries((W.catalog || []).map((c) => [c.slug, c]));
+  const slug = new URLSearchParams(location.search).get("e");
+  const item = slug && bySlug[slug];
+  const c = item && (W.content || {})[slug];
+  const lines = (n) => el("div", { class: "lines" }, ...Array.from({ length: n }, () => el("i")));
+  const list = (tag, arr) => el(tag, {}, ...(arr || []).map((x) => el("li", { text: x })));
+
+  if (!item || !c || !c.teach) {
+    // Index of all packs plus tour-based sequences.
+    const cats = W.categories || {};
+    const sections = Object.keys(cats).map((cat) => el("section", {},
+      el("h2", { class: "shelf-title", text: cats[cat] }),
+      el("div", { class: "pack-list" }, ...(W.catalog || []).filter((x) => x.cat === cat && (W.content || {})[x.slug] && W.content[x.slug].teach).map((x) =>
+        el("a", { href: `index.html?e=${x.slug}` }, el("b", { text: x.title }), el("span", { class: "muted", text: x.eyebrow }))))));
+    const seqs = (W.tours || []).map((tour) => el("div", { class: "sequence" },
+      el("h3", { text: tour.title }),
+      el("p", { class: "muted", text: tour.blurb }),
+      el("ol", {}, ...tour.steps.filter((s) => bySlug[s.slug]).map((s) => el("li", {},
+        el("a", { href: `index.html?e=${s.slug}` }, el("span", { text: bySlug[s.slug].title })), " ",
+        el("span", { class: "muted", text: s.goal }))))));
+    main.append(el("div", { class: "packs" }, ...sections,
+      el("section", {}, el("h2", { class: "shelf-title", text: "Lesson sequences" }),
+        el("p", { class: "muted", text: "Each guided tour works as a short unit: one lesson per experiment, in this order, with the tour goal as the lesson's opening challenge." }),
+        el("div", { class: "packs" }, ...seqs))));
+    return;
+  }
+
+  const T = c.teach;
+  document.title = `${t("Teacher pack")} · ${t(item.title)} · ${t("Science Wonders")}`;
+  document.getElementById("eyebrow").textContent = "Teacher pack";
+  document.getElementById("title").textContent = item.title;
+  document.getElementById("lede").textContent = item.blurb;
+  const expURL = new URL(`../demos/${slug}/index.html`, location.href).href;
+
+  const actions = el("div", { class: "pack-actions" },
+    el("button", { type: "button", class: "primary", text: "Print the worksheet", onclick: () => printPart("print-worksheet") }),
+    el("button", { type: "button", text: "Print the lesson plan", onclick: () => printPart("print-plan") }),
+    el("a", { class: "btn", href: `../demos/${slug}/index.html`, text: "Open the experiment" }),
+    el("a", { class: "tool-link", href: "index.html", text: "All teacher packs" }));
+  function printPart(cls) {
+    document.documentElement.classList.add(cls);
+    const done = () => { document.documentElement.classList.remove(cls); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    window.print();
+    setTimeout(done, 1000);
+  }
+  const meta = el("div", { class: "pack-meta" },
+    T.level ? el("span", { text: T.level }) : null,
+    T.minutes ? el("span", { text: `${T.minutes} minutes` }) : null);
+
+  // ----- Lesson plan (teacher) -----
+  const plan = el("section", { class: "sheet plan-sheet", "aria-label": "Lesson plan" },
+    el("div", { class: "sheet-head" }, el("h2", { text: "Lesson plan" }), el("span", { class: "eyebrow", text: item.title })),
+    el("div", {}, el("h3", { text: "Learning objectives" }), list("ul", T.objectives)),
+    T.plan ? el("div", {}, el("h3", { text: "Timeline" }),
+      el("table", { class: "plan" }, el("tbody", {}, ...T.plan.map((r) => el("tr", {}, el("td", { text: `${r.min} min` }), el("td", { text: r.what })))))) : null,
+    T.vocabulary ? el("div", {}, el("h3", { text: "Key words" }),
+      el("dl", { class: "vocab" }, ...T.vocabulary.flatMap((v) => [el("dt", { text: v.term }), el("dd", { text: v.def })]))) : null,
+    T.misconceptions ? el("div", {}, el("h3", { text: "Common misconceptions" }), list("ul", T.misconceptions)) : null,
+    T.answers ? el("div", {}, el("h3", { text: "Answers and notes" }), list("ol", T.answers)) : null,
+    c.quiz ? el("div", {}, el("h3", { text: "Quiz answers" }), el("ol", {}, ...c.quiz.map((q) =>
+      el("li", {}, el("b", { text: q.options[q.answer] }), " ", el("span", { text: q.why }))))) : null,
+    el("p", { class: "print-only", text: expURL }));
+
+  // ----- Worksheet (student) -----
+  const work = el("section", { class: "sheet work-sheet", "aria-label": "Student worksheet" },
+    el("div", { class: "sheet-head" }, el("h2", { text: item.title }), el("span", { class: "eyebrow", text: "Worksheet" })),
+    el("div", { class: "name-line" }, el("span", { text: "Name:" }), el("span", { text: "Date:" })),
+    el("p", { class: "muted" }, el("span", { text: "Open the experiment at" }), " ", el("a", { href: expURL, text: expURL, translate: "no", id: "expURL" })),
+    T.predictions ? el("div", {}, el("h3", { text: "Before you start: predict" }),
+      el("ol", {}, ...T.predictions.map((q) => el("li", {}, el("span", { text: q }), lines(2))))) : null,
+    ...(T.activities || []).map((a, i) => el("div", {},
+      el("h3", { text: a.title }),
+      list("ol", a.steps),
+      a.table ? el("div", { class: "table-wrap" }, el("table", { class: "record" },
+        el("thead", {}, el("tr", {}, ...a.table.columns.map((h) => el("th", { text: h })))),
+        el("tbody", {}, ...Array.from({ length: a.table.rows || 4 }, () => el("tr", {}, ...a.table.columns.map(() => el("td"))))))) : null)),
+    T.questions ? el("div", {}, el("h3", { text: "Questions" }),
+      el("ol", {}, ...T.questions.map((q) => el("li", {}, el("span", { text: q }), lines(3))))) : null,
+    c.quiz ? el("div", {}, el("h3", { text: "Check your understanding" }),
+      el("ol", {}, ...c.quiz.map((q) => el("li", {}, el("span", { text: q.q }),
+        el("ul", { class: "opts" }, ...q.options.map((o) => el("li", {}, "☐ ", el("span", { text: o })))))))) : null,
+    el("div", {}, el("h3", { text: "In your own words" }), el("p", { text: "Explain to a friend what surprised you in this experiment, and why it happens." }), lines(4)));
+
+  main.append(actions, meta, plan, work);
+})();
+</script>
+</body>
+</html>

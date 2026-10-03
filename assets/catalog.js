@@ -145,5 +145,40 @@ window.WONDERS.catalog = [
     "title": "Benford's law",
     "eyebrow": "Statistics",
     "blurb": "Real-world numbers start with 1 about 30% of the time. See why, and test your own data."
+  },
+  {
+    "slug": "path-integral",
+    "cat": "quantum",
+    "title": "Every path at once",
+    "eyebrow": "Feynman's path integral",
+    "blurb": "Let a particle take every possible path, add the arrows, and watch the straight line of classical physics emerge."
+  },
+  {
+    "slug": "ladder-paradox",
+    "cat": "cosmos",
+    "title": "The ladder in the barn",
+    "eyebrow": "Relativity of simultaneity",
+    "blurb": "A fast ladder fits in a short barn, or doesn't, depending on who you ask. Both are right."
+  },
+  {
+    "slug": "mandelbrot",
+    "cat": "complexity",
+    "title": "The Mandelbrot set",
+    "eyebrow": "Fractals",
+    "blurb": "Iterate z\u00b2 + c and zoom into a boundary of endless detail from a one-line rule."
+  },
+  {
+    "slug": "fourier",
+    "cat": "math",
+    "title": "Every sound is sines",
+    "eyebrow": "Fourier series",
+    "blurb": "Build any wave, from a square wave to your own drawing, by stacking pure sine waves."
+  },
+  {
+    "slug": "prime-spirals",
+    "cat": "math",
+    "title": "Prime spirals",
+    "eyebrow": "Ulam spiral",
+    "blurb": "Write the numbers in a spiral, light up the primes, and find diagonals nobody fully understands."
   }
 ];

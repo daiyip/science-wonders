@@ -10,7 +10,9 @@
   const KEY = "science-wonders-lang";
   const script = document.currentScript;
   const root = new URL("../", script.src).href;
-  const page = script.dataset.page || "common";
+  // data-page="@e" takes the page from ?e=<slug> (the teacher pack page).
+  let page = script.dataset.page || "common";
+  if (page === "@e") page = (new URLSearchParams(location.search).get("e") || "").replace(/[^a-z0-9-]/g, "") || "common";
 
   function pick() {
     const q = new URLSearchParams(location.search).get("lang");
@@ -134,7 +136,11 @@
       if (collecting) { I.seen.add("<html>" + (/\d/.test(html) ? template(html).key : html)); done.set(node, html); return; }
       else {
         const t = lookupHtml(html);
-        if (t != null) { node.innerHTML = t; done.set(node, norm(node.innerHTML)); return; }
+        if (t != null) {
+          if (norm(t) !== html) node.innerHTML = t;
+          done.set(node, norm(node.innerHTML));
+          return;
+        }
       }
     }
     for (let c = node.firstChild; c; c = c.nextSibling) visit(c);
@@ -144,8 +150,10 @@
       if (m.type === "characterData") visit(m.target);
       else if (m.type === "attributes") visitAttrs(m.target);
       else {
-        for (const n of m.addedNodes) visit(n);
+        // A block whose content a script replaced is translated as a whole
+        // first; visiting its new text nodes one by one would break the match.
         if (m.target.nodeType === 1 && isBlock(m.target)) visit(m.target);
+        else for (const n of m.addedNodes) visit(n);
       }
     }
   });

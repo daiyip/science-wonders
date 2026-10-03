@@ -115,6 +115,7 @@
       const up = fate.results[state.n - 1];
       if (up) state.finalUp++; else state.finalDown++;
       state.flashScreen[up ? 0 : 1] = 1;
+      if (ready && state.rate <= 40 && !bulk) WONDERS.sound("tick", { pitch: up ? 0.8 : 0.25 });
       if (state.dots.length < 4000) {
         // Stored relative to the detector, so the spots survive a layout switch.
         state.dots.push({ fx: (xHit - SCR_X) / SCR_W, j: gauss() * 3.2, up });
@@ -408,6 +409,32 @@
     $("reached").textContent = state.sent ? `${Math.round(100 * fin / state.sent)}%` : "–";
     $("final").textContent = `${state.finalUp.toLocaleString()} · ${state.finalDown.toLocaleString()}`;
     $("pred").textContent = `${Math.round(pUpAt(state.n - 1) * 1000) / 10}%`;
+    checkChallenges();
+  }
+
+  // ---------- Narration and challenges ----------
+  let ready = false, bulk = false;
+  function checkChallenges() {
+    if (!ready) return;
+    const fin = state.finalUp + state.finalDown, p = pUpAt(state.n - 1);
+    if (state.n === 1 && state.classical && state.sent >= 1000) WONDERS.challenge("no-smear");
+    if (state.n >= 2 && p > 0.999 && state.finalUp >= 500 && state.finalDown === 0) WONDERS.challenge("same-answer");
+    if (state.n >= 2 && Math.abs(p - 0.25) < 0.005 && fin >= 1000 && Math.abs(state.finalUp / fin - 0.25) <= 0.03) WONDERS.challenge("one-quarter");
+  }
+  // Axes in degrees (Z = 0°, X = 90°), so a sentence has one template per chain length.
+  function chainText() {
+    const a = state.angles.slice(0, state.n).map((x) => x + "°");
+    return state.n === 1 ? `one magnet with its axis at ${a[0]}` : state.n === 2 ? `two magnets with axes at ${a[0]} and ${a[1]}` : `three magnets with axes at ${a[0]}, ${a[1]} and ${a[2]}`;
+  }
+  function describeScene() {
+    const fin = state.finalUp + state.finalDown;
+    const p = Math.round(pUpAt(state.n - 1) * 1000) / 10;
+    return `The chain has ${chainText()}, where 0° is Z and 90° is X. The last magnet predicts ${p}% up. ${state.sent.toLocaleString()} atoms sent and ${fin.toLocaleString()} reached the detector: ${state.finalUp.toLocaleString()} up and ${state.finalDown.toLocaleString()} down, always in two separate spots.`;
+  }
+  WONDERS.describer(describeScene);
+  function sayChain() {
+    const p = Math.round(pUpAt(state.n - 1) * 1000) / 10;
+    WONDERS.describe(`Chain changed: ${chainText()}. The detector was cleared. The last magnet predicts ${p}% up.`);
   }
 
   function syncControls() {
@@ -440,6 +467,7 @@
     computeLayout();
     syncControls();
     clearAll();
+    if (ready) sayChain();
   }
 
   for (let k = 1; k <= 3; k++) {
@@ -460,7 +488,11 @@
   $("presetZX").addEventListener("click", () => preset(2, [0, 90]));
   $("presetZXZ").addEventListener("click", () => preset(3, [0, 90, 0]));
   $("presetZ60").addEventListener("click", () => preset(2, [0, 60]));
-  $("classical").addEventListener("change", (e) => { state.classical = e.target.checked; });
+  $("classical").addEventListener("change", (e) => {
+    state.classical = e.target.checked;
+    if (state.classical) WONDERS.describe("Classical comparison on: a dashed band shows the smear that tilted compass needles would make, between the two real spots.", { now: true });
+    checkChallenges();
+  });
   $("rate").addEventListener("input", (e) => {
     state.rate = Math.max(1, Math.round(Math.pow(200, e.target.value / 100)));
     $("rateOut").textContent = state.rate;
@@ -469,8 +501,17 @@
     state.running = !state.running;
     $("play").textContent = state.running ? "Pause" : "Resume";
   });
-  $("burst").addEventListener("click", () => { for (let i = 0; i < 1000; i++) fire(false); updateStats(); });
-  $("clear").addEventListener("click", clearAll);
+  $("burst").addEventListener("click", () => {
+    const up0 = state.finalUp, down0 = state.finalDown;
+    bulk = true;
+    for (let i = 0; i < 1000; i++) fire(false);
+    bulk = false;
+    updateStats();
+    const up = state.finalUp - up0, down = state.finalDown - down0;
+    WONDERS.describe(`Sent 1,000 atoms. ${(up + down).toLocaleString()} reached the detector: ${up.toLocaleString()} up and ${down.toLocaleString()} down.`, { now: true });
+    WONDERS.sound("event", { pitch: 0.6 });
+  });
+  $("clear").addEventListener("click", () => { clearAll(); WONDERS.describe("Detector cleared.", { now: true }); });
 
   // Start on the famous Z, X, Z chain with results already on the detector.
   state.rate = Math.max(1, Math.round(Math.pow(200, $("rate").value / 100)));
@@ -495,5 +536,6 @@
   syncControls();
   for (let i = 0; i < 1600; i++) fire(false);
   updateStats();
+  ready = true;
   requestAnimationFrame(frame);
 })();

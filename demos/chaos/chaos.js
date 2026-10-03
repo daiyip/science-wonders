@@ -116,6 +116,7 @@
     state.colours = state.pend.map((_, i) => colourFor(i, state.n));
     state.samples = [{ t: 0, d: separation(state.pend[0], state.pend[state.n - 1]) }];
     state.tDiv = null; state.lambda = null; state.fit = null;
+    unrelatedSaid = false;
     updateReadouts();
   }
 
@@ -133,6 +134,7 @@
       if (sampleAcc >= 0.02) { sampleAcc = 0; record(); }
     }
     pushTrails();
+    checkChallenges();
   }
 
   function record() {
@@ -144,6 +146,7 @@
       if (Math.hypot(ta[0] - tb[0], ta[1] - tb[1]) > VISIBLE) {
         state.tDiv = state.t;
         computeFit();
+        announceSplit();
       }
     }
   }
@@ -394,6 +397,42 @@
       ? "×" + Math.exp(state.lambda).toFixed(1) + " per s (×10 every " + (Math.LN10 / state.lambda).toFixed(1) + " s)"
       : (state.tDiv !== null ? "no steady growth" : "measuring…");
   }
+
+  // ---------- Accessibility and challenges ----------
+  const W_ = window.WONDERS;
+  function announceSplit() {
+    W_.sound("event", { pitch: 0.4 });
+    W_.describe(state.n !== 2
+      ? "The first and last of the " + state.n + " pendulums are visibly apart after " + state.tDiv.toFixed(1) + " seconds."
+      : state.lambda
+        ? "The two pendulums are visibly apart after " + state.tDiv.toFixed(1) + " seconds. The gap grew tenfold every " + (Math.LN10 / state.lambda).toFixed(1) + " seconds."
+        : "The two pendulums are visibly apart after " + state.tDiv.toFixed(1) + " seconds.", { now: true });
+  }
+  let unrelatedSaid = false;
+  function checkChallenges() {
+    const last = state.samples[state.samples.length - 1];
+    if (last && last.d >= 1 && !unrelatedSaid) {
+      unrelatedSaid = true;
+      W_.describe("The separation has reached the unrelated band after " + state.t.toFixed(0) + " seconds. The pendulums now have nothing in common.");
+    }
+    if (state.n === 100 && last && last.d >= 1) W_.challenge("fan");
+    if (state.n === 2 && state.th1 === 150 && state.th2 === 0 && state.tDiv !== null && state.tDiv > 12) W_.challenge("late");
+    if (state.n === 2 && state.logEps >= -2 && state.t >= 30 && state.tDiv === null) W_.challenge("calm");
+  }
+  W_.describer(() => {
+    const last = state.samples[state.samples.length - 1];
+    const sep = fmtExp(Math.max(last ? last.d : 0, 1e-12));
+    const start = fmtExp(Math.pow(10, state.logEps));
+    const head = state.n === 2
+      ? "Two double pendulums started at " + state.th1 + "° and " + state.th2 + "°, " + start + " rad apart."
+      : state.n + " double pendulums started at " + state.th1 + "° and " + state.th2 + "°, spread over " + start + " rad.";
+    const tail = state.tDiv === null
+      ? "After " + state.t.toFixed(1) + " seconds the separation is " + sep + " and they still swing together."
+      : state.lambda
+        ? "They became visibly apart after " + state.tDiv.toFixed(1) + " seconds, with the gap growing tenfold every " + (Math.LN10 / state.lambda).toFixed(1) + " seconds. The separation is now " + sep + "."
+        : "They became visibly apart after " + state.tDiv.toFixed(1) + " seconds. The separation is now " + sep + ".";
+    return [head, tail].map((x) => (window.I18N ? I18N.t(x) : x)).join(" ");
+  });
 
   // ---------- Loop ----------
   let lastT = performance.now();

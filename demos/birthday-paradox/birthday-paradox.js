@@ -367,6 +367,35 @@
     $("simCount").textContent = state.firsts.length.toLocaleString() + " rooms";
   }
 
+  // ---------- Narration and challenges ----------
+  const tr = (x) => (window.I18N ? I18N.t(x) : x);
+  function sayRoom() {
+    const n = state.people.length, info = roomInfo();
+    const a = n + " people make " + (n * (n - 1) / 2) + " pairs, and the exact chance of a shared birthday is " + fmtPct(P[n]) + ".";
+    const b = info.pairs ? (info.days === 1 ? "This room has 1 shared birthday." : "This room has " + info.days + " shared birthdays.") : "This room has no shared birthday.";
+    WONDERS.describe(tr(a) + " " + tr(b));
+  }
+  // After anything the user does to the room.
+  function checkRoom() {
+    const info = roomInfo();
+    if (state.people.length >= 40 && info.pairs === 0) WONDERS.challenge("lucky-40");
+  }
+  function fillFound() {
+    const n = state.people.length;
+    WONDERS.sound("event");
+    WONDERS.describe("A shared birthday turned up when person " + n + " walked in.", { now: true });
+    if (n <= 20) WONDERS.challenge("early-match");
+  }
+  function simDone() {
+    const n = state.people.length, s = simP(n);
+    WONDERS.sound("event");
+    WONDERS.describe(tr("Simulation: " + state.firsts.length + " rooms so far.") + " " + tr("At " + n + " people, " + fmtPct(s) + " of them had a match, and the exact chance is " + fmtPct(P[n]) + "."));
+    checkSim();
+  }
+  function checkSim() {
+    if (state.simQueue === 0 && state.firsts.length >= 5000 && state.people.length === 23 && Math.abs(simP(23) - P[23]) <= 0.01) WONDERS.challenge("close-sim");
+  }
+
   // ---------- Loop ----------
   function frame(now) {
     if (state.simQueue > 0) {
@@ -374,13 +403,17 @@
       for (let i = 0; i < batch; i++) state.firsts.push(simulateRoom());
       state.simQueue -= batch;
       updateStats();
+      if (state.simQueue === 0) simDone();
     }
     if (state.filling && now >= state.fillTimer) {
       addPerson(0);
       state.fillTimer = now + 380;
       syncSlider();
       updateStats();
-      if (roomInfo().pairs > 0 || state.people.length >= MAXN) stopFill();
+      const last = state.people[state.people.length - 1];
+      WONDERS.sound("tick", { pitch: last.day / 365, pan: Math.cos(angleOf(last.day)) });
+      if (roomInfo().pairs > 0) { stopFill(); fillFound(); }
+      else if (state.people.length >= MAXN) stopFill();
     }
     const info = roomInfo();
     ctx.fillStyle = "#05080e";
@@ -400,6 +433,7 @@
     if (Lab.reducedMotion) {
       do { addPerson(-1000); } while (roomInfo().pairs === 0 && state.people.length < MAXN);
       syncSlider(); updateStats();
+      if (roomInfo().pairs > 0) fillFound();
       return;
     }
     addPerson(0);
@@ -409,22 +443,38 @@
     syncSlider(); updateStats();
   }
 
-  $("people").addEventListener("input", (e) => { stopFill(); setCount(+e.target.value, 0); });
-  $("addOne").addEventListener("click", () => { stopFill(); setCount(state.people.length + 1, 0); });
+  $("people").addEventListener("input", (e) => { stopFill(); setCount(+e.target.value, 0); checkRoom(); checkSim(); sayRoom(); });
+  $("addOne").addEventListener("click", () => {
+    stopFill(); setCount(state.people.length + 1, 0); checkRoom(); checkSim(); sayRoom();
+    const last = state.people[state.people.length - 1];
+    WONDERS.sound(roomInfo().counts[last.day] >= 2 ? "event" : "tick", { pitch: last.day / 365 });
+  });
   $("newRoom").addEventListener("click", () => {
     stopFill();
     const n = state.people.length;
     state.people = [];
     setCount(n, Lab.reducedMotion ? 0 : Math.min(40, 900 / n));
+    checkRoom(); sayRoom();
+    WONDERS.sound(roomInfo().pairs ? "event" : "tick");
   });
   $("fillMatch").addEventListener("click", () => { state.filling ? stopFill() : startFill(); });
   $("runSim").addEventListener("click", () => {
-    if (Lab.reducedMotion) { for (let i = 0; i < 1000; i++) state.firsts.push(simulateRoom()); updateStats(); }
+    if (Lab.reducedMotion) { for (let i = 0; i < 1000; i++) state.firsts.push(simulateRoom()); updateStats(); simDone(); }
     else state.simQueue += 1000;
   });
   $("clearSim").addEventListener("click", () => { state.firsts = []; state.simQueue = 0; updateStats(); });
   $("showPairs").addEventListener("change", (e) => { state.showPairs = e.target.checked; });
   $("showApprox").addEventListener("change", (e) => { state.showApprox = e.target.checked; });
+
+  WONDERS.describer(() => {
+    const n = state.people.length, info = roomInfo(), s = simP(n);
+    const out = [
+      "A ring of 365 days shows the birthdays of " + n + " people. They make " + (n * (n - 1) / 2) + " pairs, and the exact chance that at least two share a birthday is " + fmtPct(P[n]) + ".",
+      info.pairs ? (info.days === 1 ? "This room has 1 shared birthday." : "This room has " + info.days + " shared birthdays.") : "This room has no shared birthday.",
+      s === null ? "No rooms have been simulated yet." : "In " + state.firsts.length + " simulated rooms, " + fmtPct(s) + " had a match by " + n + " people.",
+    ];
+    return out.map(tr).join(" ");
+  });
 
   // Open with a room of 23 filling in and a 1,000-room simulation running.
   setCount(23, Lab.reducedMotion ? 0 : 55);

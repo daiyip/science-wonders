@@ -87,27 +87,32 @@
   }
 
   const others = () => state.n - 2;
+  // Translate the message as one block (word order changes between languages).
+  function setMsg(m, html) {
+    const t = window.I18N && I18N.lang !== "en" && html.includes("<") ? I18N.t("<html>" + html) : html;
+    m.innerHTML = t.startsWith("<html>") ? html : t;
+  }
   function renderStage() {
     const m = $("message");
     const P = state.pick + 1, L = state.left + 1;
     $("stay").hidden = $("switch").hidden = state.phase !== "decide";
     $("again").hidden = !(state.phase === "reveal" || state.phase === "void");
     if (state.phase === "pick") {
-      m.innerHTML = "Pick a door. One of the " + state.n + " hides a car; the rest hide goats.";
+      setMsg(m, "Pick a door. One of the " + state.n + " hides a car; the rest hide goats.");
     } else if (state.phase === "decide") {
       const who = state.random ? "The host, who has no idea where the car is, happened to open " : "The host, who knows where the car is, opened ";
       const what = state.n === 3 ? "door " + (state.opened.values().next().value + 1) + " to show a goat"
         : others() + " doors, all goats, and left <b>door " + L + "</b> closed";
-      m.innerHTML = "You picked <b>door " + P + "</b>. " + who + what + ". Stay with door " + P + ", or switch to door " + L + "?";
+      setMsg(m, "You picked <b>door " + P + "</b>. " + who + what + ". Stay with door " + P + ", or switch to door " + L + "?");
       $("stay").textContent = "Stay with door " + P;
       $("switch").textContent = "Switch to door " + L;
     } else if (state.phase === "void") {
-      m.innerHTML = "You picked <b>door " + P + "</b>, and the random host opened the door with the car behind it. That game doesn't count.";
+      setMsg(m, "You picked <b>door " + P + "</b>, and the random host opened the door with the car behind it. That game doesn't count.");
     } else {
       const verb = state.final === state.pick ? "stayed with" : "switched to";
-      m.innerHTML = state.won
+      setMsg(m, state.won
         ? "You " + verb + " <b>door " + (state.final + 1) + "</b> and won the car!"
-        : "You " + verb + " <b>door " + (state.final + 1) + "</b> and got a goat. The car was behind door " + (state.car + 1) + ".";
+        : "You " + verb + " <b>door " + (state.final + 1) + "</b> and got a goat. The car was behind door " + (state.car + 1) + ".");
     }
     renderDoors();
   }
@@ -141,6 +146,7 @@
       for (let d = 0; d < state.n; d++) if (d !== i && d !== state.left) state.opened.add(d);
       state.phase = state.random && state.opened.has(state.car) ? "void" : "decide";
       renderStage();
+      WONDERS.sound(state.phase === "void" ? "fail" : "event", { pitch: state.n > 1 ? i / (state.n - 1) : 0.5 });
       if (state.phase === "decide") $("switch").focus({ preventScroll: true });
     } else if (state.phase === "decide") {
       if (i === state.pick) finish(false);
@@ -156,6 +162,10 @@
     state.phase = "reveal";
     renderStage();
     updateTally();
+    WONDERS.sound(state.won ? "success" : "fail");
+    if (switched && state.won) WONDERS.challenge("switch-win");
+    const { stay, swap } = state.tally;
+    if (!state.random && stay.n >= 5 && swap.n >= 5 && swap.w / swap.n > stay.w / stay.n) WONDERS.challenge("fair-test");
     $("again").focus({ preventScroll: true });
   }
 
@@ -170,7 +180,7 @@
   // ---------- Simulation ----------
   function clearSim() {
     sim.played = sim.valid = sim.stayW = sim.swapW = 0;
-    sim.stay = []; sim.swap = []; sim.target = 0;
+    sim.stay = []; sim.swap = []; sim.target = 0; sim.reported = false;
     updateSimStats();
   }
   function simulate(count) {
@@ -194,6 +204,17 @@
       sim.swap.push(sim.valid ? sim.swapW / sim.valid : NaN);
     }
     updateSimStats();
+    if (sim.played && sim.played >= sim.target && !sim.reported) simDone();
+  }
+  // A finished simulation: narrate it, and check the random-host challenge.
+  function simDone() {
+    sim.reported = true;
+    const s = (100 * sim.stayW / Math.max(1, sim.valid)).toFixed(1), w = (100 * sim.swapW / Math.max(1, sim.valid)).toFixed(1);
+    WONDERS.sound("event");
+    if (state.random) WONDERS.describe("Simulation finished: " + sim.valid + " of " + sim.played + " games counted. Staying won " + s + "% and switching won " + w + "%.");
+    else WONDERS.describe("Simulation finished: after " + sim.played + " games, staying won " + s + "% and switching won " + w + "%.");
+    const st = sim.stayW / Math.max(1, sim.valid), sw = sim.swapW / Math.max(1, sim.valid);
+    if (state.random && sim.played >= 1000 && sim.valid >= 200 && st >= 0.45 && st <= 0.55 && sw >= 0.45 && sw <= 0.55) WONDERS.challenge("random-host");
   }
   function updateSimStats() {
     $("simN").textContent = sim.played.toLocaleString("en-US") + (state.random && sim.played ? " (" + sim.valid + " counted)" : "");
@@ -386,6 +407,24 @@
     drawChart();
     requestAnimationFrame(frame);
   }
+
+  // ---------- Screen-reader description ----------
+  // Each sentence is translated on its own, as a whole.
+  const tr = (x) => (window.I18N ? I18N.t(x) : x);
+  WONDERS.describer(() => {
+    const out = [];
+    out.push(state.random ? state.n + " doors, and the host opens doors at random." : state.n + " doors, and the host knows where the car is.");
+    if (state.phase === "pick") out.push("You have not picked a door yet.");
+    else if (state.phase === "decide") out.push("You picked door " + (state.pick + 1) + " and door " + (state.left + 1) + " is the only other closed door.");
+    else if (state.phase === "void") out.push("The random host revealed the car, so this game does not count.");
+    else out.push(state.won ? "You won the car behind door " + (state.final + 1) + "." : "You got a goat behind door " + (state.final + 1) + " and the car was behind door " + (state.car + 1) + ".");
+    const { stay, swap } = state.tally;
+    out.push("Your tally: staying won " + stay.w + " of " + stay.n + " and switching won " + swap.w + " of " + swap.n + ".");
+    out.push(sim.valid
+      ? "In " + sim.played + " simulated games, staying won " + (100 * sim.stayW / sim.valid).toFixed(1) + "% and switching won " + (100 * sim.swapW / sim.valid).toFixed(1) + "%."
+      : "No simulated games yet.");
+    return out.map(tr).join(" ");
+  });
 
   // Start with a game waiting for your pick and a simulation already running.
   buildDoors();

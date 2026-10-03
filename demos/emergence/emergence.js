@@ -76,6 +76,7 @@
     life.gen++;
     life.pop.push(countVisible());
     if (life.pop.length > 200) life.pop.shift();
+    lifeWatch();
   }
   function countVisible() {
     let n = 0;
@@ -85,6 +86,7 @@
   function lifeClear() {
     cur.fill(0); nxt.fill(0); age.fill(0);
     life.gen = 0; life.pop = [0];
+    track.preset = null; track.hand = true; track.seed = 0;
   }
   function stamp(cells, ox, oy) {
     for (const [x, y] of cells) { const i = idx(ox + x, oy + y); cur[i] = 1; age[i] = 1; }
@@ -109,16 +111,20 @@
   };
   function loadPreset(name) {
     lifeClear();
+    track.preset = name; track.hand = false;
+    if (live) W_.sound("event", { pitch: 0.6 });
     if (name === "random") {
       for (let y = 0; y < VH; y++) for (let x = 0; x < VW; x++) {
         if (Math.random() < 0.3) { const i = idx(x, y); cur[i] = 1; age[i] = 1 + Math.floor(Math.random() * 3); }
       }
       life.pop = [countVisible()];
+      if (live) W_.describe("A random soup of " + life.pop[0] + " live cells.", { now: true });
       hint("A random soup. Most of it burns out within a few hundred generations, leaving blinkers, blocks and the occasional glider sailing away.");
     } else {
       const p = PRESETS[name];
       stamp(p.cells, p.at[0], p.at[1]);
       hint(p.hint);
+      if (live) W_.describe(p.hint, { now: true });
     }
     draw(); updateReadouts();
   }
@@ -139,6 +145,15 @@
         ctx.fillStyle = a <= 1 ? "#b8f0ff" : a < 4 ? "#7fd0ff" : a < 20 ? "#5f9cff" : "#4a6fd8";
         ctx.fillRect(WX + x * CELL + 1, WY + y * CELL + 1, CELL - 1, CELL - 1);
       }
+    }
+    // Keyboard cursor, shown while the canvas has focus.
+    if (document.activeElement === canvas) {
+      const k = narrow ? 1 / WS : 1;
+      ctx.strokeStyle = "#f0b35a";
+      ctx.lineWidth = 1.5 * k;
+      const pad = 1.5 * k;
+      ctx.strokeRect(WX + kb.x * CELL - pad, WY + kb.y * CELL - pad, CELL + 2 * pad, CELL + 2 * pad);
+      ctx.lineWidth = 1;
     }
   }
 
@@ -163,6 +178,8 @@
     life.painting = cur[idx(c[0], c[1])] ? 0 : 1;
     life.last = c;
     paintLine(c, c, life.painting);
+    kb.x = c[0]; kb.y = c[1];
+    noteDrawn();
     pad.setPointerCapture(e.pointerId);
     draw(); updateReadouts();
   });
@@ -172,11 +189,76 @@
     if (!c) return;
     paintLine(life.last, c, life.painting);
     life.last = c;
+    noteDrawn();
     draw();
   });
   const endPaint = () => { if (life.painting !== null) { life.painting = null; life.pop.push(countVisible()); updateReadouts(); } };
   pad.addEventListener("pointerup", endPaint);
   pad.addEventListener("pointercancel", endPaint);
+
+  // Keyboard drawing: arrow keys move a cell cursor, Space or Enter toggles.
+  const kb = { x: 50, y: 35 };
+  canvas.addEventListener("keydown", (e) => {
+    if (state.mode !== "life") return;
+    const big = e.shiftKey ? 5 : 1;
+    const moves = { ArrowLeft: [-big, 0], ArrowRight: [big, 0], ArrowUp: [0, -big], ArrowDown: [0, big] };
+    if (moves[e.key]) {
+      e.preventDefault();
+      kb.x = Math.max(0, Math.min(VW - 1, kb.x + moves[e.key][0]));
+      kb.y = Math.max(0, Math.min(VH - 1, kb.y + moves[e.key][1]));
+      W_.describe("Column " + (kb.x + 1) + ", row " + (kb.y + 1) + (cur[idx(kb.x, kb.y)] ? ": alive." : ": empty."), { now: true });
+      draw();
+    } else if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      const i = idx(kb.x, kb.y);
+      const v = cur[i] ? 0 : 1;
+      cur[i] = v; age[i] = v;
+      noteDrawn();
+      life.pop.push(countVisible());
+      W_.sound("tick", { pitch: v ? 0.8 : 0.3, pan: kb.x / (VW - 1) * 2 - 1 });
+      W_.describe((v ? "Cell added at column " : "Cell removed at column ") + (kb.x + 1) + ", row " + (kb.y + 1) + ". " + countVisible() + " live cells.", { now: true });
+      draw(); updateReadouts();
+    }
+  });
+  canvas.addEventListener("focus", () => draw());
+  canvas.addEventListener("blur", () => draw());
+
+  // ---------- Accessibility and challenges ----------
+  const W_ = window.WONDERS;
+  const track = { preset: null, hand: false, seed: 0, lastSaidGen: 0, oneFlock: false };
+  function noteDrawn() { if (track.hand) track.seed = countVisible(); }
+  function lifeWatch() {
+    if (!live) return;
+    const n = life.pop[life.pop.length - 1];
+    if (track.preset === "random" && life.gen >= 500) W_.challenge("soup");
+    if (track.hand && track.seed > 0 && track.seed <= 10 && n > 100) W_.challenge("hand");
+    if (life.gen % 100 === 0) W_.describe("Generation " + life.gen + ": " + n + " live cells.");
+  }
+  function boidsWatch() {
+    if (boids.flocks === 1 && boids.list.length >= 100 && !track.oneFlock) {
+      track.oneFlock = true;
+      W_.sound("success");
+      W_.describe("All " + boids.list.length + " birds now fly as one flock.", { now: true });
+      W_.challenge("flock");
+    } else if (boids.flocks !== 1) track.oneFlock = false;
+  }
+  W_.describer(() => {
+    const t = (x) => (window.I18N ? I18N.t(x) : x);
+    if (state.mode === "life") {
+      const n = life.pop[life.pop.length - 1] || 0;
+      return [
+        "Game of Life at generation " + life.gen + " with " + n + " live cells on a 100 by 70 grid.",
+        life.pop.length > 20 && Math.abs(n - life.pop[life.pop.length - 21]) <= 2 ? "The population has nearly settled." : "The population is still changing.",
+        "The keyboard cursor is at column " + (kb.x + 1) + ", row " + (kb.y + 1) + (cur[idx(kb.x, kb.y)] ? ", on a live cell." : ", on an empty cell."),
+      ].map(t).join(" ");
+    }
+    const a = boids.order.length ? boids.order[boids.order.length - 1] : 0;
+    return [
+      "Flocking: " + boids.list.length + " birds" + (boids.hawk ? " and a hawk." : ", no predator."),
+      "Separation " + boids.sep.toFixed(1) + ", alignment " + boids.ali.toFixed(1) + ", cohesion " + boids.coh.toFixed(1) + ".",
+      (boids.flocks == null ? "" : "They form " + boids.flocks + (boids.flocks === 1 ? " flock" : " separate flocks") + " with alignment " + a.toFixed(2) + " (1 means all fly the same way)."),
+    ].filter(Boolean).map(t).join(" ");
+  });
 
   // =====================================================================
   // Boids
@@ -262,7 +344,7 @@
     }
     boids.tick = (boids.tick || 0) + 1;
     if (boids.tick % 4 === 0) { boids.order.push(alignment()); if (boids.order.length > 200) boids.order.shift(); }
-    if (boids.tick % 20 === 0) boids.flocks = countFlocks();
+    if (boids.tick % 20 === 0) { boids.flocks = countFlocks(); if (live) boidsWatch(); }
   }
 
   // 1 = everyone flying the same way, near 0 = random headings.
@@ -457,6 +539,17 @@
     $("modeBoids").setAttribute("aria-pressed", String(m === "boids"));
     document.querySelectorAll("[data-mode]").forEach((el) => { el.hidden = el.dataset.mode !== m; });
     pad.hidden = m !== "life";
+    if (m === "life") {
+      canvas.setAttribute("tabindex", "0");
+      canvas.removeAttribute("role");
+      canvas.setAttribute("aria-label", "Game of Life grid, with the complete list of rules and live counts. To draw, move the cursor with the arrow keys and press Space or Enter to add or remove a cell.");
+    } else {
+      if (document.activeElement === canvas) canvas.blur();
+      canvas.removeAttribute("tabindex");
+      canvas.setAttribute("role", "img");
+      canvas.setAttribute("aria-label", "Flocking birds, coloured by heading, with the complete list of rules each bird follows and live counts.");
+    }
+    W_.describe(m === "life" ? "Game of Life." : "Flocking. " + boids.list.length + " birds steering by three rules.", { now: true });
     $("modeNote").textContent = m === "life"
       ? "Cells on a grid, updated all at once, one generation at a time."
       : "Each bird steers by three rules about its nearest neighbours. There is no leader.";
@@ -479,6 +572,7 @@
   $("presetRandom").addEventListener("click", () => loadPreset("random"));
   $("clear").addEventListener("click", () => {
     lifeClear(); draw(); updateReadouts();
+    W_.describe("The grid is empty. Use the arrow keys and Space to draw cells.", { now: true });
     hint("An empty grid. Click to draw cells, then press Play. Three in a row makes a blinker; a 2 by 2 square never changes.");
   });
   $("lifeSpeed").addEventListener("input", (e) => { life.speed = +e.target.value; $("lifeSpeedOut").textContent = life.speed; });
@@ -511,6 +605,7 @@
   else window.addEventListener("resize", onResize);
 
   // ---------- Start ----------
+  let live = false;
   setBoidCount(boids.n);
   for (let i = 0; i < 60; i++) boidsStep();   // birds already beginning to group
   boids.flocks = countFlocks();
@@ -530,6 +625,8 @@
   } else {
     setRunning(true);
   }
+  track.preset = "start";
+  live = true;
   draw();
   updateReadouts();
   requestAnimationFrame(frame);

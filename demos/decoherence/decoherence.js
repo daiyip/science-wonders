@@ -85,6 +85,7 @@
   }
 
   function newRun() {
+    saidHalf = false; saidGone = false;
     state.t = 0; state.C = 1; state.hits = 0; state.hold = 0;
     state.trace = [[0, 1]];
     for (const p of state.particles) p.marked = false;
@@ -112,11 +113,13 @@
           if (dot < 0) {
             p.dx -= 2 * dot * nx; p.dy -= 2 * dot * ny;
             // The bounce happened in this branch only: the particle now holds a partial record.
+            const before = state.C;
             state.C *= r;
             state.hits++;
             if (r < 1) p.marked = true;
             b.flash = 1;
             state.trace.push([state.t, state.C]);
+            onCollision(b, before);
           }
           p.x = b.x + nx * (BLOB_R + P_R); p.y = b.y + ny * (BLOB_R + P_R);
         }
@@ -124,6 +127,40 @@
     }
     state.t += dt;
   }
+
+  // ---------- Narration and challenges ----------
+  let ready = false, saidHalf = false, saidGone = false;
+  function onCollision(b, before) {
+    if (!ready) return;
+    WONDERS.sound("tick", { pitch: 0.3 + 0.7 * state.C, pan: b === blobs[0] ? -0.4 : 0.4 });
+    if (!saidHalf && state.C < 0.5) {
+      saidHalf = true;
+      WONDERS.describe(`After ${state.hits} collisions, coherence has fallen below half. The fringes are fading.`);
+    }
+    if (!saidGone && state.C < 0.05) {
+      saidGone = true;
+      WONDERS.describe(`After ${state.hits} collisions, coherence is almost gone. The output shows no fringes: the gas holds the which-path record.`);
+      WONDERS.sound("event", { pitch: 0.2 });
+    }
+    // One bounce takes visible fringes straight to none.
+    if (state.coupling >= 1 && before >= 0.5 && state.C === 0) WONDERS.challenge("one-hit");
+  }
+  function runEnded() {
+    if (!ready) return;
+    if (state.N === 0 && state.C === 1 && state.t >= state.win) WONDERS.challenge("vacuum");
+  }
+  function checkSlow() {
+    const L = lambda();
+    if (ready && state.N >= 100 && state.coupling >= 0.01 && L > 0 && 1 / L >= 20) WONDERS.challenge("slow-decay");
+  }
+  function describeScene() {
+    const L = lambda();
+    const gas = state.N ? `The chamber holds ${state.N} gas particles at ${state.T} K, and each collision loses ${Math.round(state.coupling * 100)}% of the coherence.` : "The gas has been pumped out, so nothing collides with the object.";
+    const now = `In this run ${state.hits} collisions have happened and coherence is ${(state.C * 100).toFixed(0)}%, so the fringes at the output have ${(state.C * 100).toFixed(0)}% visibility.`;
+    const avg = L > 0 ? `On average coherence falls by a factor of e every ${(1 / L).toFixed(1)} s.` : "Coherence never decays.";
+    return `The object is in a superposition of the upper and lower path. ${gas} ${now} ${avg}`;
+  }
+  WONDERS.describer(describeScene);
 
   // ---------- Drawing ----------
   function label(text, x, y, align, colour) {
@@ -467,6 +504,7 @@
         const n = Math.ceil(speed() * dt / 4) || 1;
         for (let i = 0; i < n; i++) step(dt / n);
       } else {
+        if (state.hold === 0) runEnded();
         state.hold += dt;
         if (state.hold > 1.4) newRun();
       }
@@ -486,6 +524,9 @@
     state.hits = Math.round(collisionRate() * state.t);
     updateStats(true);
     draw();
+    // Reduced motion shows the average, so the challenges are judged from it.
+    if (ready && state.N === 0) WONDERS.challenge("vacuum");
+    if (ready && state.coupling >= 1 && state.N > 0) WONDERS.challenge("one-hit");
   }
 
   // ---------- Controls ----------
@@ -496,6 +537,7 @@
   }
   function changed() {
     readouts();
+    checkSlow();
     if (Lab.reducedMotion) { renderStatic(); return; }
     const L = lambda();
     state.win = Math.max(state.win, state.t + 1);
@@ -510,11 +552,12 @@
     state.running = !state.running;
     $("play").textContent = state.running ? "Pause" : "Resume";
   });
-  $("reset").addEventListener("click", () => { newRun(); if (Lab.reducedMotion) renderStatic(); });
+  $("reset").addEventListener("click", () => { newRun(); WONDERS.describe("New superposition started with full coherence.", { now: true }); if (Lab.reducedMotion) renderStatic(); });
   $("vacuum").addEventListener("click", () => {
     state.N = 0; $("pressure").value = 0; setParticleCount(0);
     readouts();
     newRun();
+    WONDERS.describe("Gas pumped out. A new superposition starts with nothing to collide with.", { now: true });
     if (Lab.reducedMotion) renderStatic();
   });
 
@@ -576,9 +619,11 @@
   newRun();
   if (Lab.reducedMotion) {
     renderStatic();
+    ready = true;
   } else {
     // Start part-way into a run so the first view already shows some decay.
     for (let i = 0; i < 120; i++) step(1 / 60);
+    ready = true;
     requestAnimationFrame(frame);
   }
 })();

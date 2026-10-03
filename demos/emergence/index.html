@@ -40,6 +40,7 @@
   [hidden] { display: none !important; }
   .bench { position: relative; }
   #paintPad { position: absolute; touch-action: none; cursor: crosshair; }
+  .key-hint { margin-top: 8px; font-size: var(--step--1); color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -66,10 +67,11 @@
   </div>
 
   <div class="bench">
-    <canvas id="bench" width="960" height="520" aria-label="The simulation world on the left, and on the right the complete list of rules it follows with live counts of what is happening"></canvas>
+    <canvas id="bench" width="960" height="520" tabindex="0" aria-label="Game of Life grid, with the complete list of rules and live counts. To draw, move the cursor with the arrow keys and press Space or Enter to add or remove a cell."></canvas>
     <div id="paintPad" aria-hidden="true"></div>
   </div>
-  <div class="stats" aria-live="polite">
+  <p class="key-hint" data-mode="life">Keyboard: Tab to the grid, move with the arrow keys (hold Shift to jump 5 cells) and press Space or Enter to add or remove a cell.</p>
+  <div class="stats">
     <span>Rules in play <b id="ruleCount">3</b></span>
     <span data-mode="life">Generation <b id="lifeGen">0</b></span>
     <span data-mode="life">Live cells <b id="lifeCells">0</b></span>

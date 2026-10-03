@@ -383,12 +383,18 @@
       return;
     }
     const f = sample(state.t).f;
+    const prevT = state.t;
     state.t = Math.min(P.tEnd, state.t + dt * rate(f));
     const s = sample(state.t);
     const cycle = Math.floor(s.phi / (2 * Math.PI));
     if (cycle > state.lastCycle) {
       state.ripples.push({ tv: state.tv, amp: s.A / P.hPeak });
       state.lastCycle = cycle;
+      W8.sound("tick", { pitch: Math.min(1, Math.max(0, Math.log(s.f / P.f0) / Math.log(P.fRd / P.f0))) });
+    }
+    if (prevT < P.tMerge && state.t >= P.tMerge) {
+      W8.describe("The black holes have merged into one of " + P.Mf.toFixed(0) + " M☉, spinning at " + P.af.toFixed(2) + ". The new black hole rings down.", { now: true });
+      W8.sound("event", { pitch: 0.7 });
     }
     state.ripples = state.ripples.filter((r) => (state.tv - r.tv) * 70 < 340);
   }
@@ -442,6 +448,29 @@
       Math.round(P.fRd * k) + " Hz" + (k > 1 ? " (two octaves above the true " + Math.round(fA) + " to " + Math.round(P.fRd) + " Hz)." : ", the true pitch. Most phone and laptop speakers can't reproduce it; try headphones.");
   }
 
+  // ---------- Narration, sound and challenges ----------
+  const W8 = window.WONDERS;
+  // Peak strain of GW150914 itself, for the "half the strain" challenge.
+  let refPeak = 0;
+  function measureRef() {
+    const keep = { m1: state.m1, m2: state.m2, distMly: state.distMly };
+    Object.assign(state, { m1: 36, m2: 29, distMly: 1300 });
+    derive();
+    refPeak = P.hPeak;
+    Object.assign(state, keep);
+    derive();
+  }
+  function settingsSaid() {
+    W8.describe("Black holes of " + state.m1 + " and " + state.m2 + " M☉, " + fmtDist(state.distMly) + " away: peak strain " + sci(P.hPeak) + ", and " + P.Erad.toFixed(1) + " M☉ turned into gravitational waves.");
+    const pair = (state.m1 === 36 && state.m2 === 29) || (state.m1 === 29 && state.m2 === 36);
+    if (pair && refPeak && Math.abs(P.hPeak / refPeak - 0.5) < 0.03) W8.challenge("half-strain");
+    if (P.Erad > 7) W8.challenge("energy");
+  }
+  W8.describer(() => {
+    const stats = [...document.querySelectorAll(".stats > span")].map((s) => s.textContent.replace(/\s+/g, " ").trim()).join(". ") + ".";
+    return tr("Two black holes orbiting and merging, a ring of free particles stretched and squeezed by the passing wave, and the strain waveform rising in frequency then ringing down.") + " " + stats;
+  });
+
   // ---------- Controls ----------
   function updateReadouts() {
     $("m1Out").textContent = state.m1 + " M☉";
@@ -456,19 +485,21 @@
   // A telling still frame: a few cycles before merger.
   const stillT = () => -tauOf(0.75 * P.fMerge);
 
-  $("m1").addEventListener("input", (e) => { state.m1 = +e.target.value; massesChanged(); });
-  $("m2").addEventListener("input", (e) => { state.m2 = +e.target.value; massesChanged(); });
+  $("m1").addEventListener("input", (e) => { state.m1 = +e.target.value; massesChanged(); settingsSaid(); });
+  $("m2").addEventListener("input", (e) => { state.m2 = +e.target.value; massesChanged(); settingsSaid(); });
   $("dist").addEventListener("input", (e) => {
     state.distMly = Math.pow(10, +e.target.value);
     const t = state.t;
     derive();
     state.t = Math.min(t, P.tEnd);
     updateReadouts();
+    settingsSaid();
   });
   function preset(m1, m2, mly) {
     state.m1 = m1; state.m2 = m2; state.distMly = mly;
     $("m1").value = m1; $("m2").value = m2; $("dist").value = Math.log10(mly).toFixed(2);
     massesChanged();
+    settingsSaid();
   }
   $("presetGW150914").addEventListener("click", () => preset(36, 29, 1300));
   $("presetLight").addEventListener("click", () => preset(10, 8, 1300));
@@ -489,6 +520,14 @@
   $("play").addEventListener("click", () => {
     if (!state.playing && state.t >= P.tEnd) restart();
     setPlaying(!state.playing);
+    if (!state.playing) {
+      const [hp, hc] = polStrain(sample(state.t));
+      const frac = Math.hypot(hp, hc) / P.hPeak;
+      W8.describe(state.t < P.tMerge
+        ? "Paused with the strain at " + Math.round(frac * 100) + "% of its peak, " + fmtTime(P.tMerge - state.t) + " before the merger."
+        : "Paused with the strain at " + Math.round(frac * 100) + "% of its peak, during the ringdown.", { now: true });
+      if (frac >= 0.8) W8.challenge("peak-pause");
+    }
   });
   $("replay").addEventListener("click", () => { restart(); setPlaying(true); });
   $("chirp").addEventListener("click", playChirp);
@@ -503,7 +542,7 @@
   }).observe(canvas.parentElement);
 
   // ---------- Start ----------
-  derive();
+  measureRef();
   updateReadouts();
   if (Lab.reducedMotion) {
     restart(stillT());

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="prime-spirals"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prime spirals · Science Wonders</title>
+<meta name="description" content="Write 1, 2, 3, … in a square spiral, light up the primes and watch diagonal lines appear. Highlight Euler's n² + n + 41, switch to the Sacks spiral, and tap any number to factor it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Prime spirals">
+<meta property="og:description" content="Write the numbers in a spiral, light up the primes, and find diagonals nobody fully understands.">
+<meta property="og:url" content="https://science.daiyip.com/demos/prime-spirals/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/prime-spirals.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  #bench { cursor: crosshair; }
+  .bench-keys { margin: 8px 2px 0; font-size: 0.78rem; color: #7f8ea6; }
+  .bench-keys code.k { font-family: var(--font-mono); font-size: 0.74rem; border: 1px solid #26324a; border-radius: 4px; padding: 0 4px; color: #c9d4e3; }
+  .controls select, .controls input[type="number"] {
+    font: inherit;
+    font-size: var(--step--1);
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+    width: 100%;
+    min-width: 0;
+  }
+  .coef { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-family: var(--font-mono); font-size: var(--step--1); }
+  .coef input[type="number"] { width: 6.2em; padding: 6px 6px; }
+  .coef input#polyA { width: 4.4em; }
+  .poly-name { font-family: var(--font-mono); }
+  .stats .poly-name { color: var(--ink); }
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+    .controls select, .controls input[type="number"] { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Number theory · 1772 / 1923 / 1963</div>
+    <h1>Prime spirals</h1>
+    <p class="lede">Write 1, 2, 3, … in a square spiral and light up the primes. They should look scattered at random, yet they crowd onto diagonal lines. Every one of those lines is a simple quadratic formula, and why some of them are so full of primes is still an open problem.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="620" tabindex="0" aria-label="The numbers written in a spiral with the primes lit up, and beside it the selected number with its factors and a chart of how many primes there are. Arrow keys move the cursor, Enter traces the diagonal through it, plus and minus change the grid size."></canvas>
+    <p class="bench-keys">Tap or click a number to factor it. Keyboard: <code class="k">←</code> <code class="k">↑</code> <code class="k">→</code> <code class="k">↓</code> move, <code class="k">Enter</code> traces the diagonal, <code class="k">+</code> <code class="k">−</code> change the size, <code class="k">Home</code> goes back to the centre.</p>
+  </div>
+  <div class="stats">
+    <span>Numbers shown <b id="range">1 to 40,401</b></span>
+    <span>Primes shown <b id="primeCount">–</b></span>
+    <span>π(N) vs N/ln N <b id="piRatio">–</b></span>
+    <span>Longest gap <b id="gap">–</b></span>
+    <span>Selected <b id="selStat">–</b></span>
+    <span>Highlighted <span class="poly-name" id="polyName" translate="no"></span> <b id="polyStat">nothing</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Spiral</span>
+      <div class="seg" role="group" aria-label="Spiral">
+        <button id="viewSquare" aria-pressed="true">Square (Ulam)</button>
+        <button id="viewSacks" aria-pressed="false">Sacks</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="size">Size <output id="sizeOut">201 × 201</output></label>
+      <input type="range" id="size" min="11" max="501" step="2" value="201">
+    </div>
+    <div class="control">
+      <label for="start">Start at <output id="startOut">1</output></label>
+      <input type="number" id="start" min="1" max="1000000" step="1" value="1" inputmode="numeric">
+    </div>
+    <div class="control">
+      <label for="poly">Highlight</label>
+      <select id="poly">
+        <option value="none" selected>Nothing</option>
+        <option value="euler">Euler: n² + n + 41</option>
+        <option value="landau">Landau: n² + 1</option>
+        <option value="even">Always even: n² + n + 2</option>
+        <option value="custom">Your own: an² + bn + c</option>
+      </select>
+    </div>
+    <div class="control">
+      <span class="label">Your own an² + bn + c</span>
+      <div class="coef">
+        <input type="number" id="polyA" min="0" max="100" step="1" value="4" aria-label="a, the n² coefficient"><span aria-hidden="true">n² +</span>
+        <input type="number" id="polyB" min="-10000" max="10000" step="1" value="18" aria-label="b, the n coefficient"><span aria-hidden="true">n +</span>
+        <input type="number" id="polyC" min="-10000000" max="10000000" step="1" value="19" aria-label="c, the constant"><span aria-hidden="true"></span>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Diagonals</span>
+      <div class="button-row">
+        <button id="trace" class="primary">Trace the diagonal through the selected number</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Fair test</span>
+      <label class="switch" for="random"><input type="checkbox" id="random"> Swap the primes for random odd numbers</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Pick a bright diagonal streak, click a number on it and press Trace. The page finds the formula behind the line and counts how many of its values are prime. Then flip on the fair test: random odd numbers with the same density make a checkerboard haze, but not the long streaks.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>The starting number sits in the centre. The next one goes to its right, and the count winds outward anticlockwise, one ring at a time. Each prime is lit in blue; every other square stays dark. When the cells are big enough, the numbers are written in them.</p>
+      <p>Click or tap any cell to see its number, its prime factors and its nearest prime neighbours. The chart counts the primes up to each number and compares the count with two famous estimates.</p>
+      <p>The Sacks spiral puts each number n at distance √n from the centre, making one full turn per whole square root. The perfect squares 1, 4, 9, 16, … all land on the ray pointing right, and the prime-rich formulas become smooth curves.</p>
+      <p data-depth="deep">The page finds every prime up to the largest number shown with a sieve of Eratosthenes that also records each number's smallest prime factor, so any number can be factored instantly by dividing out that factor again and again. For the largest setting, 501 × 501 cells starting at 1,000,000, that is about 1.25 million numbers, sieved in a few hundredths of a second.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Set Start at to 41 and highlight Euler's n² + n + 41. Its first 40 values, all prime, sit on one unbroken diagonal through the centre.</li>
+        <li>Click a number on a bright streak and press Trace. Compare its prime share with the 10% or so of all numbers shown.</li>
+        <li>Highlight n² + n + 2. Its line runs through the spiral without a single prime, because every value is even.</li>
+        <li>Turn on the fair test and look for the long lines. Then turn it off again.</li>
+      </ul>
+      <p data-depth="deep">The highlight readout compares two numbers. The first is how many times more often the formula's values are prime than random numbers of the same size, measured on the values shown. The second is what the Hardy–Littlewood conjecture predicts for that formula in the long run. For Euler's polynomial the prediction is about 6.6, and the measured value creeps toward it as you grow the grid.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Primes are fixed by the rule "no divisors except 1 and itself". Nothing in that rule mentions spirals or lines. Yet in a spiral, every diagonal is a quadratic formula like 4n² + 2n + 41, and some quadratics turn out primes far more often than others.</p>
+      <p>Part of the answer is simple. Odd and even numbers alternate like a chessboard, so half the diagonals hold only even numbers and can never light up. A formula is prime-rich when its values also avoid being multiples of 3, 5, 7 and other small primes. Euler's n² + n + 41 is never a multiple of any prime below 41.</p>
+      <p>The rest is unknown. Nobody has proved that n² + 1, or any other quadratic, gives infinitely many primes. That question was on Landau's list of unsolved problems in 1912 and is still open.</p>
+      <p class="muted">Euler found his polynomial in 1772. Stanisław Ulam doodled the spiral during a dull talk in 1963, and it made the cover of Scientific American the next year. Robert Sacks drew his version in 1994.</p>
+      <p data-depth="deep">In 1923 Hardy and Littlewood guessed exactly how often a quadratic should be prime, their "conjecture F". The idea is to treat each small prime p independently: if the formula hits a multiple of p less often than a random number does, its values are more likely to be prime, and the boost is multiplied over all primes. The guess matches every computer test so far, but it remains unproved even for a single quadratic. The only polynomials with a proven count are the straight lines an + b, by the prime number theorem for arithmetic progressions.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">f(n) = 4n² + bn + c<br>f(n+1) − 2f(n) + f(n−1) = 8</div>
+      <p>Each step along a diagonal moves one ring further out, and each ring is 8 cells longer than the one inside it. So the gaps between neighbouring values on a diagonal ray grow by 8 every step, which is exactly what makes them a quadratic with leading coefficient 4. The Trace button reads three cells along the ray, solves for b and c, checks the formula against further cells, and then extends it inward as far as it holds.</p>
+      <div class="eq" data-depth="deep" translate="no">π(N) ~ N ÷ ln N<br>π(N) ≈ li(N) = ∫<sub>2</sub><sup>N</sup> dt ÷ ln t</div>
+      <p>The prime number theorem, proved in 1896: near a number N, about one number in ln N is prime. The chart plots the true count π(x) from the sieve against both estimates. N/ln N falls short by roughly 10% at these sizes and only very slowly catches up, while the logarithmic integral li(N), computed here as the integral from 2, is within 1% by N = 40,000 and keeps getting relatively closer.</p>
+      <div class="eq" data-depth="deep" translate="no">#{n ≤ X : f(n) prime} ≈ C<sub>f</sub> ∑<sub>n ≤ X</sub> 1 ÷ ln f(n)<br>C<sub>f</sub> = ∏<sub>p</sub> (1 − ω(p)/p) ÷ (1 − 1/p)</div>
+      <p>The Hardy–Littlewood conjecture F, in the general form later stated by Bateman and Horn. ω(p) counts the solutions of f(n) ≡ 0 mod p among n = 0, 1, …, p − 1. A random number is a multiple of p one time in p, so primes where ω(p) = 0 raise the odds and primes where ω(p) = 2 lower them. For Euler's polynomial ω(p) = 0 for every p below 41, and C<sub>f</sub> ≈ 6.64. The page measures the ratio of prime values to the sum of 1/ln f(n) over the values shown, and computes C<sub>f</sub> from the product over all primes below 100,000, using the discriminant b² − 4ac to find ω(p).</p>
+      <div class="eq" data-depth="deep" translate="no">n²+n+41: b² − 4ac = −163<br>(−163 ÷ p) = −1 for p = 2, 3, 5, …, 37</div>
+      <p>For a prime p above 2 and a polynomial with a not divisible by p, ω(p) is 1 + (D ÷ p), where D = b² − 4ac and (D ÷ p) is the Legendre symbol: +1 if D is a square mod p, −1 if not. For Euler's polynomial D = −163 is a non-square mod every prime from 3 to 37, so no value is ever a multiple of those primes, and the values are odd as well. That is why the first 40 values are all prime. The same −163 makes e<sup>π√163</sup> astonishingly close to a whole number.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where primes do real work</h2>
+      <p>The patterns in the spiral are a puzzle, but primes themselves are workhorses. Much of their usefulness comes from two facts on this page: factoring is easy for small numbers and very hard for big ones, and primes are common enough to find quickly.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Security</span>
+        <h3>RSA encryption</h3>
+        <p>An RSA key is built by multiplying two secret primes, each hundreds of digits long. Multiplying takes a computer a moment. Recovering the two primes from the product is believed to be practically impossible, and that one-way street protects much of the secure traffic on the web.</p>
+        <span class="link"><b>In the demo:</b> factoring a six-digit number is instant; a 600-digit one is out of reach.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Security</span>
+        <h3>Finding primes for keys</h3>
+        <p>Key generators pick random odd numbers of the right size and test them until one is prime. The prime number theorem says how long that takes: about one 1024-bit number in 710 is prime, so roughly one random odd one in 355, a split second of testing.</p>
+        <span class="link"><b>In the demo:</b> the chart's N/ln N curve is the same estimate.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Mathematics · Computing</span>
+        <h3>The quadratic sieve</h3>
+        <p>Carl Pomerance's 1981 factoring method looks at the values of a quadratic, x² − N, and keeps the ones built only from small primes. It was the fastest general method for years and factored the 129-digit RSA challenge number in 1994.</p>
+        <span class="link"><b>In the demo:</b> whether a quadratic's values share small prime factors is exactly what makes a diagonal bright or dark.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Random number generators</h3>
+        <p>The "minimal standard" generator of Park and Miller (1988) multiplies by 16,807 and takes the remainder after dividing by the prime 2³¹ − 1. With a prime modulus and a well-chosen multiplier, the sequence visits every value from 1 to 2³¹ − 2 before it repeats. Similar generators sat inside many programming libraries.</p>
+        <span class="link"><b>In the demo:</b> the fair test needs random numbers too, and they make no lines.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Engineering</span>
+        <h3>Gears that wear evenly</h3>
+        <p>If two meshing gears have 12 and 36 teeth, the same teeth meet every turn and any flaw wears into the same spot. Designers choose tooth counts with no common factor, such as 12 and 37, so every tooth meets every other one in turn. Mechanics call the extra tooth a hunting tooth.</p>
+        <span class="link"><b>In the demo:</b> a number's factors decide which patterns it repeats with.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Biology</span>
+        <h3>Periodical cicadas</h3>
+        <p>Some North American cicadas spend 13 or 17 years underground and then emerge together by the billion. One leading idea is that prime cycles rarely line up with the shorter cycles of predators or of other broods. It is a hypothesis, not a settled fact.</p>
+        <span class="link"><b>In the demo:</b> 13 and 17 share no factor with any smaller cycle.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Primes found by a sieve of Eratosthenes up to the largest number shown; numbers are exact integers. The Hardy–Littlewood prediction uses the product over primes below 100,000, so its last digit can shift slightly, and it is a conjecture, not a theorem. The fair test lights each odd number with chance 2 / ln n from a fixed pseudo-random hash.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="prime-spirals.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/prime-spirals.js"></script>
+<script src="../../assets/wonders.js" data-slug="prime-spirals"></script>
+</body>
+</html>

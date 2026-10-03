@@ -52,6 +52,7 @@
   .size-tag { font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
   .size-tag.big { color: var(--warn); }
   .size-tag.small { color: var(--good); }
+  .key-hint { font-size: var(--step--1); margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -76,9 +77,9 @@
   </div>
 
   <div class="bench">
-    <canvas id="hotel" width="960" height="440" aria-label="A row of hotel rooms 1 to 16, each holding a guest, with arriving guests waiting below and the room-change rule written beside them"></canvas>
+    <canvas id="hotel" width="960" height="440" role="img" aria-label="A row of hotel rooms 1 to 16, each holding a guest, with arriving guests waiting below and the room-change rule written beside them"></canvas>
   </div>
-  <div class="stats" aria-live="polite">
+  <div class="stats">
     <span>Rule <b id="rule">–</b></span>
     <span>Guests turned away <b id="turnedAway">0</b></span>
     <span>Empty rooms <b id="emptyRooms">none</b></span>
@@ -134,9 +135,9 @@
   </div>
 
   <div class="bench">
-    <canvas id="cantor" width="960" height="440" aria-label="A grid of infinite digit strings, one per row, with the diagonal highlighted and a new string built underneath by changing each diagonal digit"></canvas>
+    <canvas id="cantor" width="960" height="440" tabindex="0" role="application" aria-describedby="cantorKeys" aria-label="A grid of infinite digit strings, one per row, with the diagonal highlighted and a new string built underneath by changing each diagonal digit. Use the arrow keys to choose a digit and Enter or Space to change it."></canvas>
   </div>
-  <div class="stats" aria-live="polite">
+  <div class="stats">
     <span>Diagonal digits changed <b id="steps">0</b></span>
     <span>Rows ruled out <b id="ruledOut">–</b></span>
     <span>New string starts <b id="newStart">–</b></span>
@@ -167,6 +168,7 @@
       </div>
     </div>
   </div>
+  <p class="muted key-hint" id="cantorKeys">Keyboard: Tab to the grid, choose a digit with the arrow keys, and press Enter or Space to change it.</p>
   <p class="callout" id="cantorHint">Click any digit in the list to change it; the new string updates to dodge it. Then try "Add the new string to the top": the list shifts down, the diagonal runs again, and out comes another string the list missed.</p>
 
   <div class="explain">

@@ -157,8 +157,88 @@
     for (const b of depthSeg.children) b.setAttribute("aria-pressed", String(b.dataset.depthSet === v));
   }
 
-  const toolbar = el("div", { class: "toolbar" }, shareBtn, embedBtn, recordBtn, presentBtn, quizLink, depthCtl, shareStatus);
+  // Optional sound cues (off by default, remembered per browser).
+  const SOUND_KEY = "science-wonders-sound";
+  let soundOn = false;
+  try { soundOn = localStorage.getItem(SOUND_KEY) === "on"; } catch (e) {}
+  const soundBtn = (window.AudioContext || window.webkitAudioContext)
+    ? el("button", { id: "wSound", type: "button", "aria-pressed": String(soundOn), text: "Sound cues", onclick: () => {
+        soundOn = !soundOn;
+        soundBtn.setAttribute("aria-pressed", String(soundOn));
+        try { localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch (e) {}
+        if (soundOn) { audio(); playSound("success"); }
+      } })
+    : null;
+  const teachLink = content && content.teach
+    ? el("a", { class: "tool-link", href: `../../teach/index.html?e=${slug}`, text: "Teacher pack" }) : null;
+
+  // Screen-reader narration: a polite live region, plus an on-demand
+  // "Describe the scene" button that is visible only when focused.
+  const live = el("div", { class: "sr-only", "aria-live": "polite", id: "wLive" });
+  document.body.append(live);
+  let describerFn = null;
+  const describeBtn = el("button", { type: "button", class: "sr-only-focusable", id: "wDescribe", text: "Describe the scene", onclick: () => {
+    const t = describerFn ? describerFn() : "";
+    say(t || (bench && bench.querySelector("canvas") ? bench.querySelector("canvas").getAttribute("aria-label") : "") || "", true);
+  } });
+
+  const toolbar = el("div", { class: "toolbar" }, describeBtn, shareBtn, embedBtn, recordBtn, presentBtn, soundBtn, quizLink, teachLink, depthCtl, shareStatus);
   if (head) head.after(toolbar);
+
+  let lastSaid = 0, pending = null, pendingTimer = null;
+  function say(text, now) {
+    if (!text) return;
+    text = window.I18N ? window.I18N.t(String(text)) : String(text);
+    const gap = Date.now() - lastSaid;
+    if (now || gap > 4000) {
+      clearTimeout(pendingTimer); pending = null;
+      lastSaid = Date.now();
+      live.textContent = "";
+      setTimeout(() => { live.textContent = text; }, 30);
+    } else {
+      pending = text;
+      clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(() => { const t = pending; pending = null; say(t, true); }, 4000 - gap);
+    }
+  }
+
+  // ---------- Sound ----------
+  let actx = null;
+  function audio() {
+    if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+    if (actx && actx.state === "suspended") actx.resume().catch(() => {});
+    return actx;
+  }
+  const lastSound = {};
+  function playSound(kind, opts) {
+    if (!soundOn) return;
+    const now = performance.now();
+    if (now - (lastSound[kind] || 0) < (kind === "tick" ? 45 : 120)) return;
+    lastSound[kind] = now;
+    const a = audio();
+    if (!a) return;
+    const o = opts || {};
+    const pitch = Math.max(0, Math.min(1, o.pitch == null ? 0.5 : o.pitch));
+    const t0 = a.currentTime;
+    const notes = {
+      tick: [[400 + 900 * pitch, 0, 0.04, 0.05]],
+      event: [[300 + 500 * pitch, 0, 0.18, 0.12]],
+      success: [[523, 0, 0.14, 0.12], [659, 0.1, 0.14, 0.12], [784, 0.2, 0.25, 0.12]],
+      fail: [[330, 0, 0.18, 0.1], [262, 0.14, 0.28, 0.1]]
+    }[kind] || [[440, 0, 0.1, 0.08]];
+    const pan = a.createStereoPanner ? a.createStereoPanner() : null;
+    if (pan) { pan.pan.value = Math.max(-1, Math.min(1, o.pan || 0)); pan.connect(a.destination); }
+    for (const [f, start, dur, vol] of notes) {
+      const osc = a.createOscillator(), g = a.createGain();
+      osc.type = kind === "tick" ? "triangle" : "sine";
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + start);
+      g.gain.exponentialRampToValueAtTime(vol, t0 + start + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + start + dur);
+      osc.connect(g); g.connect(pan || a.destination);
+      osc.start(t0 + start); osc.stop(t0 + start + dur + 0.02);
+    }
+  }
 
   // ---------- Clip recording ----------
   function mainCanvas() {
@@ -306,6 +386,51 @@
     }
     (toolbar || head).after(card);
 
+    // ---------- Challenges ----------
+    if (content.challenges && content.challenges.length) {
+      const doneMap = () => ((load().challenges || {})[slug] || {});
+      update((p) => { (p.challengeTotals = p.challengeTotals || {})[slug] = content.challenges.length; });
+      const list = el("ul", { class: "challenge-list" });
+      const count = el("span", { class: "challenge-count" });
+      const items = {};
+      for (const c of content.challenges) {
+        const li = el("li", { class: "challenge", "data-id": c.id },
+          el("span", { class: "challenge-mark", "aria-hidden": "true" }),
+          el("span", { class: "challenge-text" }, el("span", { text: c.goal }),
+            c.hint ? el("details", {}, el("summary", { text: "Hint" }), el("span", { text: c.hint })) : null));
+        items[c.id] = li;
+        list.append(li);
+      }
+      const box = el("section", { class: "challenges", id: "challenges", "aria-label": "Challenges" },
+        el("div", { class: "challenges-head" }, el("div", { class: "eyebrow", text: "Challenges" }), count), list);
+      const paint = () => {
+        const d = doneMap();
+        let n = 0;
+        for (const c of content.challenges) {
+          const ok = !!d[c.id];
+          if (ok) n++;
+          items[c.id].classList.toggle("done", ok);
+          items[c.id].querySelector(".challenge-mark").textContent = ok ? "★" : "☆";
+        }
+        count.textContent = `${n} of ${content.challenges.length} done`;
+      };
+      paint();
+      const anchor = document.querySelector(".explain");
+      if (anchor) anchor.before(box); else if (bench) bench.after(box);
+      W.challenge = (id) => {
+        const c = content.challenges.find((x) => x.id === id);
+        if (!c || doneMap()[id]) return;
+        update((p) => { ((p.challenges = p.challenges || {})[slug] = p.challenges[slug] || {})[id] = Date.now(); });
+        paint();
+        items[id].classList.add("just-done");
+        setTimeout(() => items[id].classList.remove("just-done"), 2400);
+        playSound("success");
+        const t = window.I18N ? window.I18N.t : (x) => x;
+        say(t("Challenge complete:") + " " + t(c.goal), true);
+        toast(t("Challenge complete:") + " " + t(c.goal));
+      };
+    }
+
     // ---------- Quiz ----------
     const apps = document.getElementById("applications");
     const quiz = el("section", { class: "quiz", id: "quiz" },
@@ -350,6 +475,20 @@
     const footer = document.querySelector(".footer");
     if (footer) footer.before(rel);
   }
+
+  function toast(text) {
+    const t = el("div", { class: "toast", role: "presentation", "aria-hidden": "true", text });
+    document.body.append(t);
+    setTimeout(() => t.classList.add("out"), 2600);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  // ---------- Hooks for the page's own script (stubs in assets/lab.js) ----------
+  if (!(content && content.challenges && content.challenges.length) || embedded) W.challenge = () => {};
+  W.describe = (text, opts) => say(text, opts && opts.now);
+  W.describer = (fn) => { describerFn = fn; };
+  W.sound = (kind, opts) => playSound(kind, opts);
+  for (const [name, args] of (W._queue || []).splice(0)) W[name](...args);
 
   // Apply a shared setup last, once every control exists and has its listeners.
   if (applySetup()) {

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="ladder-paradox"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Ladder in the Barn · Science Wonders</title>
+<meta name="description" content="Run a 10 m ladder at 0.8c through an 8 m barn. In the barn's frame it fits and both doors shut at once; in the ladder's frame the barn is only 4.8 m long. See why both are right.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="The Ladder in the Barn">
+<meta property="og:description" content="A fast ladder fits in a short barn, or doesn't, depending on who you ask. Both are right.">
+<meta property="og:url" content="https://science.daiyip.com/demos/ladder-paradox/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/ladder-paradox.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Special relativity · Einstein 1905 · Rindler 1961</div>
+    <h1>The ladder in the barn</h1>
+    <p class="lede">A 10 m ladder races through an 8 m barn at 80% of the speed of light. The farmer sees a shrunken ladder and shuts both doors on it at once. The ladder sees a shrunken barn, less than half its length. Nothing breaks, and both of them are right.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="600" aria-label="Animated barn and ladder seen from the barn frame, above a spacetime diagram of the ladder ends and the barn doors with lines of simultaneity, beside a list of events in the order this observer sees them"></canvas>
+  </div>
+  <div class="stats">
+    <span>Lorentz factor γ <b id="gamma">–</b></span>
+    <span>Ladder, measured in the barn frame <b id="ladderInBarn">–</b></span>
+    <span>Barn, measured in the ladder frame <b id="barnInLadder">–</b></span>
+    <span>Door events, barn frame <b id="gapBarn">–</b></span>
+    <span>Door events, ladder frame <b id="gapLadder">–</b></span>
+    <span>Door events, this view <b id="gapView">–</b></span>
+    <span>Result <b id="verdict">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="speed">Ladder speed <output id="speedOut">0.800c</output></label>
+      <input type="range" id="speed" min="0.3" max="0.99" step="0.005" value="0.8">
+    </div>
+    <div class="control">
+      <label for="ladderLen">Ladder length at rest <output id="ladderOut">10.0 m</output></label>
+      <input type="range" id="ladderLen" min="4" max="16" step="0.5" value="10">
+    </div>
+    <div class="control">
+      <label for="barnLen">Barn length at rest <output id="barnOut">8.0 m</output></label>
+      <input type="range" id="barnLen" min="4" max="16" step="0.5" value="8">
+    </div>
+    <div class="control">
+      <span class="label">View from</span>
+      <div class="seg" role="group" aria-label="View from">
+        <button id="frameBarn" aria-pressed="true">Barn</button>
+        <button id="frameLadder" aria-pressed="false">Ladder</button>
+        <button id="frameMid" aria-pressed="false">Midway</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="observer">Observer speed, relative to the barn <output id="observerOut">0.000c</output></label>
+      <input type="range" id="observer" min="-0.99" max="0.99" step="0.005" value="0">
+    </div>
+    <div class="control">
+      <span class="label">Animation</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="restart">Restart</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="scrub">Step through time</label>
+      <input type="range" id="scrub" min="0" max="1000" step="1" value="0">
+    </div>
+    <div class="control">
+      <span class="label">Exit door</span>
+      <label class="switch" for="wall"><input type="checkbox" id="wall"> Keep it shut, like a solid wall</label>
+    </div>
+    <div class="control">
+      <span class="label">Spacetime diagram</span>
+      <label class="switch" for="simul"><input type="checkbox" id="simul" checked> Show lines of simultaneity</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Watch the doors in the Barn view, then press Ladder. The same two door events happen in both views, but in the ladder's view the exit door shuts first, before the ladder's front gets there, and the entrance door shuts last, after its rear is in.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>A ladder flies to the right through a barn with a door at each end. Each door slams shut for about one nanosecond and opens again. The farmer's two door clocks are synchronised, and both doors shut when they read 0.</p>
+      <p>In the barn's view the ladder is contracted to 6 m, so it sits inside the 8 m barn when both doors shut together. Press Ladder: now the ladder is at rest and 10 m long, and the barn rushes past contracted to 4.8 m. The ladder still gets through untouched, because in this view the doors do not shut at the same time.</p>
+      <p>Below the animation is a spacetime diagram: position across, time up. The orange band is the ladder sweeping through time, the blue band the barn. The white dots are the two door events.</p>
+      <p data-depth="deep">The small numbers above the doors are the barn's own clocks, and those under the ladder are clocks carried on its two ends, synchronised by the ladder's crew. In the Ladder view, look at the barn clocks at one moment: they disagree. The exit clock is ahead of the entrance clock by vB/c², 21.3 ns at the default settings, so it reaches 0 first. Each side thinks the other side's clocks are badly set.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Slow the ladder below about 0.62c. In the barn's view it no longer fits, and both doors hit it. That is true in every view, because whether a door meets the ladder is a single event in one place.</li>
+        <li>Pick Midway. Now the barn and the ladder rush toward each other at the same speed, and both are contracted by the same factor, so the ladder still looks longer than the barn.</li>
+        <li>Drag the observer speed below zero. Now the entrance door shuts first. Which of two distant events comes first depends on who is asking.</li>
+        <li>Switch on the solid exit door. The ladder's front stops at the wall, but its rear keeps going until the news arrives.</li>
+      </ul>
+      <p data-depth="deep">With the defaults, γ = 1/√(1 − 0.8²) = 5/3. The ladder shrinks to 10 × 0.6 = 6 m and the barn to 8 × 0.6 = 4.8 m. In the ladder's frame the exit door shuts γvB/c² = (5/3)(0.8)(8 m)/c ≈ 35.6 ns before the entrance door. In that time the barn moves 0.8 × 10.7 m ≈ 8.5 m, enough for the 10 m ladder to slip through a 4.8 m barn.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>"The ladder is inside with both doors shut" sounds like a plain fact. It isn't. It means "the entrance shut and the exit shut <em>at the same moment</em>", and observers moving relative to each other disagree about which distant events happen at the same moment. That disagreement is the whole trick behind length contraction: to measure a moving object you mark both ends at the same moment, and each observer means a different set of moments.</p>
+      <p>What everyone agrees on is what happens at a single place and time: did the door meet the ladder or not? The answer is the same in every view.</p>
+      <p class="muted">Paradoxes like this were made famous by Wolfgang Rindler's 1961 paper about a fast-moving man falling through a grate, and by the pole-and-barn puzzle in Taylor and Wheeler's textbook Spacetime Physics.</p>
+      <p data-depth="deep">The two door events are spacelike separated: light from one cannot reach the other, because they are 8 m apart and happen at once in the barn frame. For such pairs the time order itself depends on the observer. Pairs where one event could cause the other, like the ladder's front hitting a wall and its rear end stopping, always keep their order.</p>
+      <p data-depth="deep">The solid-wall version shows there are no truly rigid objects in relativity. When the front stops, the rear cannot know until a signal travels back along the ladder, and nothing goes faster than light. Even with that signal at the speed of light, the rear moves on and the ladder ends up squashed to L√((1 − β)/(1 + β)), 3.3 m at the defaults. A real ladder's signal is a sound wave, tens of thousands of times slower, and it would be crushed long before.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no"><i>x</i>′ = γ(<i>x</i> − <i>vt</i>)<br><i>t</i>′ = γ(<i>t</i> − <i>vx</i>/<i>c</i>²)<br>γ = 1 / √(1 − <i>v</i>²/<i>c</i>²)</div>
+      <p>The Lorentz transformation from the barn's coordinates (<i>x</i>, <i>t</i>) to those of an observer moving at <i>v</i> along the barn. The page builds every worldline in the barn frame as straight pieces, then applies this transformation exactly, with the observer speed slider as <i>v</i>, to draw the scene, the diagram and the event list. Ladder and Midway set <i>v</i> to the ladder's speed and to the speed at which the barn and ladder move equally fast in opposite directions.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>L</i><sub>barn frame</sub> = <i>L</i> / γ<br><i>B</i><sub>ladder frame</sub> = <i>B</i> / γ</div>
+      <p>Length contraction, measured by marking both ends at the same moment in your own frame. With <i>L</i> = 10 m, <i>B</i> = 8 m and γ = 5/3, the ladder is 6 m in the barn frame and the barn is 4.8 m in the ladder frame, the two readouts above. Nothing is squeezed: each length is a statement about which moments count as simultaneous.</p>
+      <div class="eq" data-depth="deep" translate="no">Δ<i>t</i>′ = −γ<i>v</i> Δ<i>x</i> / <i>c</i>²</div>
+      <p>The second Lorentz line applied to two events that are simultaneous in the barn frame (Δ<i>t</i> = 0) and a distance Δ<i>x</i> = <i>B</i> apart, the two door events. In the ladder frame they are γ<i>vB</i>/<i>c</i>² apart, about 35.6 ns by default, and for <i>v</i> &gt; 0 the exit door goes first. The tilted dashed lines on the diagram are lines of constant <i>t</i>′: everything on one of them happens at the same moment for that frame.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>ℓ</i> = <i>L</i> √((1 − β) / (1 + β))<br>β = <i>v</i>/<i>c</i></div>
+      <p>The solid-wall version. The front stops when it reaches the wall; a stop signal then runs back at the speed of light, the fastest any material could possibly react, and each part of the ladder stops when the signal reaches it. In the barn frame the rear is <i>L</i>/γ behind and closes on the signal at <i>c</i> + <i>v</i>, so the ladder's final length is (<i>L</i>/γ)/(1 + β), which simplifies to <i>ℓ</i> above. The ladder is trapped inside whenever <i>ℓ</i> &lt; <i>B</i>.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>When "at the same moment" matters</h2>
+      <p>Length contraction and the relativity of simultaneity are not just puzzles. They shape how machines are built and how clocks are set.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Particle physics</span>
+        <h3>Colliding pancakes</h3>
+        <p>At Brookhaven's RHIC collider, gold nuclei travel at γ ≈ 100. In the lab frame each round nucleus is flattened a hundredfold along its path into a thin disc. Physicists model the collisions as two such pancakes passing through each other, which is how the quark-gluon plasma forms.</p>
+        <span class="link"><b>In the demo:</b> push the speed toward 0.99c and the moving object shrinks along its motion only.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Navigation</span>
+        <h3>Synchronising GPS clocks</h3>
+        <p>On a rotating Earth there is no single way to agree what time it is everywhere at once. GPS fixes "now" in a frame that does not rotate with the Earth, and receivers apply a Sagnac correction that can exceed 100 ns, about 30 m of position error if left out.</p>
+        <span class="link"><b>In the demo:</b> two clocks that agree in one frame disagree in another.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Light sources</span>
+        <h3>X-ray free-electron lasers</h3>
+        <p>In machines like SLAC's LCLS and the European XFEL, electrons fly through a row of magnets a few centimetres apart. In the electrons' frame that row is contracted by γ, tens of thousands of times, and they wiggle fast enough to emit X-rays with wavelengths below a nanometre.</p>
+        <span class="link"><b>In the demo:</b> the barn seen from the ladder is the magnet row seen from an electron.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Cosmic rays</span>
+        <h3>Muons reaching the ground</h3>
+        <p>Muons are made about 15 km up and most live only microseconds. From the ground, their clocks run slow. From the muon's own frame, nothing is slow: the atmosphere is contracted to a few hundred metres. Both stories predict the same number of muons at the ground.</p>
+        <span class="link"><b>In the demo:</b> the barn frame and the ladder frame describe one outcome in two ways.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Electromagnetism</span>
+        <h3>Magnetism in every motor</h3>
+        <p>A current in a wire is electrons drifting at a fraction of a millimetre per second. For a charge moving beside the wire, the electrons and the metal ions are contracted by different tiny amounts, so the wire looks slightly charged. The resulting electric force is what we call magnetism in the lab frame.</p>
+        <span class="link"><b>In the demo:</b> lengths depend on who measures them, even at everyday speeds.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Engineering</span>
+        <h3>Impact testing</h3>
+        <p>Strike one end of a steel bar and the far end does not move until a stress wave arrives at about 5 km/s. Engineers use this in split Hopkinson bars to measure how materials behave in crashes and explosions, timing the waves as they run along the bars.</p>
+        <span class="link"><b>In the demo:</b> with the exit door shut, the rear keeps going until the news arrives.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Exact Lorentz transformations in one dimension. Doors shut for 1 ns at barn time 0. Positions are where things are at each moment in the chosen frame, not how they would look, which light-travel delays would distort. In the solid-wall version the ladder is as stiff as relativity allows: each part stops when a signal from the front, moving at light speed, reaches it.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="ladder-paradox.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/ladder-paradox.js"></script>
+<script src="../../assets/wonders.js" data-slug="ladder-paradox"></script>
+</body>
+</html>

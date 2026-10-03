@@ -72,7 +72,9 @@
     if (state.tapeA.length > 40) { state.tapeA.shift(); state.tapeB.shift(); }
     state.lastA = A; state.lastB = B; state.lampA = 1; state.lampB = 1;
     dirtyStats = true;
+    if (ready && !bulk) WONDERS.sound("tick", { pitch: A === B ? 0.8 : 0.3 });
   }
+  let ready = false, bulk = false;
   function sendPair(animate) {
     const [A, B] = models[state.model](state.a, state.b);
     record(A, B, animate);
@@ -301,7 +303,28 @@
     $("aliceOut").textContent = state.a + "°";
     $("bobOut").textContent = state.b + "°";
     dirtyStats = false;
+    checkChallenges(bin, d);
   }
+
+  // ---------- Narration and challenges ----------
+  const fmt = (p) => (p * 100).toFixed(1);
+  function checkChallenges(bin, d) {
+    if (!ready || state.model !== "quantum" || !bin.n) return;
+    const agree = bin.same / bin.n;
+    if (d === 90 && bin.n >= 200 && agree === 0) WONDERS.challenge("never-agree");
+    if (d >= 17.5 && d <= 22.5 && bin.n >= 1000 && agree - cAgree(d) >= 0.05) WONDERS.challenge("beat-plan");
+  }
+  function describeScene() {
+    const d = foldDiff(state.a - state.b);
+    const bin = state.data[state.model][binOf(state.a, state.b)];
+    const rules = state.model === "quantum" ? "Quantum rules are on." : "Hidden instructions are on.";
+    const angles = `Alice's polarizer is at ${state.a}° and Bob's at ${state.b}°, ${d}° apart.`;
+    const measured = bin.n
+      ? `Over ${bin.n.toLocaleString()} pairs at this angle difference the results agreed ${fmt(bin.same / bin.n)}% of the time; quantum mechanics predicts ${fmt(qAgree(d))}% and the best hidden-instruction plan ${fmt(cAgree(d))}%.`
+      : `No pairs measured at this angle difference yet; quantum mechanics predicts ${fmt(qAgree(d))}% agreement and the best hidden-instruction plan ${fmt(cAgree(d))}%.`;
+    return rules + " " + angles + " " + measured;
+  }
+  WONDERS.describer(describeScene);
 
   // ---------- Bell test ----------
   const SETTINGS = [[0, 22.5, +1], [45, 22.5, +1], [45, 67.5, +1], [0, 67.5, -1]];
@@ -339,7 +362,11 @@
   }
   renderBell(null, null);
   $("runBell").addEventListener("click", () => {
-    renderBell(bellRun("quantum", 20000), bellRun("classical", 20000));
+    const q = bellRun("quantum", 20000), c = bellRun("classical", 20000);
+    renderBell(q, c);
+    WONDERS.describe(`Bell test done. Quantum rules score S = ${q.S.toFixed(2)}, above the limit of 2. Hidden instructions score ${c.S.toFixed(2)}.`, { now: true });
+    WONDERS.sound("event", { pitch: 0.8 });
+    if (q.S > 2.7) WONDERS.challenge("bell");
   });
 
   // ---------- Controls ----------
@@ -351,6 +378,7 @@
     $("modelQ").setAttribute("aria-pressed", String(m === "quantum"));
     $("modelC").setAttribute("aria-pressed", String(m === "classical"));
     dirtyStats = true;
+    WONDERS.describe(m === "quantum" ? "The universe now runs on quantum rules." : "The universe now runs on hidden instructions.", { now: true });
   }
   $("modelQ").addEventListener("click", () => setModel("quantum"));
   $("modelC").addEventListener("click", () => setModel("classical"));
@@ -359,8 +387,17 @@
     $("auto").textContent = state.running ? "Pause" : "Resume";
   });
   $("one").addEventListener("click", () => sendPair(true));
-  $("burst").addEventListener("click", () => { for (let i = 0; i < 500; i++) sendPair(false); });
+  $("burst").addEventListener("click", () => {
+    bulk = true;
+    for (let i = 0; i < 500; i++) sendPair(false);
+    bulk = false;
+    updateStats();
+    const d = foldDiff(state.a - state.b), bin = state.data[state.model][binOf(state.a, state.b)];
+    WONDERS.describe(`Sent 500 pairs. At ${d}° apart the results now agree ${fmt(bin.same / bin.n)}% of the time over ${bin.n.toLocaleString()} pairs.`, { now: true });
+    WONDERS.sound("event");
+  });
   $("sweep").addEventListener("click", () => {
+    WONDERS.describe("Swept all angle differences from 0° to 90°, 300 pairs each. The measured dots now follow the curve for the current universe.", { now: true });
     for (let d = 0; d <= 90; d += 2.5) {
       for (let i = 0; i < 300; i++) {
         const [A, B] = models[state.model](0, d);
@@ -372,6 +409,7 @@
   });
   $("clearData").addEventListener("click", () => {
     state.data = { quantum: makeBins(), classical: makeBins() };
+    WONDERS.describe("Measured data cleared.", { now: true });
     dirtyStats = true;
   });
 
@@ -413,5 +451,6 @@
       bin.n++; if (A === B) bin.same++;
     }
   }
+  ready = true;
   requestAnimationFrame(frame);
 })();

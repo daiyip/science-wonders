@@ -197,8 +197,39 @@
     if (!state.done && (state.t > state.tCap || (state.t > 34 / state.v0 && state.inside < 1e-3))) {
       state.done = true;
       state.holdUntil = performance.now() + 3200;
+      runFinished();
     }
   }
+
+  // ---------- Narration and challenges ----------
+  let ready = false, lastSaid = "";
+  const pctW = (p) => pct(p).replace("%", "");
+  function runFinished() {
+    if (!ready) return;
+    const below = state.E < state.V0;
+    // Narrate a run once per setting, not on every automatic replay.
+    const key = state.E + "|" + state.V0 + "|" + state.a;
+    if (key !== lastSaid) {
+      WONDERS.describe(`Run finished. ${pctW(state.T)}% of the wave was transmitted and ${pctW(state.R)}% reflected. Quantum theory predicts ${pctW(state.theoryT)}% transmitted.`);
+      WONDERS.sound("event", { pitch: Math.min(1, state.T) });
+    }
+    lastSaid = key;
+    if (state.V0 > 0 && state.T < 0.01) WONDERS.challenge("thick-wall");
+    if (state.V0 > 0 && !below && state.R >= 0.3) WONDERS.challenge("bounce-back");
+    if (below && Math.abs(state.T - 0.5) <= 0.02) WONDERS.challenge("coin-flip");
+  }
+  function describeScene() {
+    const below = state.E < state.V0;
+    const setup = `An electron with ${state.E.toFixed(2)} eV of energy meets a barrier ${state.V0.toFixed(2)} eV high and ${state.a.toFixed(2)} nm wide.`;
+    const classical = state.V0 === 0 ? "There is no barrier." : below
+      ? "Its energy is below the barrier top, so a classical ball would always bounce back."
+      : "Its energy is above the barrier top, so a classical ball would always get over.";
+    const now = state.done
+      ? `The run has finished: ${pctW(state.T)}% of the wave got through and ${pctW(state.R)}% reflected.`
+      : `The run is in progress, ${state.t.toFixed(0)} fs after the start.`;
+    return `${setup} ${classical} ${now} Quantum theory predicts ${pctW(state.theoryT)}% transmitted.`;
+  }
+  WONDERS.describer(describeScene);
 
   // Simulated femtoseconds per animation frame: the packet crosses the view in about 6 s.
   const stepsPerFrame = () => Math.max(2, Math.round(1 / (7 * state.v0) / DT));
@@ -523,6 +554,7 @@
   $("loop").addEventListener("change", (e) => { state.loop = e.target.checked; });
   $("restart").addEventListener("click", () => {
     state.running = true;
+    lastSaid = "";
     $("pause").textContent = "Pause";
     restart();
   });
@@ -550,6 +582,7 @@
   state.loop = $("loop").checked;
   reset();
   updateOutputs();
+  ready = true;
   if (Lab.reducedMotion) {
     runQuietly();
   } else {

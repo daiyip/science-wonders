@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="mandelbrot"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Mandelbrot set · Science Wonders</title>
+<meta name="description" content="Iterate z² + c, zoom into the Mandelbrot set's endlessly detailed edge, and pick any point to see its orbit and its Julia set.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="The Mandelbrot set">
+<meta property="og:description" content="One line of arithmetic, z² + c, draws a shape with detail at every scale. Zoom in, and pick a point to see its Julia set.">
+<meta property="og:url" content="https://science.daiyip.com/demos/mandelbrot/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/mandelbrot.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .mb-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+  .mb-main, .mb-side { min-width: 0; }
+  #bench { touch-action: none; cursor: crosshair; }
+  .julia-note { margin-top: 10px; font-size: var(--step--1); color: var(--bench-ink); line-height: 1.5; }
+  .key-hint { margin-top: 8px; font-size: 0.78rem; color: #7f8ea6; }
+  .control.wide { grid-column: 1 / -1; }
+  .controls .control { align-content: start; }
+  .controls .seg { align-self: start; }
+  .switch-list { display: grid; gap: 8px; }
+  @media (min-width: 760px) { .control.span2 { grid-column: span 2; } }
+  .num-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .num-row label { display: grid; gap: 3px; font-size: 0.78rem; color: var(--ink-soft); }
+  .num-row input {
+    font: inherit; font-family: var(--font-mono); font-size: var(--step--1);
+    padding: 6px 8px; border-radius: 8px; border: 1px solid var(--rule);
+    background: var(--paper); color: var(--ink); width: 100%; min-width: 0;
+  }
+  @media (max-width: 759px) {
+    .mb-grid { grid-template-columns: 1fr; }
+  }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+    .num-row input { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Fractals · 1918 / 1980</div>
+    <h1>The Mandelbrot set</h1>
+    <p class="lede">Take a number c, start at zero, and square and add c over and over. Either the numbers stay small forever or they run off to infinity. Colour every c by which happens and you get a shape whose edge has new detail however far you zoom.</p>
+  </div>
+
+  <div class="bench">
+    <div class="mb-grid">
+      <div class="mb-main">
+        <canvas id="bench" width="600" height="480" tabindex="0" role="application" aria-label="The Mandelbrot set, which you can explore. Drag or use the arrow keys to move; scroll, pinch or press plus and minus to zoom; click, or press Enter for the centre, to choose the point c whose orbit and Julia set are shown; Shift with the arrow keys nudges c."></canvas>
+        <p class="key-hint">Keys on the picture: arrows move, + and − zoom, Enter picks the centre as c, Shift + arrows nudge c, Home shows the whole set.</p>
+      </div>
+      <div class="mb-side">
+        <canvas id="julia" width="300" height="300" role="img" aria-label="The Julia set for the chosen point c, with the orbit of 0 drawn on it and the escape circle of radius 2"></canvas>
+        <p class="julia-note" id="juliaNote">This c is inside the Mandelbrot set, so its Julia set is one connected piece.</p>
+      </div>
+    </div>
+  </div>
+  <div class="stats">
+    <span>Zoom <b id="zoomStat">1×</b></span>
+    <span>Centre <b id="centreStat">–</b></span>
+    <span>Iteration limit <b id="itersStat">500</b></span>
+    <span>Drawn in <b id="renderStat">–</b></span>
+    <span>Precision <b id="precStat">–</b></span>
+    <span>Point c <b id="cStat">–</b></span>
+    <span>Orbit of 0 <b id="orbitStat">–</b></span>
+    <span>Julia set <b id="juliaStat">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control wide">
+      <span class="label">Go to</span>
+      <div class="button-row">
+        <button id="presetHome">Whole set</button>
+        <button id="presetSeahorse">Seahorse valley</button>
+        <button id="presetElephant">Elephant valley</button>
+        <button id="presetMini">A mini-Mandelbrot</button>
+        <button id="presetBulbs">Period bulbs</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="iters">Iteration limit <output id="itersOut">500</output></label>
+      <input type="range" id="iters" min="0" max="13" step="1" value="4">
+    </div>
+    <div class="control">
+      <span class="label">Zoom</span>
+      <div class="button-row">
+        <button id="zoomIn">Zoom in ×3</button>
+        <button id="zoomOut">Zoom out</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Clicking the picture</span>
+      <div class="seg" role="group" aria-label="Clicking the picture">
+        <button id="clickPick" aria-pressed="true">Picks c</button>
+        <button id="clickZoom" aria-pressed="false">Zooms in</button>
+      </div>
+    </div>
+    <div class="control span2">
+      <span class="label">View</span>
+      <div class="num-row">
+        <label for="cx">Centre, real part<input type="number" id="cx" step="any" value="-0.6"></label>
+        <label for="cy">Centre, imaginary part<input type="number" id="cy" step="any" value="0"></label>
+        <label for="zoom">Zoom factor<input type="number" id="zoom" step="any" min="0.25" max="1e15" value="1"></label>
+      </div>
+    </div>
+    <div class="control span2">
+      <span class="label">Point c</span>
+      <div class="num-row">
+        <label for="cRe">Real part<input type="number" id="cRe" step="any" value="-0.465"></label>
+        <label for="cIm">Imaginary part<input type="number" id="cIm" step="any" value="0.509"></label>
+        <div class="button-row" style="align-self:end"><button id="pickCentre">Use the centre of the view as c</button></div>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Show</span>
+      <div class="switch-list">
+      <label class="switch" for="orbit"><input type="checkbox" id="orbit" checked> The orbit of 0 on the picture</label>
+      <label class="switch" for="labels"><input type="checkbox" id="labels"> The period of each bulb</label>
+      <label class="switch" for="follow"><input type="checkbox" id="follow"> Julia set follows the mouse</label>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Drag to move, scroll or pinch to zoom, double-click to zoom in. Click any point to make it c: its orbit is traced on the picture and its Julia set appears beside it. Inside the black, the Julia set is one piece; step just outside and it shatters into dust.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Every pixel stands for a complex number c, a point on a plane with a real part across and an imaginary part up. Start with z = 0 and apply the rule z → z² + c again and again. If z stays within distance 2 of zero for as many steps as the iteration limit allows, c counts as part of the Mandelbrot set and is painted black. If z gets further than that, it is certain to run off to infinity, and the pixel is coloured by how many steps that took: dark far away, bright and banded close to the edge.</p>
+      <p>The picture on the right is a Julia set. It uses the same rule, but with the chosen c held fixed and every pixel used as the starting z. Black points there never escape. The amber path is the orbit of 0: the list of z values 0, c, c² + c, and so on, drawn on both pictures.</p>
+      <p data-depth="deep">Both pictures are computed in background Web Workers so the page stays responsive while you zoom. Every fourth pixel is computed first and blown up into a soft preview; then every pixel is filled in, strip by strip. Moving or zooming throws the unfinished work away and starts again. Two shortcuts save time inside the set: a formula that recognises the main cardioid and the big disc to its left, and a check that stops iterating once an orbit returns exactly to a value it had before.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Click inside the big heart shape. The orbit spirals in to one point, and the Julia set is a single solid blob. Click inside the disc to its left and the orbit ends up hopping between two points.</li>
+        <li>Click just outside the black. The orbit wanders for a while, then shoots away, and the Julia set breaks into dust.</li>
+        <li>Turn on Period bulbs. Each bulb on the main cardioid has its own cycle length. Pick c in the bulb labelled 3 and the orbit settles into a loop of three points.</li>
+        <li>Go to Seahorse valley and keep zooming into a spiral. Raise the iteration limit when the black starts to look smooth and blobby.</li>
+        <li>On a computer, switch on Julia set follows the mouse and slide slowly across the edge of the set.</li>
+      </ul>
+      <p data-depth="deep">Zoom far into the edge and the picture eventually turns into flat rectangles. Computers here store numbers as doubles with about 16 significant digits. Once neighbouring pixels are closer together than that precision allows, they are rounded to the same number and get the same colour. With a centre near 1 in size, that happens between about 10¹³× and 10¹⁴× zoom; the Precision readout counts the digits you have left. Deep-zoom programs get past it by computing one orbit at high precision and every other pixel as a small difference from it, a technique called perturbation.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>The rule is one line of arithmetic, yet the edge of the set never gets simpler. Zoom in and you find spirals, seahorse tails and lightning-like branches, and among them tiny copies of the whole set, each slightly different and each with its own copies. The set is also connected: those copies that look like islands are joined to the main body by filaments too thin to draw.</p>
+      <p>The same black-or-not test on c decides the shape of a whole other picture. Every c inside the set has a Julia set in one piece; every c outside has one that is dust. One point's orbit tells you about infinitely many others.</p>
+      <p class="muted">Pierre Fatou and Gaston Julia studied these iterations by hand around 1918. Benoit Mandelbrot, working at IBM, made the first detailed computer pictures of the set in 1980, and Adrien Douady and John Hubbard proved it is connected in 1982.</p>
+      <p data-depth="deep">The edge is about as wiggly as a curve can be: Mitsuhiro Shishikura proved in 1998 that its fractal dimension is 2, the same as a filled area. The set's area is about 1.5066, known only from large computations. Whether the set is locally connected, which would mean its whole shape is fixed by a simple combinatorial description, is still an open problem.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">z<sub>0</sub> = 0,&nbsp; z<sub>n+1</sub> = z<sub>n</sub>² + c<br>M = { c : |z<sub>n</sub>| ≤ 2 for every n }</div>
+      <p>The definition of the Mandelbrot set M. Writing z = x + iy and c = a + ib, one step is x → x² − y² + a and y → 2xy + b, which is exactly what the workers compute for each pixel. If |z| ever exceeds 2 (and |c| ≤ 2), each later step at least doubles the excess, so the orbit must escape; that is why 2 is the radius used for orbits and for the dashed circle. Points that survive the iteration limit are drawn black, so a low limit makes the set look too big.</p>
+      <div class="eq" data-depth="deep" translate="no">ν = n + 1 − log₂( ln |z<sub>n</sub>| )</div>
+      <p>The smooth escape count used for colouring. A raw step count n jumps by whole numbers and draws hard bands. Once |z| is large, each step roughly squares it, so ln |z| doubles; taking log₂ of ln |z| measures how far through its final step the orbit is. The page iterates each pixel until |z| > 1000 to make this accurate, then colours by √(ν − ν<sub>min</sub>), where ν<sub>min</sub> is the smallest count in view, so deep zooms keep their contrast.</p>
+      <div class="eq" data-depth="deep" translate="no">K<sub>c</sub> = { z<sub>0</sub> : z<sub>n</sub> ↛ ∞ }<br>c ∈ M &nbsp;⇔&nbsp; K<sub>c</sub> connected</div>
+      <p>The filled Julia set K<sub>c</sub> is the set of starting points whose orbits stay bounded for that fixed c, which is what the right-hand picture shows. The point 0 is special because the derivative of z² + c is zero there. Fatou and Julia showed that the fate of this one critical point decides everything: if its orbit stays bounded, K<sub>c</sub> is in one piece; if it escapes, K<sub>c</sub> is a Cantor set of dust. That is why the same orbit is drawn on both pictures.</p>
+      <div class="eq" data-depth="deep" translate="no">c = e<sup>iθ</sup>/2 − e<sup>2iθ</sup>/4<br>θ = 2π p/q &nbsp;⇒&nbsp; period q<br>δ ≈ 2<sup>−52</sup> |c| ≈ 2.2 × 10<sup>−16</sup> |c|</div>
+      <p>The first line traces the edge of the main cardioid: inside it, z² + c has one attracting fixed point, so orbits settle onto a single point. At the angle θ = 2π p/q a bulb is attached whose orbits cycle through q points, which is what the period labels show. The last line is the spacing of double-precision numbers near c. When the pixel size falls below δ, neighbouring pixels share a value and the image breaks into blocks.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where iteration and fractals do real work</h2>
+      <p>The set itself is pure mathematics, but the ideas it made famous, repeating a simple rule and finding detail at every scale, turn up across science and engineering.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Electronics</span>
+        <h3>Fractal antennas</h3>
+        <p>An antenna shaped like a fractal packs a long, crinkled conductor into a small space and responds well at several frequencies at once. Nathan Cohen built the first ones in the 1990s, and fractal-style designs have since been used in compact multiband antennas for phones and radios.</p>
+        <span class="link"><b>In the demo:</b> the edge keeps adding detail as you zoom, so its length has no limit.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Film and games</span>
+        <h3>Fractal landscapes</h3>
+        <p>Loren Carpenter's 1980 short film Vol Libre flew over mountains built by repeatedly subdividing triangles and adding random bumps at each scale. The same approach made the Genesis planet in Star Trek II in 1982, and it is still how many games generate terrain and clouds.</p>
+        <span class="link"><b>In the demo:</b> structure at every zoom level comes from repeating one rule.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Numerical computing</span>
+        <h3>Solving equations with Newton's method</h3>
+        <p>Newton's method finds roots by repeating a step, just as this page repeats z² + c. Which root it reaches from a given start is decided by the same Julia-set theory Fatou and Julia developed. In 2001 Hubbard, Schleicher and Sutherland used it to give a set of starting points guaranteed to find every root of a polynomial.</p>
+        <span class="link"><b>In the demo:</b> the Julia panel sorts starting points by where their orbits go.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Physics and biology</span>
+        <h3>Period doubling</h3>
+        <p>Along the real axis the set is the period-doubling cascade of the logistic map, a simple model of population growth. The same cascade, with the same ratio of about 4.669 between steps, was measured by Albert Libchaber in heated liquid helium in 1980 and has been seen in dripping taps, lasers, electronic circuits and heart cells.</p>
+        <span class="link"><b>In the demo:</b> the bulbs on the real axis have periods 1, 2, 4, 8 going left.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>Teaching and testing parallel computers</h3>
+        <p>Every pixel of the set can be computed independently, so drawing it is a standard first exercise in parallel and GPU programming and a common benchmark. The Computer Language Benchmarks Game, for example, has long included a Mandelbrot program to compare programming languages.</p>
+        <span class="link"><b>In the demo:</b> several background workers share the strips of each picture.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Imaging</span>
+        <h3>Fractal image compression</h3>
+        <p>Michael Barnsley and Alan Sloan noticed that parts of real photos resemble shrunken copies of other parts, and stored images as the rules that rebuild them. Their company's compression was used for the pictures in Microsoft's Encarta encyclopedia in 1993, though faster methods such as JPEG won out.</p>
+        <span class="link"><b>In the demo:</b> the mini-Mandelbrots are shrunken, slightly altered copies of the whole.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Escape-time rendering of z² + c in double precision (about 16 significant digits), with escape radius 1000 for smooth colouring, a cardioid and disc test and an orbit periodicity check, computed in background Web Workers. Orbits of 0 are followed for up to 100,000 steps with escape radius 2; a cycle is reported when the orbit returns to within one part in a billion.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="mandelbrot.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/mandelbrot.js"></script>
+<script src="../../assets/wonders.js" data-slug="mandelbrot"></script>
+</body>
+</html>

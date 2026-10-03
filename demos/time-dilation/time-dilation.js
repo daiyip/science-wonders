@@ -450,6 +450,31 @@
     drawSpacetime();
   }
 
+  // ---------- Narration, sound and challenges ----------
+  const W8 = window.WONDERS;
+  function phaseText() {
+    const t = state.p * state.T, tShip = t / state.gamma;
+    if (state.p <= 0) return "Ready to launch";
+    if (state.p >= 1) return "Home again. The traveller is " + fmtYears(t - tShip, true) + " younger than the twin who stayed.";
+    return (t < state.T / 2 ? "Outbound" : "Coming home") + " · Earth year " + t.toFixed(t < 100 ? 1 : 0) + " · ship year " + tShip.toFixed(tShip < 100 ? 1 : 0);
+  }
+  function hintText() {
+    const kms = state.beta * 299792.458;
+    return "At " + fmtBeta(state.beta) + " (" + Math.round(kms).toLocaleString("en-US") + " km/s), every second on the ship takes " + fmtGamma(state.gamma) + " seconds on Earth. " +
+      "Earth sees the trip to " + DESTS[state.dest].name + " take " + fmtYears(state.T, true) + "; the traveller lives through " + fmtYears(state.tau, true) + ".";
+  }
+  // A trip just finished: narrate, chime, and check the age-gap challenge.
+  function arrived() {
+    W8.describe(phaseText(), { now: true });
+    W8.sound("event", { pitch: 0.6 });
+    if (state.T - state.tau >= 10) W8.challenge("ten-years");
+  }
+  function checkSettings() {
+    if (state.gamma >= 2.95 && state.gamma <= 3.05) W8.challenge("gamma-three");
+    if (state.dest === "sirius" && Math.abs(state.tau - 10) <= 0.05) W8.challenge("sirius-ten");
+  }
+  W8.describer(() => tr(hintText()) + " " + tr(phaseText()));
+
   function updateStats() {
     $("gamma").textContent = fmtGamma(state.gamma);
     $("earthTime").textContent = fmtYears(state.T, true);
@@ -457,9 +482,7 @@
     $("ageGap").textContent = fmtYears(state.T - state.tau, true);
     $("shipDist").textContent = fmtLy(state.D / state.gamma);
     $("speedOut").textContent = fmtBeta(state.beta);
-    const kms = state.beta * 299792.458;
-    $("hint").textContent = "At " + fmtBeta(state.beta) + " (" + Math.round(kms).toLocaleString("en-US") + " km/s), every second on the ship takes " + fmtGamma(state.gamma) + " seconds on Earth. " +
-      "Earth sees the trip to " + DESTS[state.dest].name + " take " + fmtYears(state.T, true) + "; the traveller lives through " + fmtYears(state.tau, true) + ".";
+    $("hint").textContent = hintText();
   }
 
   // ---------- Loop ----------
@@ -470,7 +493,7 @@
     state.clockS += dt / 1000;
     if (state.playing && state.p < 1) {
       state.p = Math.min(1, state.p + dt / TRIP_MS);
-      if (state.p >= 1) setPlayButton();
+      if (state.p >= 1) { setPlayButton(); arrived(); }
     }
     draw();
     requestAnimationFrame(frame);
@@ -485,6 +508,9 @@
   function settingsChanged(restartTrip) {
     recompute();
     updateStats();
+    W8.describe(hintText());
+    W8.sound("tick", { pitch: Math.min(1, Math.log10(state.gamma) / 1.4) });
+    checkSettings();
     if (restartTrip) launch();
     else if (Lab.reducedMotion) draw();
   }
@@ -495,6 +521,7 @@
     if (Lab.reducedMotion) {
       state.clockS = stillClockS();
       draw();
+      arrived();
     }
   }
   // For a still picture: the moving clock near the right of its lane, so its light path doesn't wrap.

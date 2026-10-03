@@ -78,6 +78,19 @@
   galaxies.forEach((g, i) => { const d = Math.hypot(g.x - BOX / 2, g.y - BOX / 2); if (d < best) { best = d; state.home = i; } });
 
   const wrap = (d) => d - BOX * Math.round(d / BOX);
+  const START_HOME = state.home;
+
+  // ---------- Narration, sound and challenges ----------
+  const W8 = window.WONDERS;
+  function bangReached() {
+    W8.describe("The clock has run back " + tNow().toFixed(1) + " billion years, to 1 / H₀: every galaxy crowds onto every other one, everywhere at once.", { now: true });
+    W8.sound("event", { pitch: 0.2 });
+    if (state.home !== START_HOME) W8.challenge("bang-home");
+  }
+  W8.describer(() => {
+    const stats = [...document.querySelectorAll(".stats > span")].map((s) => s.textContent.replace(/\s+/g, " ").trim()).join(". ") + ".";
+    return tr("A field of galaxies spreading apart around the home galaxy, a plot of their speed against distance with a fitted straight line, and a light wave stretched on its way to us.") + " " + stats;
+  });
 
   // ---------- Measure: positions, speeds, the fit ----------
   function measure() {
@@ -405,7 +418,7 @@
     const tn = tNow();
     if (state.mode === "rewind") {
       state.t *= Math.exp(-dt * 0.65);
-      if (state.t <= T_MIN_FRAC * tn) { state.t = T_MIN_FRAC * tn; state.mode = "bang"; state.hold = 0; }
+      if (state.t <= T_MIN_FRAC * tn) { state.t = T_MIN_FRAC * tn; state.mode = "bang"; state.hold = 0; bangReached(); }
     } else if (state.mode === "bang") {
       state.hold += dt;
       if (state.hold > 3.2) state.mode = "rise";
@@ -434,6 +447,8 @@
     $("age").textContent = (KM_S_MPC_TO_GYR / state.fit).toFixed(1) + " billion yr";
     $("nGal").textContent = state.visible.filter((p) => !p.home).length.toLocaleString();
     $("zOut").textContent = (1 / state.aEmit - 1).toFixed(2);
+    const age = KM_S_MPC_TO_GYR / state.fit;
+    if (state.H0 !== 70 && a >= 0.999 && age >= 13.6 && age <= 13.9) W8.challenge("age");
   }
 
   // ---------- Controls ----------
@@ -446,6 +461,8 @@
     state.home = i;
     state.pan = Lab.reducedMotion ? [0, 0] : [sx - FIELD.cx, sy - FIELD.cy];
     $("hint").textContent = "New home. Everything still rushes away from you, and the slope is the same.";
+    W8.describe("New home. Everything still rushes away from you, and the slope is the same.", { now: true });
+    W8.sound("event", { pitch: 0.6 });
   }
 
   $("play").addEventListener("click", () => {
@@ -457,6 +474,7 @@
       state.t = T_MIN_FRAC * tNow();
       state.mode = "bang";
       setPlaying(false);
+      bangReached();
     } else {
       state.mode = "rewind";
       setPlaying(true);
@@ -468,6 +486,9 @@
     state.mode = "forward";
     setPlaying(false);
     $("timeOut").textContent = fmtGyr(state.t);
+    const m = measure();
+    W8.describe("Cosmic time " + state.t.toFixed(state.t < 10 ? 2 : 1) + " billion years: the universe is " + (m.a * 100).toFixed(0) + "% of today's size, and the fitted slope is H = " + state.fit.toFixed(1) + " km/s/Mpc.");
+    W8.sound("tick", { pitch: m.a });
   });
   $("h0").addEventListener("input", (e) => {
     const frac = state.t / tNow();
@@ -477,11 +498,18 @@
     state.t = frac * tNow();
     $("time").value = state.t.toFixed(2);
     $("timeOut").textContent = fmtGyr(state.t);
-    $("hint").textContent = "With H₀ = " + state.H0 + ", 1 / H₀ is " + tNow().toFixed(1) + " billion years. A faster expansion means a younger universe.";
+    const h0Msg = "With H₀ = " + state.H0 + ", 1 / H₀ is " + tNow().toFixed(1) + " billion years. A faster expansion means a younger universe.";
+    $("hint").textContent = h0Msg;
+    W8.describe(h0Msg);
+    W8.sound("tick", { pitch: (state.H0 - 50) / 40 });
   });
   $("emitted").addEventListener("input", (e) => {
     state.aEmit = +e.target.value;
     $("emittedOut").textContent = Math.round(state.aEmit * 100) + "% of today's size";
+    const seen = H_BETA / state.aEmit;
+    W8.describe("Light that left when the universe was " + Math.round(state.aEmit * 100) + "% of today's size arrives with redshift z = " + (1 / state.aEmit - 1).toFixed(2) + ": the 486 nm hydrogen line is seen at " + Math.round(seen) + " nm" + (seen > 700 ? ", in the infrared." : "."));
+    W8.sound("tick", { pitch: 1 - (state.aEmit - 0.4) / 0.6 });
+    if (seen > 700) W8.challenge("infrared");
   });
   $("arrows").addEventListener("change", (e) => { state.arrows = e.target.checked; });
   $("grid").addEventListener("change", (e) => { state.grid = e.target.checked; });

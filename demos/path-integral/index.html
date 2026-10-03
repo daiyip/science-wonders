@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="path-integral"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Every path at once · Science Wonders</title>
+<meta name="description" content="Feynman's sum over histories: let a particle take every possible path, give each path a little arrow, add the arrows head to tail and watch the straight line, the law of reflection and Snell's law appear.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Every path at once">
+<meta property="og:description" content="Let a particle take every possible path, add the arrows, and watch the straight line of classical physics emerge.">
+<meta property="og:url" content="https://science.daiyip.com/demos/path-integral/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/path-integral.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .control[hidden] { display: none; }
+  @media (min-width: 700px) { .controls .control.span2 { grid-column: span 2; } }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .bench canvas { touch-action: none; cursor: crosshair; }
+  .bench canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .keys { margin-top: 8px; font-size: var(--step--1); color: var(--ink-soft); }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls button { min-height: 38px; }
+    .seg { border-radius: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum mechanics · 1942 / 1948 / 1985</div>
+    <h1>Every path at once</h1>
+    <p class="lede">Feynman's rule for the quantum world: a particle does not take one path, it takes all of them. Each path gets a little arrow that turns as the particle travels. Add every arrow head to tail and the straight line, the law of the mirror and the bending of light all fall out.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="560" tabindex="0" aria-label="Three panels. A source and a detector joined by many sample paths, coloured by the direction of each path's arrow, with the classical path dashed. A curve of the extra travel time of each path, with its little arrow. All the arrows added head to tail into a spiral, with the final arrow drawn from start to end. Click or drag on a path to select it. Keyboard: left and right arrows choose a path, Shift moves faster, Enter adds the arrows again."></canvas>
+  </div>
+  <p class="keys">Click or drag across the paths to follow one. On the keyboard, focus the picture and use the arrow keys; Enter adds the arrows again.</p>
+  <div class="stats">
+    <span><span id="s1l">Paths that add up</span> <b id="s1">–</b></span>
+    <span><span id="s2l">Arrows added</span> <b id="s2">–</b></span>
+    <span><span id="s3l">Selected path bulges by</span> <b id="s3">–</b></span>
+    <span><span id="s4l">Selected arrow turned</span> <b id="s4">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control span2">
+      <span class="label">Setup</span>
+      <div class="seg" role="group" aria-label="Setup">
+        <button id="modeFree" aria-pressed="true">Free flight</button>
+        <button id="modeMirror" aria-pressed="false">Mirror</button>
+        <button id="modeRefract" aria-pressed="false">Refraction</button>
+      </div>
+    </div>
+    <div class="control" data-mode="free">
+      <label for="lamRel">Wavelength (how quantum) <output id="lamRelOut">0.030 × distance</output></label>
+      <input type="range" id="lamRel" min="0" max="100" step="1" value="64">
+    </div>
+    <div class="control span2" data-mode="mirror" hidden>
+      <span class="label">Mirror surface</span>
+      <div class="seg" role="group" aria-label="Mirror surface">
+        <button id="surfWhole" aria-pressed="true">Whole</button>
+        <button id="surfEnds" aria-pressed="false">Ends only</button>
+        <button id="surfMiddle" aria-pressed="false">Middle only</button>
+        <button id="surfGrating" aria-pressed="false">Grating</button>
+      </div>
+    </div>
+    <div class="control" data-mode="mirror" hidden>
+      <label for="det">Detector angle <output id="detOut">+40.0°</output></label>
+      <input type="range" id="det" min="-80" max="80" step="0.5" value="40">
+    </div>
+    <div class="control" data-mode="mirror" hidden>
+      <label for="spacing">Grating spacing <output id="spacingOut">1.20 µm</output></label>
+      <input type="range" id="spacing" min="0.60" max="3.00" step="0.02" value="1.20">
+    </div>
+    <div class="control" data-mode="refract" hidden>
+      <label for="index">Refractive index below <output id="indexOut">1.50</output></label>
+      <input type="range" id="index" min="1.00" max="2.42" step="0.01" value="1.50">
+    </div>
+    <div class="control" data-mode="mirror refract" hidden>
+      <label for="lambda">Wavelength <output id="lambdaOut">550 nm</output></label>
+      <input type="range" id="lambda" min="400" max="700" step="5" value="550">
+    </div>
+    <div class="control">
+      <span class="label">The sum</span>
+      <div class="button-row">
+        <button id="replay" class="primary">Add the arrows again</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Watch the spiral of added arrows. Its long straight middle comes from the paths near the dashed one, whose arrows all point the same way. The far paths only wind the ends into tight curls that go nowhere.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Pick a setup: a particle flying from A to B, light bouncing off a mirror, or light going from air into glass. The page draws a sample of the possible paths. Each path gets an arrow, like the hand of a stopwatch that spins as the particle travels. A longer trip means more turns, so the arrow's final direction depends on the path.</p>
+      <p>In the spiral, every arrow is added head to tail, from one end of the family of paths to the other. The line from the first tail to the last head is the final arrow. Its length squared is the chance of arriving: a long final arrow means a bright detector, a short one means a dark one.</p>
+      <p data-depth="deep">Colour shows direction: two arrows with the same colour point the same way, and gold is the direction of the classical path's arrow. Near the dashed path the colours stay the same over a wide band; far from it they cycle through the rainbow in a short distance. The curve below the picture shows why: it is flat at the bottom, so neighbouring paths there take almost the same time, and steep at the sides, where a tiny change of path adds a whole turn.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>In Free flight, slide the wavelength down. The band of paths that add up shrinks toward the straight line. Big objects have tiny wavelengths, so for a baseball only the straight line is left: classical physics.</li>
+        <li>In Mirror, choose Ends only. Most of the mirror is still there, yet the detector goes almost dark. Choose Middle only: a strip a third as wide reflects as much as the whole mirror, even a little more.</li>
+        <li>Move the detector to −60°, back past the source, where a plain mirror sends almost nothing. Choose Grating and change the spacing until the detector lights up: light leaves the mirror at the "wrong" angle.</li>
+        <li>In Refraction, the gold path is not the straight line. It bends at the surface, because light is slower in glass and the least-time route spends less of its length there.</li>
+      </ul>
+      <p data-depth="deep">The grating works by removing strips whose arrows would point against the rest. Strips a spacing d apart send light toward the angles where the paths from neighbouring strips differ by a whole number of wavelengths: d (sin θ<sub>S</sub> + sin θ<sub>D</sub>) = ±mλ, with the angles of the source and the detector signed as on the Detector angle slider (the source sits at −40°). Here the source is close, so each part of the mirror sees a different angle, and several spacings light up the same detector, each with a different whole number m. Change the wavelength and the bright angles move: that is how a grating splits white light into colours.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>The rule never says that light picks the shortest-time path, or that a ball follows Newton's laws. Every path counts the same. The classical path wins only because its neighbours agree with it, while everywhere else neighbours cancel. Change the surroundings, as the grating does, and light goes where no classical ray would.</p>
+      <p class="muted">Feynman worked this out in his 1942 thesis and published it in 1948, building on a 1933 idea of Dirac. His 1985 book QED explains it with stopwatch arrows exactly like these.</p>
+      <p data-depth="deep">This also answers an old puzzle. In 1662 Fermat said that light takes the path of least time, and people asked how light could know in advance which path that is. It doesn't: it tries them all, and only near the least-time path do the arrows add up. Strictly the rule is stationary time, not least time; a curved mirror can make the reflected path a maximum, and the arrows add up there just as well.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">A = Σ<sub>paths</sub> e<sup>iS/ħ</sup><br>P = |A|²</div>
+      <p>The amplitude A is the sum over paths of a unit arrow turned by the action S divided by ħ. For light, S/ħ is 2π times the path length in wavelengths, counting glass as n times longer. The page samples one family of paths finely enough that neighbouring arrows differ by less than 0.3 rad, adds the arrows exactly as drawn and reports |A|², relative to the sum over a perfect, endless family of the same paths. All arrows have the same length; real light also loses a little strength with distance and angle, which only matters near the ends of the mirror.</p>
+      <div class="eq" data-depth="deep" translate="no">S[x] = S<sub>cl</sub> + mπ²a² ÷ 4T<br>S ÷ ħ − S<sub>cl</sub> ÷ ħ = π³a² ÷ 2λL</div>
+      <p>Free flight: a particle of mass m covers the distance L in a time T along the path y(t) = a sin(πt/T). For a free particle the action is the time integral of ½mv², which gives exactly the classical action plus a term that grows with the square of the bulge a. Here λ = h ÷ mv is the de Broglie wavelength at the classical speed v = L/T. The page uses this formula. Paths with |a| below √(2λL)/π turn by less than half a turn; that is the band labelled "paths that add up".</p>
+      <div class="eq" data-depth="deep" translate="no">∫ e<sup>iφ″u²/2</sup> du = √(2π ÷ φ″) e<sup>iπ/4</sup></div>
+      <p>Near the stationary path the phase grows like ½φ″u², so the sum becomes this Fresnel integral. Its running total traces the Cornu spiral in the picture: straight in the middle, curling into two eyes at the ends. The final arrow's length √(2π/φ″) is the dashed circle. A larger φ″, which means a shorter wavelength or a heavier particle, makes the band of contributing paths narrower in proportion to √(1/φ″).</p>
+      <div class="eq" data-depth="deep" translate="no">d/dx [ ℓ₁(x) + n ℓ₂(x) ] = 0<br>⇔ sin θ₁ = n sin θ₂</div>
+      <p>Refraction: the optical path from the source to the crossing point x and on to the detector is ℓ₁ + nℓ₂. Where its slope is zero the arrows stop turning, and that condition is exactly Snell's law. The page finds the point by bisection and the sin ratio readout checks that it equals n. For the mirror, n = 1 below is replaced by a reflection and the same condition gives equal angles.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where summing over paths earns its keep</h2>
+      <p>Adding arrows over every route is not just a way of thinking. It is how physicists calculate, and how engineers shape light and matter waves.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Optics</span>
+        <h3>Spectrometers and CD rainbows</h3>
+        <p>A diffraction grating is a surface with thousands of lines per millimetre. Each colour finds its own angle where the strips' arrows line up, so white light fans out into a spectrum. Astronomers read the make-up of stars this way, and the tracks of a CD do it by accident.</p>
+        <span class="link"><b>In the demo:</b> the Grating surface and the Wavelength slider move the bright angle.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Optics</span>
+        <h3>Fresnel zone plates</h3>
+        <p>Block every ring of a flat plate whose arrows point the wrong way and the rest add up at one spot: a lens with no curved glass. Zone plates focus X-rays, which no ordinary lens can bend, in the microscopes used to image cells and computer chips.</p>
+        <span class="link"><b>In the demo:</b> the turns on the curve are Fresnel zones.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Particle physics</span>
+        <h3>Feynman diagrams</h3>
+        <p>Every Feynman diagram is one class of paths in the sum, with its own arrow. Adding them gave the magnetic strength of the electron to about one part in a trillion, the best-tested prediction in science.</p>
+        <span class="link"><b>In the demo:</b> many contributions, each an arrow, added into one amplitude.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing · Materials</span>
+        <h3>Simulating atoms and quarks</h3>
+        <p>Turned around in imaginary time, the sum over paths becomes a sum of positive weights that computers can sample. Path-integral Monte Carlo predicts the properties of liquid helium and hydrogen in chemistry, and lattice QCD computes the mass of the proton from quarks and gluons.</p>
+        <span class="link"><b>In the demo:</b> a sampled family of paths, each with a weight from its action.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Telecom</span>
+        <h3>Radio links and the Fresnel zone</h3>
+        <p>Engineers planning a microwave link keep the region around the straight line between two dishes clear of hills and buildings. That region is the first Fresnel zone, the band of paths whose arrows add up, and blocking it weakens the signal even when the dishes can still see each other.</p>
+        <span class="link"><b>In the demo:</b> "Paths that add up" is that zone.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Physics</span>
+        <h3>Atom interferometers</h3>
+        <p>Atoms sent along two routes and recombined pick up a phase S/ħ that depends on gravity along each route. Comparing the arrows measures gravity and rotation so precisely that these devices are used for navigation and for testing whether all things fall the same way.</p>
+        <span class="link"><b>In the demo:</b> the arrow of each path is its action divided by ħ.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. The sum runs over a one-parameter family of paths (one bulge shape, or one point on the mirror or surface), not over every path; extra wiggle shapes would each add a similar factor and change nothing qualitative. Arrows all have the same length. The mirror is 50 µm long with the source and detector 50 µm from its centre, at real wavelengths; direct light from source to detector is left out, as if blocked by a screen.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="path-integral.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/path-integral.js"></script>
+<script src="../../assets/wonders.js" data-slug="path-integral"></script>
+</body>
+</html>

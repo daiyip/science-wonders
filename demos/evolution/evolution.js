@@ -152,6 +152,7 @@
     state.gen++; state.tick = 0; state.eaten = 0;
     snapshotStart();
     record();
+    onGeneration();
   }
 
   // ---------- One tick of the world ----------
@@ -190,6 +191,7 @@
         if (d < 7) {
           c.alive = false; c.fleeing = null;
           state.eaten++;
+          if (live) W_.sound("tick", { pitch: c.shade, pan: ((c.x - HX) / HW) * 2 - 1 });
           state.puffs.push({ x: c.x, y: c.y, shade: c.shade, t: 0 });
           h.mode = "eat"; h.t = EAT_TICKS; h.target = null;
         } else if (h.t > CHASE_MAX || d > VIEW * 1.4) {
@@ -220,6 +222,39 @@
     state.puffs = state.puffs.filter((p) => p.t < 40);
     if (++state.tick >= GEN_TICKS) nextGeneration();
   }
+
+  // ---------- Accessibility and challenges ----------
+  // Challenge progress is tracked from user actions only: the page pre-runs
+  // generations on load, so nothing counts until the user changes something.
+  const W_ = window.WONDERS;
+  let live = false;                       // true once the page has finished its pre-run
+  const track = { touched: false, envGens: 0, litterRun: 0 };
+  function onGeneration() {
+    track.envGens++;
+    if (!live) return;
+    const m = means();
+    if (!isFinite(m.shade)) return;
+    const tone = bgTone();
+    if (track.touched && state.env === "soot" && m.shade < 0.3) W_.challenge("dark");
+    if (state.env === "litter" && Math.abs(m.shade - 0.5) <= 0.05) track.litterRun++; else track.litterRun = 0;
+    if (track.touched && track.litterRun >= 5) W_.challenge("litter");
+    if (track.touched && state.hawks === 0 && m.speed < 0.15) W_.challenge("slow");
+    if (state.gen % 5 === 0) {
+      W_.describe("Generation " + state.gen + ": average colour " + m.shade.toFixed(2) + " on ground of " + tone.toFixed(2) + ", average speed " + m.speed.toFixed(2) + ".");
+    }
+  }
+  W_.describer(() => {
+    const t = (x) => (window.I18N ? I18N.t(x) : x);
+    const m = means();
+    const a = "Generation " + state.gen + " on " + ENVS[state.env].name.toLowerCase() + ", ground shade " + bgTone().toFixed(2) + " on a scale from 0 (black) to 1 (pale).";
+    const b = state.hawks === 0 ? "There are no hawks." : state.hawks === 1 ? "One hawk is hunting." : state.hawks + " hawks are hunting.";
+    const c = isFinite(m.shade)
+      ? m.n + " creatures are alive, with average colour " + m.shade.toFixed(2) + " and average speed " + m.speed.toFixed(2) + "; " + state.eaten + " have been eaten this generation."
+      : "No creatures are alive.";
+    const contrast = isFinite(m.shade) ? Math.abs(m.shade - bgTone()) : 0;
+    const d = contrast < 0.08 ? "The creatures blend into the ground." : contrast < 0.25 ? "The creatures stand out a little from the ground." : "The creatures stand out clearly against the ground.";
+    return [a, b, c, d].map(t).join(" ");
+  });
 
   // ---------- Drawing ----------
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
@@ -426,6 +461,11 @@
   function setEnv(env, announce) {
     const before = state.env;
     state.env = env;
+    if (before !== env) { track.touched = true; track.envGens = 0; track.litterRun = 0; }
+    if (announce && before !== env) {
+      W_.sound("event", { pitch: ENVS[env].tone });
+      W_.describe("The ground is now " + ENVS[env].name.toLowerCase() + ", shade " + ENVS[env].tone.toFixed(2) + ".", { now: true });
+    }
     for (const [id, e] of [["envSand", "sand"], ["envLitter", "litter"], ["envSoot", "soot"]]) {
       $(id).setAttribute("aria-pressed", String(e === env));
     }
@@ -447,6 +487,7 @@
 
   $("predators").addEventListener("input", (e) => {
     state.hawks = +e.target.value;
+    track.touched = true;
     $("predatorsOut").textContent = state.hawks === 0 ? "none" : state.hawks + (state.hawks === 1 ? " hawk" : " hawks");
     placeHawks();
     if (state.hawks === 0) hint("No hawks: nothing removes the conspicuous creatures, so colour drifts at random and speed slowly falls because it costs offspring.");
@@ -472,6 +513,7 @@
     draw(); updateReadouts();
   });
   $("reset").addEventListener("click", () => {
+    track.touched = true; track.litterRun = 0;
     newPopulation(); draw(); updateReadouts();
     hint("A fresh, varied population. Every run differs, because the hawks and the mutations are random, but the outcome on each background is the same.");
   });
@@ -501,6 +543,7 @@
   } else {
     setRunning(true);
   }
+  live = true;
   draw();
   updateReadouts();
   requestAnimationFrame(frame);

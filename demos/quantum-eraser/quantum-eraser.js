@@ -138,10 +138,19 @@
   }
 
   function measureStored() {
+    const stored = state.waiting;
     for (const h of state.hits) if (!h.o) sortHit(h, true);
     state.waiting = 0;
     updateReadouts();
+    if (!stored) return;
+    const v = visibility();
+    WONDERS.describe(state.tags && v > 0.5
+      ? `Measured ${stored.toLocaleString()} stored twins at ${state.angle}°. The dots already on the screen split into a striped D1 group and a matching D2 group with the gaps; the bare screen is unchanged.`
+      : `Measured ${stored.toLocaleString()} stored twins at ${state.angle}°. The dots already on the screen split into two groups; the bare screen is unchanged.`, { now: true });
+    WONDERS.sound("event", { pitch: 0.7 });
+    if (state.tags && stored >= 500 && v >= 0.98) WONDERS.challenge("delayed-choice");
   }
+  const visibility = () => (state.tags ? Math.abs(Math.sin(2 * state.angle * DEG)) : 1);
 
   // Redraw films and counts from the hit list.
   function rebuild() {
@@ -447,6 +456,7 @@
     for (const f of done) {
       state.flights.splice(state.flights.indexOf(f), 1);
       land(f.x); // if the delay was switched mid-flight, land() follows the current setting
+      WONDERS.sound("tick", { pitch: (f.x + HALF) / (2 * HALF) });
       if (state.delay) state.coil = 1;
       state.flashScreen = { y: yOnScreen(f.x), a: 1 };
       updateReadouts();
@@ -486,7 +496,7 @@
     $("count").textContent = state.hits.length.toLocaleString();
     $("split").textContent = `${state.n1.toLocaleString()} · ${state.n2.toLocaleString()}`;
     $("waiting").textContent = state.delay || state.waiting ? state.waiting.toLocaleString() : "delay off";
-    const v = state.tags ? Math.abs(Math.sin(2 * state.angle * DEG)) : 1;
+    const v = visibility();
     $("vis").textContent = Math.round(v * 100) + "%";
     $("visAll").textContent = state.tags ? "none" : "full";
     let note = "";
@@ -498,7 +508,23 @@
     $("angle0").setAttribute("aria-pressed", String(state.angle === 0));
     $("angle45").setAttribute("aria-pressed", String(state.angle === 45));
     $("measure").disabled = state.waiting === 0;
+    const sorted = state.n1 + state.n2;
+    if (state.tags && (state.angle === 0 || state.angle === 90) && sorted >= 1000) WONDERS.challenge("read-path");
+    if (state.tags && v >= 0.45 && v <= 0.55 && sorted >= 2000) WONDERS.challenge("half-erased");
   }
+
+  // ---------- Narration ----------
+  function describeScene() {
+    const v = Math.round(visibility() * 100);
+    const n = state.hits.length.toLocaleString();
+    let s = state.tags
+      ? `Which-path tags are on, so the bare screen shows ${n} hits in one smooth blob with no stripes.`
+      : `Which-path tags are off, so the bare screen shows ${n} hits in clear stripes.`;
+    s += ` The twin's polarizer is at ${state.angle}°. ${state.n1.toLocaleString()} twins reached D1 and ${state.n2.toLocaleString()} reached D2; each sorted group has ${v}% fringe visibility.`;
+    if (state.waiting) s += ` ${state.waiting.toLocaleString()} twins are waiting in the delay line, so their screen hits are not sorted yet.`;
+    return s;
+  }
+  WONDERS.describer(describeScene);
 
   function setAngle(a) {
     state.angle = a;
@@ -509,17 +535,25 @@
   }
 
   $("angle").addEventListener("input", (e) => setAngle(+e.target.value));
-  $("angle0").addEventListener("click", () => setAngle(0));
-  $("angle45").addEventListener("click", () => setAngle(45));
+  $("angle0").addEventListener("click", () => {
+    setAngle(0);
+    WONDERS.describe("Polarizer at 0°: the twin's result now reveals which slit was used. Sorted hits were cleared; neither group can show stripes.", { now: true });
+  });
+  $("angle45").addEventListener("click", () => {
+    setAngle(45);
+    WONDERS.describe("Polarizer at 45°: the which-path record is erased. Sorted hits were cleared; the D1 group will show stripes and D2 the gaps.", { now: true });
+  });
   $("tags").addEventListener("change", (e) => {
     state.tags = e.target.checked;
     computePdf();
     clearAll();
+    WONDERS.describe(state.tags ? "Which-path tags on. The screen was cleared; the bare screen will show a blob." : "Which-path tags off. The screen was cleared; stripes will appear directly on the bare screen.", { now: true });
   });
   $("delay").addEventListener("change", (e) => {
     state.delay = e.target.checked;
     if (!state.delay && state.waiting) measureStored(); // the stored twins come out to the polarizer
     updateReadouts();
+    if (state.delay) WONDERS.describe("Delay on. New twins are held in a fibre, so their screen hits stay grey until you measure.", { now: true });
   });
   $("measure").addEventListener("click", measureStored);
   $("colour").addEventListener("change", (e) => { state.colour = e.target.checked; rebuild(); });
@@ -531,7 +565,7 @@
     state.running = !state.running;
     $("play").textContent = state.running ? "Pause" : "Resume";
   });
-  $("clear").addEventListener("click", clearAll);
+  $("clear").addEventListener("click", () => { clearAll(); WONDERS.describe("Screen cleared.", { now: true }); });
 
   // Start with a sorted pattern already on screen so the first view tells the story.
   state.rate = Math.max(1, Math.round(Math.pow(200, $("rate").value / 100)));

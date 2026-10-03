@@ -89,6 +89,7 @@
       h: ic.x * ic.vy - ic.y * ic.vx, law, light: false, colour,
       trail: [[ic.x, ic.y]], alive: true, status: "orbiting",
       phi: Math.atan2(ic.y, ic.x), lastDr: null, peri: [], laps: 0,
+      nPeri: 0, rmin: Math.hypot(ic.x, ic.y),
     };
   }
 
@@ -111,6 +112,7 @@
     }
     if (Lab.reducedMotion && !state.running) preroll(L.parts);
     updateOrbitStats();
+    if (!quietFates) W8.sound("tick", { pitch: 0.5 });
   }
 
   function relaunchAll() {
@@ -127,12 +129,14 @@
       rk4(p, dt);
       left -= dt;
       const r = Math.hypot(p.x, p.y);
+      if (r < p.rmin) p.rmin = r;
       // Accumulated angle, for measuring how far the orbit turns between closest approaches.
       let dphi = Math.atan2(p.y, p.x) - Math.atan2(py, px);
       dphi -= 2 * Math.PI * Math.round(dphi / (2 * Math.PI));
       const dr = p.x * p.vx + p.y * p.vy;
       if (p.lastDr !== null && p.lastDr < 0 && dr >= 0) {
         p.peri.push(p.phi + dphi * (p.lastDr / (p.lastDr - dr)));
+        p.nPeri++;
         if (p.peri.length > 8) p.peri.shift();
       }
       p.lastDr = dr;
@@ -146,8 +150,10 @@
         p.alive = false;
         p.status = r < RS && p.law === "E" ? "captured" : "hit the mass";
         p.trail.push([p.x, p.y]);
+        fateEvent(p);
       } else if (r > 400 * M && dr > 0) {
         p.alive = false; p.status = "escaped";
+        fateEvent(p);
       }
     }
   }
@@ -162,6 +168,35 @@
     const n = p.peri.length;
     return Math.abs(p.peri[n - 1] - p.peri[n - 2]) * 180 / Math.PI - 360;
   }
+
+  // ---------- Narration, sound and challenges ----------
+  const W8 = window.WONDERS;
+  let quietFates = false; // no narration while pre-rolling the opening orbit
+  function fateEvent(p) {
+    if (quietFates) return;
+    if (p.status === "captured") { W8.describe("A particle fell through the event horizon into the black hole."); W8.sound("fail"); }
+    else if (p.status === "hit the mass") { W8.describe("A Newtonian particle hit the central mass."); W8.sound("fail"); }
+    else { W8.describe("A particle escaped to deep space."); W8.sound("event", { pitch: 0.8 }); }
+  }
+  function checkOrbitChallenges() {
+    for (const L of state.launches) {
+      if (L.label !== "your launch") continue;
+      for (const p of L.parts) {
+        if (!p.alive) continue;
+        if (p.nPeri >= 3) W8.challenge("own-orbit");
+        if (p.law === "E" && p.nPeri >= 5 && p.rmin < 4 * RS) W8.challenge("close-orbit");
+      }
+    }
+  }
+  function statsText(id) {
+    return [...$(id).children].map((s) => s.textContent.replace(/\s+/g, " ").trim()).join(". ") + ".";
+  }
+  W8.describer(() => {
+    if (state.mode === "orbits") {
+      return tr("A black hole at the centre of a warped sheet, with test particles orbiting it. The dashed green ring is the last stable orbit at 3 rₛ.") + " " + statsText("orbitStats");
+    }
+    return tr("A black hole at the centre of a warped sheet, with light rays passing it from the left. The dashed yellow ring is the photon sphere at 1.5 rₛ.") + " " + statsText("lightStats");
+  });
 
   // ---------- Presets ----------
   const tangential = (r, v) => ({ x: r, y: 0, vx: 0, vy: v });
@@ -212,6 +247,12 @@
     state.rays = { main, family };
     state.photonT = 0;
     updateLightStats();
+    const e = main.find((q) => q.law === "E"), m = e || main[0];
+    const b = (state.b / RS).toFixed(2);
+    if (m.fate === "captured") W8.describe("Impact parameter " + b + " rₛ: the light is captured by the black hole.");
+    else if (m.deflection >= 2 * Math.PI) W8.describe("Impact parameter " + b + " rₛ: the light loops around the black hole, turning through " + (m.deflection * 180 / Math.PI).toFixed(0) + "°, then escapes.");
+    else W8.describe("Impact parameter " + b + " rₛ: the light escapes, bent by " + (m.deflection * 180 / Math.PI).toFixed(1) + "°.");
+    if (e && e.fate !== "captured" && e.deflection >= 2 * Math.PI) W8.challenge("loop-light");
   }
 
   // ---------- Projection: an oblique view of Flamm's paraboloid ----------
@@ -351,7 +392,7 @@
   }
 
   function drawDrag() {
-    const d = state.drag;
+    const d = state.drag || (state.kbOn ? kbAim() : null);
     if (!d) return;
     const [X0, Y0] = project(d.x0, d.y0);
     const [X1, Y1] = project(d.x1, d.y1);
@@ -369,7 +410,7 @@
     const v = dragVelocity(d);
     ctx.font = fs(12) + MONO;
     ctx.textAlign = "left";
-    const txt = `r = ${(Math.hypot(d.x0, d.y0) / RS).toFixed(1)} rₛ   v = ${Math.hypot(v[0], v[1]).toFixed(2)} c`;
+    const txt = `r = ${(Math.hypot(d.x0, d.y0) / RS).toFixed(1)} rₛ   v = ${Math.hypot(v[0], v[1]).toFixed(3)} c`;
     // Keep the readout on screen: flip it to the left of the arrow near the right edge.
     if (X1 + 10 + ctx.measureText(txt).width > W - 6) { ctx.textAlign = "right"; ctx.fillText(txt, X1 - 10, Math.max(18, Y1 - 8)); ctx.textAlign = "left"; }
     else ctx.fillText(txt, X1 + 10, Math.max(18, Y1 - 8));
@@ -498,7 +539,7 @@
     if (state.running) {
       if (state.mode === "orbits") {
         for (const p of state.particles) if (p.alive) advanceParticle(p, BASE_SPEED * state.speed * dt);
-        if (now - lastStats > 200) { lastStats = now; updateOrbitStats(); }
+        if (now - lastStats > 200) { lastStats = now; updateOrbitStats(); checkOrbitChallenges(); }
       } else {
         state.photonT += dt * 140;
       }
@@ -566,9 +607,59 @@
     const [vx, vy] = dragVelocity(d);
     const ic = { x: d.x0, y: d.y0, vx, vy };
     launch(() => ic, "your launch");
+    checkOrbitChallenges();
   }
   canvas.addEventListener("pointerup", endDrag);
   canvas.addEventListener("pointercancel", () => { state.drag = null; state.dragB = false; });
+
+  // ---------- Keyboard: aim and launch without a pointer ----------
+  // The aim starts at distance kb.r on the right of the hole; kb.dir is the launch direction in
+  // degrees from straight outward (90 = sideways, anticlockwise), kb.v the speed as a fraction of c.
+  const kb = { r: 30 * M, dir: 90, v: 0.15, preview: null };
+  function kbAim() {
+    if (state.mode !== "orbits") return null;
+    const a = kb.dir * Math.PI / 180, len = kb.v / DRAG_GAIN;
+    const d = { x0: kb.r, y0: 0, x1: kb.r + len * Math.cos(a), y1: len * Math.sin(a) };
+    if (!kb.preview) kb.preview = previewPath(d);
+    d.preview = kb.preview;
+    return d;
+  }
+  function kbSay() {
+    W8.describe("Aim: start " + (kb.r / RS).toFixed(1) + " rₛ from the hole, speed " + kb.v.toFixed(3) + " c, " + kb.dir + "° from straight outward. Press Enter to launch.");
+  }
+  canvas.addEventListener("focus", () => { state.kbOn = canvas.matches(":focus-visible"); kb.preview = null; });
+  canvas.addEventListener("blur", () => { state.kbOn = false; });
+  canvas.addEventListener("keydown", (e) => {
+    const k = e.key, big = e.shiftKey;
+    if (k !== "Tab") state.kbOn = true;
+    if (state.mode === "light") {
+      const step = (big ? 0.1 : 0.005) * RS;
+      let b = state.b;
+      if (k === "ArrowUp" || k === "ArrowRight") b += step;
+      else if (k === "ArrowDown" || k === "ArrowLeft") b -= step;
+      else return;
+      e.preventDefault();
+      state.b = Math.min(8 * RS, Math.max(0.5 * RS, Math.round(b / RS / 0.005) * 0.005 * RS));
+      $("impact").value = (state.b / RS).toFixed(3);
+      computeRays();
+      return;
+    }
+    if (k === "ArrowLeft" || k === "ArrowRight") kb.dir = ((kb.dir + (k === "ArrowLeft" ? 1 : -1) * (big ? 15 : 3)) % 360 + 360) % 360;
+    else if (k === "ArrowUp" || k === "ArrowDown") kb.v = Math.min(0.9, Math.max(0.01, +(kb.v + (k === "ArrowUp" ? 1 : -1) * (big ? 0.01 : 0.001)).toFixed(3)));
+    else if (k === "+" || k === "=" || k === "-" || k === "_") kb.r = Math.min(42 * M, Math.max(4 * M, kb.r + (k === "-" || k === "_" ? -1 : 1) * (big ? 4 : 1) * M));
+    else if (k === "Enter" || k === " ") {
+      e.preventDefault();
+      const a = kb.dir * Math.PI / 180;
+      const ic = { x: kb.r, y: 0, vx: kb.v * Math.cos(a), vy: kb.v * Math.sin(a) };
+      launch(() => ic, "your launch");
+      checkOrbitChallenges();
+      W8.describe("Launched from " + (kb.r / RS).toFixed(1) + " rₛ at " + kb.v.toFixed(3) + " c.", { now: true });
+      return;
+    } else return;
+    e.preventDefault();
+    kb.preview = null;
+    kbSay();
+  });
 
   // Switch layouts at the phone breakpoint; particles and rays live in sheet coordinates, so nothing is lost.
   let rzTimer = 0;
@@ -593,6 +684,7 @@
       ? "Drag on the sheet to launch a particle: press where it starts and pull in the direction it should move. Longer drags launch faster."
       : "Click or drag on the sheet to set how far from the hole the beam aims. The critical value is b = 2.598 rₛ: just above it light loops round the photon sphere, just below it light is captured.";
     V = view();
+    kb.preview = null;
     if (mode === "light") computeRays();
   }
   $("modeOrbits").addEventListener("click", () => setMode("orbits"));
@@ -602,6 +694,7 @@
     state.law = law;
     pressed(["gravNewton", "gravEinstein", "gravBoth"], { newton: "gravNewton", einstein: "gravEinstein", both: "gravBoth" }[law]);
     relaunchAll();
+    kb.preview = null;
     if (state.mode === "light") computeRays();
   }
   $("gravNewton").addEventListener("click", () => setLaw("newton"));
@@ -632,8 +725,10 @@
 
   // Open with a precessing orbit already traced so the rosette is visible at once.
   if (!state.running) $("play").textContent = "Play";
+  quietFates = true;
   launch(PRESETS.presetPrecess.icFor, PRESETS.presetPrecess.label);
   if (!Lab.reducedMotion) for (const p of state.particles) advanceParticle(p, 1400);
+  quietFates = false;
   updateOrbitStats();
   requestAnimationFrame(frame);
 })();

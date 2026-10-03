@@ -32,3 +32,18 @@ window.Lab = (function () {
 
   return { setupCanvas, wavelengthToRGB, reducedMotion };
 })();
+
+// Hooks a demo can call at any time; assets/wonders.js (loaded last) replaces
+// these and replays anything called before it loaded.
+//   WONDERS.challenge("id")          mark a challenge from assets/content/* done
+//   WONDERS.describe("text", {now})  narrate a change to screen readers
+//   WONDERS.describer(() => "text")  full description of the scene, on demand
+//   WONDERS.sound("tick"|"event"|"success"|"fail", {pitch: 0..1, pan: -1..1})
+(function () {
+  const W = (window.WONDERS = window.WONDERS || {});
+  const q = (W._queue = W._queue || []);
+  for (const name of ["challenge", "describe", "describer", "sound"]) {
+    if (!W[name]) W[name] = (...args) => { q.push([name, args]); };
+  }
+})();
+

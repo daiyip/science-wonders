@@ -57,16 +57,16 @@
   </div>
 
   <div class="bench">
-    <canvas id="bench" width="960" height="560" aria-label="A black hole at the centre of a sheet warped into a funnel, with test particles orbiting on it or light rays bending past it"></canvas>
+    <canvas id="bench" width="960" height="560" tabindex="0" aria-label="A black hole at the centre of a sheet warped into a funnel, with test particles orbiting on it or light rays bending past it. Drag to launch a particle. Keyboard: left and right arrows turn the launch direction, up and down arrows change the speed, plus and minus move the start point, Enter launches. With light rays, up and down arrows change the impact parameter."></canvas>
   </div>
-  <div class="stats" aria-live="polite" id="orbitStats">
+  <div class="stats" id="orbitStats">
     <span>Particles <b id="nParticles">0</b></span>
     <span>Orbit shift per lap, Einstein <b id="shiftE">–</b></span>
     <span>Weak-field formula <b id="shiftFormula">–</b> <span class="muted">(underestimates close to the hole)</span></span>
     <span>Orbit shift per lap, Newton <b id="shiftN">–</b></span>
     <span>Latest launch <b id="fate">–</b></span>
   </div>
-  <div class="stats" aria-live="polite" id="lightStats" hidden>
+  <div class="stats" id="lightStats" hidden>
     <span>Impact parameter <b id="bOut">–</b></span>
     <span>Bending, Einstein <b id="defE">–</b></span>
     <span>Weak-field 4GM/(c²b) <b id="defFormula">–</b></span>

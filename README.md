@@ -22,6 +22,9 @@ Twenty experiments in four categories, each with controls to play with, a short 
 - **Presenter mode** for projectors
 - **Embed** code (`?embed=1` shows only the apparatus and controls, with a link back)
 - **Record a clip** of the experiment as a video (MP4 or WebM, up to 20 seconds, made in the browser)
+- **Challenges:** three goals per experiment (`challenges` in `assets/content/*`), detected by the page script calling `WONDERS.challenge(id)`; stars show on the home page
+- **Accessibility:** keyboard control for every canvas interaction, screen-reader narration (`WONDERS.describe`, `WONDERS.describer` behind a "Describe the scene" button) and optional sound cues (`WONDERS.sound`); these hooks are stubbed in `assets/lab.js`
+- **Teacher packs** (`teach/index.html?e=<slug>`): printable worksheet and lesson plan rendered from `teach` in each content entry; the tours double as lesson sequences
 - **Simple / Deeper** explanations: elements marked `data-depth="deep"` (including a "The math" section with `.eq` equation blocks) appear only in Deeper mode; `?depth=deep` links straight to it
 - **Progress** (visited pages, predictions, quiz scores), stored only in the browser's localStorage
 
@@ -49,7 +52,7 @@ New pages also need `<script src="../../assets/i18n.js" data-page="<slug>"></scr
 1. Create `demos/<name>/index.html` and copy the header, `.bench`, `.controls` and `.explain` structure from an existing demo.
 2. Link `../../assets/style.css` and `../../assets/lab.js` (canvas sizing, wavelength colours).
 3. Add a card to the right category shelf in `index.html` and a "Real-world applications" section to the page.
-4. Add the experiment to `assets/catalog.js`, write its predict/quiz/related entry in `assets/content/<category>.js`, include the four shared scripts at the end of the page (copy from any demo), and add its files to the precache list in `sw.js`.
+4. Add the experiment to `assets/catalog.js`, write its predict/quiz/related entry in `assets/content/<category>.js`, include the shared scripts at the end of the page, add `challenges` and `teach` to its content entry (copy from any demo), and add its files to the precache list in `sw.js`.
 
 ## Publish
 
