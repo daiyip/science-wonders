@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entropy and the Arrow of Time</title>
+<meta name="description" content="Pull out a partition and watch a gas spread. Then reverse every velocity and watch it un-mix, and see how a nudge of 1/65,536 of a pixel spoils it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .callout.alert { border-left-color: var(--warn); }
+  .callout + .callout { margin-top: 10px; }
+  .switch input { flex: none; }
+  .stats sup, .callout sup { line-height: 0; }
+  .formula { font-family: var(--font-mono); font-size: 0.92em; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Thermodynamics · Clausius 1865 · Boltzmann 1877</div>
+    <h1>Entropy and the arrow of time</h1>
+    <p class="lede">Take away the wall and the gas fills the box. Every collision obeys laws that work just as well backwards, yet a gas never gathers itself back into one half. Reverse every velocity and watch it do exactly that, then see how little it takes to spoil it.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="460" aria-label="A box of gas particles with a removable partition down the middle, and two live graphs: the fraction of particles in the left half, and the entropy, over the last 20 seconds"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>In the left half <b id="leftOut">–</b></span>
+    <span>Entropy, in units of k <b id="entropyOut">–</b></span>
+    <span>Clock <b id="clockOut">0.0 s</b></span>
+    <span>Time runs <b id="dirOut">forward</b></span>
+    <span>Chance all are on the left <b id="pAllOut">–</b></span>
+    <span>Seen all on the left <b id="seenOut">0 times</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="count">Particles <output id="countOut">200</output></label>
+      <input type="range" id="count" min="0" max="23" step="1" value="16">
+    </div>
+    <div class="control">
+      <span class="label">Time</span>
+      <div class="button-row">
+        <button id="reverse" class="primary">Reverse time</button>
+        <button id="play">Pause</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Box</span>
+      <div class="button-row">
+        <button id="restart">Start over</button>
+        <button id="partition">Put the wall back</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="speed">Simulation speed <output id="speedOut">8×</output></label>
+      <input type="range" id="speed" min="1" max="30" step="1" value="8">
+    </div>
+    <div class="control">
+      <span class="label">Imperfect reversal</span>
+      <label class="switch" for="nudge"><input type="checkbox" id="nudge"> Nudge one particle by 1/65,536 of a pixel when reversing</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">The wall has just been pulled out. Let the gas spread for a few seconds, then press Reverse time.</p>
+  <p class="callout" id="odds"></p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each dot is a gas particle bouncing off the walls and off each other with no friction, so no energy is lost. They all start in the left half. The top graph tracks what fraction is on the left; it drops to one half and then just jitters there.</p>
+      <p>The bottom graph is the entropy. Count the ways to choose which <i>n</i> of the <i>N</i> particles sit on the left: that is <span class="formula">C(N, n)</span>. Boltzmann's entropy is <span class="formula">S = k ln W</span>, the log of that count. An even split has by far the most ways, so that is where the gas spends nearly all of its time.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Let the gas mix, then press Reverse time. Every particle retraces its path, the gas crowds back into the left half, and the entropy runs back down to zero.</li>
+        <li>Turn on the nudge and reverse again. One particle, shown in orange, moves 1/65,536 of a pixel. Each collision magnifies the error and passes it on, and soon the reversed gas stays mixed.</li>
+        <li>Drop to 4 particles. All four land on the left about one look in sixteen, so you will see it often. At 100 particles the odds are about 1 in 10<sup>30</sup>.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>The laws behind every collision here run equally well forwards and backwards. A film of any single bounce looks fine in reverse. In 1876 Josef Loschmidt used this to challenge Boltzmann: if each step is reversible, how can entropy only go up?</p>
+      <p>Boltzmann's answer was counting. Mixed arrangements outnumber sorted ones so hugely that almost every path leads toward mixing. Going back needs every velocity reversed with perfect precision, and chaos turns the tiniest error into a total one. The deeper puzzle is why the universe started in such a low-entropy state at all.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where the arrow of time does work</h2>
+      <p>The same counting that keeps your gas mixed sets hard limits on engines, fridges, computers and life, and even tells us how much information a black hole holds.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Energy</span>
+        <h3>The limit on every heat engine</h3>
+        <p>Sadi Carnot showed in 1824 that an engine running between a hot and a cold temperature can turn at most 1 − T<sub>cold</sub>/T<sub>hot</sub> of its heat into work, with temperatures in kelvin. A steam plant at 600 °C dumping heat at 30 °C can never beat about 65%. Real ones manage around 40%. The rest has to leave as heat to carry away entropy.</p>
+        <span class="link"><b>In the demo:</b> spreading out is free; herding particles back takes work.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Homes</span>
+        <h3>Refrigerators and heat pumps</h3>
+        <p>Heat never flows from cold to hot on its own, any more than the gas un-mixes. A fridge or heat pump forces it uphill with a compressor and pays in electricity. Because it moves heat rather than making it, a good heat pump delivers 3 to 4 units of heat for each unit of electricity.</p>
+        <span class="link"><b>In the demo:</b> putting the wall back sorts nothing; sorting needs work.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Computing</span>
+        <h3>The energy cost of forgetting</h3>
+        <p>Rolf Landauer showed in 1961 that erasing one bit of information must release at least kT ln 2 of heat, about 3 × 10<sup>−21</sup> joules at room temperature. Erasing squeezes two possible states into one, like pushing a particle into one half of the box. Experiments confirmed the limit in 2012; today's chips still use far more than this.</p>
+        <span class="link"><b>In the demo:</b> one particle, two halves: ln 2 of entropy per bit.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Information</span>
+        <h3>Data compression</h3>
+        <p>In 1948 Claude Shannon defined the entropy of a message using the same formula. It is the fewest bits per symbol any lossless code can average. ZIP and PNG squeeze repetitive data toward that floor, and truly random data, with maximum entropy, cannot be compressed at all.</p>
+        <span class="link"><b>In the demo:</b> "all on the left" takes one line to describe; a mixed gas needs a bit per particle.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Life · Climate</span>
+        <h3>Living on low-entropy sunlight</h3>
+        <p>Earth sends back into space about as much energy as it gets from the Sun. What it keeps is the low entropy. Sunlight arrives as relatively few high-energy photons from a 5,800 K surface and leaves as roughly 20 times as many infrared ones. Plants run on that difference, and everything else eats plants. A charged battery is a store of the same kind of order.</p>
+        <span class="link"><b>In the demo:</b> life is a local, paid-for return toward the left side.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Astrophysics</span>
+        <h3>Black hole entropy</h3>
+        <p>Jacob Bekenstein argued in 1972, and Stephen Hawking confirmed in 1974, that a black hole has entropy proportional to the area of its horizon: one quarter of the area in Planck units. A black hole with the Sun's mass would hold about 10<sup>77</sup> k of entropy, around 10<sup>19</sup> times more than the Sun itself.</p>
+        <span class="link"><b>In the demo:</b> entropy is a count of hidden arrangements, even for a black hole.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Particles are soft disks moved with a bit-reversible integer Verlet method (Levesque and Verlet, 1993), so reversing time retraces every path exactly, down to the last bit.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="entropy.js"></script>
+</body>
+</html>

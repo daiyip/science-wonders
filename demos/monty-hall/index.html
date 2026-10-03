@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Monty Hall Problem</title>
+<meta name="description" content="Pick a door, watch the host reveal a goat, then stay or switch. Play it, simulate a thousand games, and try it with 100 doors until the answer feels obvious.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* ---- The stage (inside the always-dark bench) ---- */
+  .stage { display: grid; gap: 14px; padding: 10px 4px 16px; }
+  .doors {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: var(--gap, min(18px, 3vw));
+    --dw: min(132px, 23vw);
+  }
+  .doors[data-size="m"] { --dw: min(96px, 21vw); --gap: 14px; }
+  .doors[data-size="s"] { --dw: min(64px, 15vw); --gap: 10px; }
+  .doors[data-size="xs"] { --dw: min(46px, 11vw); --gap: 7px; }
+  .doors[data-size="xxs"] { --dw: min(34px, 8vw); --gap: 4px; }
+
+  .door {
+    all: unset;
+    box-sizing: border-box;
+    width: var(--dw);
+    display: grid; gap: 6px; justify-items: center;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .door:disabled { cursor: default; }
+  .door:focus-visible { outline: 2px solid #8fa6ff; outline-offset: 4px; }
+  .frame {
+    position: relative; width: 100%; aspect-ratio: 2 / 3;
+    background: radial-gradient(120% 80% at 50% 100%, #1b2638 0%, #070b13 70%);
+    border-radius: 6px 6px 2px 2px;
+    box-shadow: 0 0 0 3px #3a4760, inset 0 -6px 0 #1a2232;
+    perspective: 1100px;
+  }
+  .doors[data-size="xxs"] .frame, .doors[data-size="xs"] .frame { box-shadow: 0 0 0 2px #3a4760; }
+  .prize { position: absolute; inset: 0; display: grid; place-items: center; }
+  .prize svg { width: 78%; height: auto; }
+  .leaf {
+    position: absolute; inset: 0;
+    border-radius: 5px 5px 1px 1px;
+    background: linear-gradient(180deg, #c8603f 0%, #a8482f 100%);
+    transform-origin: left center;
+    transition: transform .55s cubic-bezier(.3,.7,.3,1);
+    display: grid; place-items: center;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  }
+  .leaf::before, .leaf::after {
+    content: ""; position: absolute; left: 14%; right: 14%;
+    border: 2px solid rgba(60,20,10,.28); border-radius: 3px;
+  }
+  .leaf::before { top: 9%; height: 34%; }
+  .leaf::after { bottom: 9%; height: 34%; }
+  .doors[data-size="xxs"] .leaf::before, .doors[data-size="xxs"] .leaf::after,
+  .doors[data-size="xs"] .leaf::before, .doors[data-size="xs"] .leaf::after { border-width: 1px; }
+  .knob { position: absolute; right: 11%; top: 52%; width: 9%; aspect-ratio: 1; border-radius: 50%; background: #f0c36a; }
+  .num {
+    position: relative; z-index: 1;
+    font-family: var(--font-display); font-weight: 600;
+    font-size: calc(var(--dw) * 0.36); line-height: 1;
+    color: #fbe9dc; text-shadow: 0 1px 0 rgba(0,0,0,.3);
+  }
+  .door:not(:disabled):hover .leaf { filter: brightness(1.12); }
+  .door.open .leaf { transform: rotateY(-74deg); filter: brightness(.7); }
+  .door.picked .frame { box-shadow: 0 0 0 3px #8fa6ff, 0 0 18px rgba(143,166,255,.45); }
+  .door.offered .frame { box-shadow: 0 0 0 3px #f0b35a, 0 0 18px rgba(240,179,90,.4); }
+  .door.win .frame { box-shadow: 0 0 0 3px #4cc48d, 0 0 22px rgba(76,196,141,.55); }
+  .doors[data-size="xxs"] .door.picked .frame, .doors[data-size="xs"] .door.picked .frame { box-shadow: 0 0 0 2px #8fa6ff; }
+  .doors[data-size="xxs"] .door.offered .frame, .doors[data-size="xs"] .door.offered .frame { box-shadow: 0 0 0 2px #f0b35a; }
+  .doors[data-size="xxs"] .door.win .frame, .doors[data-size="xs"] .door.win .frame { box-shadow: 0 0 0 2px #4cc48d; }
+  .tag {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: #7f8ea6; min-height: 1.4em; text-align: center; white-space: nowrap;
+  }
+  .door.picked .tag { color: #8fa6ff; }
+  .door.offered .tag { color: #f0b35a; }
+  .doors[data-size="xs"] .tag, .doors[data-size="xxs"] .tag { display: none; }
+
+  .host-line { text-align: center; color: #e4eaf2; font-size: var(--step-0); max-width: 62ch; margin: 0 auto; min-height: 3.2em; }
+  .host-line b { color: #fff; }
+  .stage-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 40px; }
+  .stage-actions button { background: #121a26; color: #e4eaf2; border-color: #26324a; font-size: var(--step-0); padding: 9px 18px; }
+  .stage-actions button:hover { border-color: #7f8ea6; }
+  .stage-actions button.go-stay { border-color: #f08a5d; color: #f6b393; }
+  .stage-actions button.go-switch { background: #8fa6ff; border-color: #8fa6ff; color: #0b1018; }
+  .stage-actions button:focus-visible { outline-color: #8fa6ff; }
+  .stage-actions [hidden] { display: none; }
+  .bench .chart-wrap { border-top: 1px solid var(--bench-rule); padding-top: 12px; }
+
+  /* ---- Outside the bench: theme-aware ---- */
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px; padding: 12px 16px;
+    border-left: 3px solid var(--accent); background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1); max-width: 80ch;
+  }
+  .grid2 { align-items: start; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 36px; }
+  .grid2 > * { min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 18px; display: grid; gap: 12px; align-content: start; }
+  .flow { display: grid; gap: 16px; }
+  .flow-step { display: grid; gap: 6px; }
+  .flow-step .eyebrow { font-size: 0.75rem; }
+  .bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--paper); }
+  .bar span { display: block; height: 100%; min-width: 3px; transition: width .5s ease; }
+  .bar .mine { background: var(--warn); }
+  .bar .rest { background: var(--accent); }
+  .bar .rest.split { background: repeating-linear-gradient(90deg, var(--accent) 0 calc(var(--cell) - 2px), var(--panel) calc(var(--cell) - 2px) var(--cell)); }
+  .bar .gone { background: var(--rule); }
+  .bar-labels { display: flex; justify-content: space-between; gap: 10px; font-size: var(--step--1); flex-wrap: wrap; }
+  .bar-labels b { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .k-mine { color: var(--warn); }
+  .k-rest { color: var(--accent); }
+  .bayes { font-family: var(--font-mono); font-size: 0.85rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; overflow-x: auto; }
+  .bayes div { white-space: pre; }
+  @media (max-width: 560px) { .bayes { font-size: 0.72rem; padding: 10px; } }
+  .bayes .hl { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Probability · Bayes 1763 · Selvin 1975 · vos Savant 1990</div>
+    <h1>The Monty Hall problem</h1>
+    <p class="lede">A car hides behind one door and goats behind the rest. You pick a door, the host opens a goat door, and offers you a swap. Most people stay put. They shouldn't: switching wins two times out of three.</p>
+  </div>
+
+  <div class="bench">
+    <div class="stage">
+      <div class="doors" id="doors" role="group" aria-label="Doors"></div>
+      <p class="host-line" id="message" aria-live="polite"></p>
+      <div class="stage-actions">
+        <button id="stay" class="go-stay" hidden>Stay</button>
+        <button id="switch" class="go-switch" hidden>Switch</button>
+        <button id="again" hidden>Play again</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="bench" width="960" height="300" aria-label="Win rate for staying and for switching as simulated games accumulate, with the theoretical values shown as dashed lines"></canvas>
+    </div>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>You played <b id="played">0</b></span>
+    <span>Won by staying <b id="stayTally">0 of 0</b></span>
+    <span>Won by switching <b id="switchTally">0 of 0</b></span>
+    <span>Simulated games <b id="simN">0</b></span>
+    <span>Simulated stay wins <b id="simStay">–</b></span>
+    <span>Simulated switch wins <b id="simSwitch">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="doorCount">Number of doors <output id="doorCountOut">3</output></label>
+      <input type="range" id="doorCount" min="3" max="100" step="1" value="3">
+    </div>
+    <div class="control">
+      <span class="label">The host</span>
+      <div class="seg" role="group" aria-label="Host behaviour">
+        <button id="hostKnows" aria-pressed="true">Knows</button>
+        <button id="hostRandom" aria-pressed="false">Opens at random</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Simulation</span>
+      <div class="button-row">
+        <button id="simulate" class="primary">Simulate 1,000 games</button>
+        <button id="clearSim">Clear</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Your games</span>
+      <div class="button-row">
+        <button id="newGame">New game</button>
+        <button id="resetTally">Reset my tally</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Pick a door to start. Changing the number of doors or the host starts a fresh tally and a fresh simulation.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Where the probability goes</h2>
+      <p class="muted" id="flowIntro"></p>
+      <div class="flow" id="flow"></div>
+    </div>
+    <div class="card">
+      <h2>The Bayes calculation</h2>
+      <p class="muted">Say you pick door 1 and the host opens door 3. Before he acts, each door has a 1/3 chance. Then ask how likely his move was in each case:</p>
+      <div class="bayes">
+        <div>Car behind 1: P(opens 3) = ½  <span class="muted">(2 or 3, his choice)</span></div>
+        <div>Car behind 2: P(opens 3) = 1  <span class="muted">(his only goat)</span></div>
+        <div>Car behind 3: P(opens 3) = 0  <span class="muted">(never the car)</span></div>
+        <div>&nbsp;</div>
+        <div>P(opens 3) = ⅓·½ + ⅓·1 + ⅓·0 = ½</div>
+        <div>P(car 1 | opens 3) = (⅓·½) ÷ ½ = <span class="hl">1/3</span></div>
+        <div>P(car 2 | opens 3) = (⅓·1) ÷ ½ = <span class="hl">2/3</span></div>
+      </div>
+      <p>Bayes' rule weighs each possibility by how well it explains what you saw. If the car is behind door 2, the host was <em>forced</em> to open door 3, so seeing door 3 open is twice as likely in that world. That doubles door 2's odds relative to yours.</p>
+    </div>
+  </div>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>The host knows where the car is. He always opens every other door except one, never shows the car, and always offers the swap. Your first pick is right only 1 time in 3. Switching wins exactly when that first pick was wrong, which is the other 2 times in 3.</p>
+      <p>The chart replays the game a thousand times. Early on the two lines wander; as games pile up they settle onto the dashed lines at 1/3 and 2/3.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Play ten games always switching, then ten always staying, and compare your tally.</li>
+        <li>Slide to 100 doors. You pick one, and the host opens 98 goats, carefully skipping one door. Would you still stay?</li>
+        <li>Make the host open doors at random. When he happens to show only goats, staying and switching really are 50/50. Games where he reveals the car don't count.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Two closed doors feel like a coin toss. But the host's choice was not random: he had to avoid the car, and that carries information about the door he skipped and none about yours.</p>
+      <p>When Marilyn vos Savant gave the switching answer in Parade magazine in 1990, about 10,000 readers wrote in, nearly 1,000 of them with PhDs, most saying she was wrong. The mathematician Paul Erdős reportedly stayed unconvinced until he saw a computer simulation.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where updating on evidence matters</h2>
+      <p>The Monty Hall trap is mixing up "how likely is this evidence" with "how likely is my guess, given the evidence". Bayes' rule keeps them apart, and getting it right matters far beyond game shows.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>Reading a positive test</h3>
+        <p>Suppose 1 person in 1,000 has a disease, and a test catches 99% of cases but also flags 5% of healthy people. A positive result then means only about a 2% chance of disease, because healthy people vastly outnumber sick ones. Ignoring that base rate is one of the most common errors in reading screening results.</p>
+        <span class="link"><b>In the demo:</b> your door's starting odds of 1/3 still count after the evidence.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Email</span>
+        <h3>Spam filters</h3>
+        <p>Bayesian spam filters, popularised by Paul Graham's 2002 essay "A Plan for Spam", start from how common spam is and update on each word in a message. A word like "unsubscribe" shifts the odds a little; dozens of such clues together make the verdict nearly certain.</p>
+        <span class="link"><b>In the demo:</b> the host's door choice is a clue, weighed by Bayes' rule.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Technology</span>
+        <h3>A/B testing</h3>
+        <p>Websites show two versions of a page to different visitors and compare results. Early numbers swing wildly, and stopping as soon as one looks ahead produces false winners. Bayesian A/B tests report the probability that one version is truly better, given the data so far.</p>
+        <span class="link"><b>In the demo:</b> watch how far the lines stray before 1,000 games settle them.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Rescue</span>
+        <h3>Finding Air France 447</h3>
+        <p>After the 2009 crash in the Atlantic, two years of searching found no wreck. In 2011 analysts built a Bayesian map of where the plane could be, updating it with every area already searched. The wreck was found within about a week once searching resumed in the area the map ranked highest. The US Coast Guard plans searches the same way.</p>
+        <span class="link"><b>In the demo:</b> every opened door with no car moves probability onto the doors left.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Law</span>
+        <h3>The prosecutor's fallacy</h3>
+        <p>In 1999 Sally Clark was convicted of murdering her two baby sons, partly on testimony that two cot deaths in one family had a 1 in 73 million chance. That figure was flawed, and it answered the wrong question: double murder is also extremely rare, so the two had to be compared. Her conviction was overturned in 2003.</p>
+        <span class="link"><b>In the demo:</b> a rare event alone proves little until you weigh the alternatives.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">AI · Robotics</span>
+        <h3>Machines that update beliefs</h3>
+        <p>Robot vacuums and self-driving cars track where they are with Bayes filters, updating a map of likely positions after every sensor reading. Many machine learning methods also treat learning as Bayesian updating: start with a prior, then let the data reshape it.</p>
+        <span class="link"><b>In the demo:</b> the probability bars are a belief being updated by one observation.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. The car is placed uniformly at random each game. A knowing host who has a choice of doors picks among them at random.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="monty-hall.js"></script>
+</body>
+</html>

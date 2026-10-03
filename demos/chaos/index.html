@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chaos and the Butterfly Effect</title>
+<meta name="description" content="Start double pendulums a billionth of a radian apart and watch the difference grow exponentially until they have nothing in common.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Classical mechanics · 1890 / 1961 / 1972</div>
+    <h1>Chaos and the butterfly effect</h1>
+    <p class="lede">Two double pendulums start a millionth of a radian apart. The laws are exact and nothing is random, yet within seconds they swing as if they had never met. Watch the gap between them grow tenfold, again and again.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="520" aria-label="Double pendulums drawn on top of each other with fading trails on the left, and on the right a log-scale plot of how far apart they are over time"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Time <b id="time">0.0 s</b></span>
+    <span>Starting difference <b id="startDiff">–</b></span>
+    <span>Separation now <b id="sepNow">–</b></span>
+    <span>Visibly apart after <b id="divTime">not yet</b></span>
+    <span>Growth rate <b id="lyap">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="theta1">Upper arm start angle <output id="theta1Out">150°</output></label>
+      <input type="range" id="theta1" min="-180" max="180" step="1" value="150">
+    </div>
+    <div class="control">
+      <label for="theta2">Lower arm start angle <output id="theta2Out">0°</output></label>
+      <input type="range" id="theta2" min="-180" max="180" step="1" value="0">
+    </div>
+    <div class="control">
+      <label for="offset">Starting difference <output id="offsetOut">1e-6 rad</output></label>
+      <input type="range" id="offset" min="-9" max="-2" step="0.5" value="-6">
+    </div>
+    <div class="control">
+      <span class="label">Pendulums</span>
+      <div class="seg" role="group" aria-label="Number of pendulums">
+        <button id="count2" aria-pressed="true">2</button>
+        <button id="count10" aria-pressed="false">10</button>
+        <button id="count100" aria-pressed="false">100 fan</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Simulation</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="restart">Restart</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Trails</span>
+      <label class="switch" for="trails"><input type="checkbox" id="trails" checked> Show where the lower bobs have been</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Each tenfold improvement in the starting difference buys less than two extra seconds of agreement. Shrinking it a millionfold barely delays the split.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each pendulum is two equal one-metre arms hinged together, swinging under real gravity with no friction. Their motion is computed with the same exact equations and the same fourth-order Runge-Kutta steps. The only difference is the starting angle of the upper arm, which differs by the amount on the slider, spread evenly across the pendulums.</p>
+      <p>The right panel tracks how far apart the first and last pendulum are, counting both angles and both spin rates. The vertical scale is logarithmic, so steady exponential growth shows up as a straight climb.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Drop the starting difference from 1e-2 to 1e-9 rad. That is ten million times more precise, yet the pendulums stay together only about four times as long.</li>
+        <li>Set both arms to small angles like 20° and 0°. The motion is regular, the gap grows slowly and the plot no longer climbs in a straight line. Chaos needs enough energy.</li>
+        <li>Pick 100 fan. The pendulums leave as a single line, smear into a ribbon, then scatter over every reachable position.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Nothing here is random. Give a computer the same numbers and it repeats the run exactly. But any error in the starting state, however small, is multiplied by about the same factor every second. Predicting further ahead needs exponentially better measurements, so in practice the future is closed even though the laws are known.</p>
+      <p class="muted">Poincaré saw this in the three-body problem around 1890. Edward Lorenz rediscovered it in a weather model in 1961 and asked in 1972 whether a butterfly in Brazil could set off a tornado in Texas.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Living with sensitive dependence</h2>
+      <p>Chaos sets hard limits on prediction, but knowing where those limits are, and how to exploit tiny nudges, turns it into a tool.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Meteorology</span>
+        <h3>Why forecasts stop at about two weeks</h3>
+        <p>In 1961 Lorenz restarted a weather simulation from numbers rounded to three decimals and got a completely different forecast after a few simulated weeks. Small errors in today's observations grow the same way in real weather, which caps useful day-to-day forecasts at roughly ten to fourteen days.</p>
+        <span class="link"><b>In the demo:</b> a rounding-sized difference ends in a different pendulum.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Meteorology</span>
+        <h3>Ensemble forecasts</h3>
+        <p>Weather centres such as ECMWF run their model around 50 times from slightly perturbed starting states. Where the runs agree, the forecast is confident. Where they fan out, forecasters give probabilities instead, like a 40% chance of rain.</p>
+        <span class="link"><b>In the demo:</b> 100 fan is an ensemble; its spread is the uncertainty.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Spaceflight</span>
+        <h3>Steering spacecraft for almost no fuel</h3>
+        <p>Near unstable points between the Sun, Earth and Moon, a tiny burn produces a large change in path. In 1983 NASA used a series of lunar flybys to send ISEE-3 out of its orbit near the Sun-Earth L1 point to meet comet Giacobini-Zinner, renamed ICE. Japan's Hiten reached the Moon in 1991 on a similar low-energy route.</p>
+        <span class="link"><b>In the demo:</b> sensitivity works both ways; a tiny nudge buys a big change.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>Heart rhythm</h3>
+        <p>The electrical waves that coordinate a heartbeat can break into spiral waves and then disordered activity, which is what happens in ventricular fibrillation. Researchers study arrhythmias as nonlinear dynamics, and experiments have used small, well-timed stimuli to steer irregular rhythms back toward regular ones.</p>
+        <span class="link"><b>In the demo:</b> low angles stay regular; push the energy up and order breaks down.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Engineering</span>
+        <h3>Mixing</h3>
+        <p>Stirring works because chaotic flow stretches and folds fluid, pulling neighbouring drops apart exponentially fast. Engineers design static mixers, microfluidic chips and industrial stirrers to produce chaotic advection, which blends liquids far faster than diffusion alone.</p>
+        <span class="link"><b>In the demo:</b> the 100 pendulums start as one line and end up spread everywhere.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Security</span>
+        <h3>Chaos-based encryption</h3>
+        <p>A chaotic system turns a secret starting value into a stream that looks random and changes completely if the key changes slightly. Researchers have used this for image ciphers and for synchronised chaotic lasers that carried hidden data over a commercial fibre network in Athens in 2005.</p>
+        <span class="link"><b>In the demo:</b> change the key by 1e-9 and the output becomes unrecognisable.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Equal masses, equal 1 m arms, g = 9.81 m/s², no friction, integrated with fixed-step RK4 at 1/480 s and shown in real time.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="chaos.js"></script>
+</body>
+</html>

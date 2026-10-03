@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quantum Tunneling</title>
+<meta name="description" content="Fire an electron wave packet at a barrier it cannot climb and watch part of it come out the other side, solved live from the Schrödinger equation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Quantum mechanics · Gamow 1928 · Nobel Prizes 1973 and 1986</div>
+    <h1>Quantum tunneling</h1>
+    <p class="lede">An electron runs at a wall it doesn't have the energy to climb. A ball would bounce back every time. The electron's wave leaks into the wall, and some of it comes out the other side.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="460" aria-label="An electron wave packet travelling right toward a rectangular energy barrier, with the probability of reflection and transmission shown as a bar below"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Transmitted <b id="trans">–</b></span>
+    <span>Reflected <b id="refl">–</b></span>
+    <span>Quantum theory <b id="theory">–</b></span>
+    <span>Classical ball gets through <b id="classical">–</b></span>
+    <span>Electron wavelength <b id="lambda">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="height">Barrier height <output id="heightOut">1.00 eV</output></label>
+      <input type="range" id="height" min="0" max="2" step="0.05" value="1">
+    </div>
+    <div class="control">
+      <label for="width">Barrier width <output id="widthOut">0.50 nm</output></label>
+      <input type="range" id="width" min="0.1" max="1.5" step="0.05" value="0.5">
+    </div>
+    <div class="control">
+      <label for="energy">Electron energy <output id="energyOut">0.60 eV</output></label>
+      <input type="range" id="energy" min="0.1" max="2" step="0.05" value="0.6">
+    </div>
+    <div class="control">
+      <span class="label">Simulation</span>
+      <div class="button-row">
+        <button id="restart" class="primary">Restart</button>
+        <button id="pause">Pause</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Wave</span>
+      <label class="switch" for="showRe"><input type="checkbox" id="showRe" checked> Show the real part, Re ψ</label>
+    </div>
+    <div class="control">
+      <span class="label">Comparison</span>
+      <label class="switch" for="showBall"><input type="checkbox" id="showBall" checked> Race a classical ball</label>
+    </div>
+    <div class="control">
+      <span class="label">Far side</span>
+      <label class="switch" for="magnify"><input type="checkbox" id="magnify"> Magnify past the barrier ×20</label>
+    </div>
+    <div class="control">
+      <span class="label">Replay</span>
+      <label class="switch" for="loop"><input type="checkbox" id="loop" checked> Repeat automatically</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Energy is below the barrier, so a classical ball always bounces back.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>The blue hump is |ψ|², the probability of finding the electron at each spot. It starts as one lump moving right at a definite average energy. The amber block is a region where the electron would need more energy than it has.</p>
+      <p>This is a live solution of the Schrödinger equation on 2,048 grid points, stepped forward every 0.02 femtoseconds. When the packet hits the barrier, it splits. The bar underneath tallies how much probability ended up on each side, and the white tick shows what the textbook formula predicts.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Double the barrier width from 0.5 to 1.0 nm. Transmission doesn't halve: it falls from about 14% to under 1%, because tunneling dies off exponentially with thickness.</li>
+        <li>Raise the energy above the barrier. The classical ball sails over every time, yet part of the wave still reflects.</li>
+        <li>Turn on the ×20 magnifier with a thick barrier. The transmitted packet is tiny, but it is there.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Inside the barrier the electron's kinetic energy would be negative, which is impossible for a ball. For a wave it just means the wave stops oscillating and fades instead. If the wall is thin enough, the wave hasn't faded to nothing by the far side, and there it carries on as a normal travelling wave.</p>
+      <p>Each electron is detected whole, on one side or the other. Nobody ever catches one halfway through. The percentages are odds for single electrons.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Walking through walls, every day</h2>
+      <p>Tunneling is not a lab curiosity. It keeps the Sun burning, decides how long radioactive atoms last, and runs through the electronics in your pocket.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Imaging · Nobel 1986</span>
+        <h3>Scanning tunneling microscope</h3>
+        <p>A sharp metal tip hovers a few atom-widths above a surface, and electrons tunnel across the vacuum gap. The current falls about tenfold for every extra 0.1 nm of gap, so it maps individual atoms. Binnig and Rohrer built it at IBM Zurich in 1981.</p>
+        <span class="link"><b>In the demo:</b> nudge the width slider and watch transmission swing by large factors.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Electronics</span>
+        <h3>Flash memory</h3>
+        <p>Each bit in a USB stick or phone's storage is charge trapped behind a thin insulating layer. A strong voltage thins the barrier enough for electrons to tunnel in or out, which is how bits are written and erased. With the voltage off, the charge stays put for years.</p>
+        <span class="link"><b>In the demo:</b> a thick, high barrier holds almost everything back.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Astrophysics</span>
+        <h3>Sunlight</h3>
+        <p>The Sun's core is about 15 million kelvin, far too cool for two protons to overcome their electric repulsion by brute force. They fuse because they tunnel through it. Without tunneling the Sun would not shine.</p>
+        <span class="link"><b>In the demo:</b> the classical ball never makes it; the wave sometimes does.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Nuclear physics</span>
+        <h3>Alpha decay</h3>
+        <p>An alpha particle is trapped inside a nucleus by a barrier it can't climb. In 1928 Gamow, and separately Gurney and Condon, explained its escape as tunneling. Because the odds depend exponentially on energy, half-lives range from under a microsecond to billions of years.</p>
+        <span class="link"><b>In the demo:</b> small changes in energy make big changes in transmission.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Electronics · Nobel 1973</span>
+        <h3>Tunnel diodes and Josephson junctions</h3>
+        <p>Leo Esaki's 1957 tunnel diode passes current by tunneling through a very thin junction, giving it switching speeds used in high-frequency oscillators. Josephson junctions, where pairs of electrons tunnel between superconductors, are the building block of many quantum computers.</p>
+        <span class="link"><b>In the demo:</b> a barrier under a nanometre thick lets a lot through.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Biochemistry</span>
+        <h3>Enzymes that tunnel</h3>
+        <p>Some enzymes move hydrogen atoms faster than classical chemistry allows. Swapping hydrogen for heavier deuterium slows soybean lipoxygenase about 80 times, far beyond the classical limit of around 7, a sign that the hydrogen tunnels.</p>
+        <span class="link"><b>In the demo:</b> a heavier particle fades inside the barrier as if the barrier were higher.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Solved with the split-operator Fourier method for an electron in one dimension, with absorbing edges so waves that leave the view don't wrap around.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="tunneling.js"></script>
+</body>
+</html>

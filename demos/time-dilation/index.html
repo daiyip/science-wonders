@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Time Dilation and the Twin Paradox</title>
+<meta name="description" content="Send one twin to a nearby star at close to light speed and compare their ages when they get home.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .control select {
+    font: inherit;
+    font-size: var(--step--1);
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .button-row button.preset { padding: 6px 11px; font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Special relativity · Einstein 1905 · Langevin's twins 1911</div>
+    <h1>Time dilation and the twin paradox</h1>
+    <p class="lede">One twin stays on Earth. The other flies to a nearby star and back at close to the speed of light. When they meet again, the traveller is younger. Not by a trick of signals: they really have lived fewer years.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="560" aria-label="Two light clocks, one at rest and one moving, beside two dials for the twins' elapsed time, a map of the round trip to a star and a spacetime diagram of both twins' paths"></canvas>
+  </div>
+  <div class="stats" aria-live="polite">
+    <span>Lorentz factor γ <b id="gamma">–</b></span>
+    <span>Round trip, Earth clock <b id="earthTime">–</b></span>
+    <span>Round trip, ship clock <b id="shipTime">–</b></span>
+    <span>Age gap on return <b id="ageGap">–</b></span>
+    <span>Distance as measured on board <b id="shipDist">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="speed">Ship speed <output id="speedOut">0.866 c</output></label>
+      <input type="range" id="speed" min="0.1" max="3.8002" step="0.0025" value="1.3170">
+    </div>
+    <div class="control">
+      <span class="label">Speed presets</span>
+      <div class="button-row">
+        <button id="p50" class="preset">0.5c</button>
+        <button id="p866" class="preset">0.866c</button>
+        <button id="p99" class="preset">0.99c</button>
+        <button id="p999" class="preset">0.999c</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="dest">Destination</label>
+      <select id="dest">
+        <option value="proxima" selected>Proxima Centauri · 4.24 ly</option>
+        <option value="sirius">Sirius · 8.6 ly</option>
+        <option value="vega">Vega · 25 ly</option>
+        <option value="pleiades">The Pleiades · about 444 ly</option>
+        <option value="galactic">Galactic centre · about 26,700 ly</option>
+      </select>
+    </div>
+    <div class="control">
+      <span class="label">Trip</span>
+      <div class="button-row">
+        <button id="launch" class="primary">Launch again</button>
+        <button id="pause">Pause</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Light clocks</span>
+      <label class="switch" for="trail"><input type="checkbox" id="trail" checked> Show the light's path</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">At 0.866 c, every second on the ship takes 2 seconds on Earth.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>A light clock ticks each time a pulse of light goes up to a mirror and back. On the moving ship, Earth sees the light travel a longer, slanted path. Light moves at the same speed for everyone, so each tick takes longer. That stretch factor is γ = 1 / √(1 − v²/c²).</p>
+      <p>Below, both twins start aged 30. The dials and bars show how much time each one lives through. On the spacetime diagram, each dot marks the same amount of a twin's own time, and the traveller's dots are spaced further apart.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Pick 0.866c. γ is exactly 2: the traveller ages one year for every two on Earth.</li>
+        <li>Go to the galactic centre at 0.999c. Earth waits over 53,000 years; the traveller is back in under 2,400.</li>
+        <li>Drop to 0.5c. The effect is real but small: γ is only 1.155. At airliner speeds it is a few tens of nanoseconds per day.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Motion is relative, so from the ship it's Earth's clocks that run slow. Then why is the traveller the younger one? Because only the traveller turns around. To get home they switch from one moving frame to another, and the two twins take different paths through spacetime. The straight path, staying home, is the one with the most time on it.</p>
+      <p class="muted">The traveller also sees the distance shrink by γ, which is how, fast enough, they cover 4.24 light-years in under 4.24 years of their own time without ever outrunning light.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Where moving clocks really run slow</h2>
+      <p>Nobody has flown to a star, but time dilation is measured every day. Engineers correct for it, and particle physicists depend on it.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Navigation</span>
+        <h3>GPS</h3>
+        <p>GPS satellites move at about 3.9 km/s, which slows their clocks by about 7 microseconds a day. Weaker gravity in orbit speeds them up by about 45. The net 38 microseconds a day is corrected by building the clocks to tick slightly slow. Left alone, position errors would grow by roughly 10 km a day.</p>
+        <span class="link"><b>In the demo:</b> the speed part is the slow light clock, at a tiny γ.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Archaeology · Geology</span>
+        <h3>Seeing inside pyramids with muons</h3>
+        <p>Cosmic rays make muons about 15 km up. A muon lives 2.2 microseconds on average, enough to travel only about 660 m. They reach the ground because their clocks run slow. Muon imaging found a large hidden void in the Great Pyramid of Giza in 2017 and is used to look inside volcanoes.</p>
+        <span class="link"><b>In the demo:</b> the muon is the traveller, living a short life over a long trip.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Particle physics</span>
+        <h3>Muon storage rings</h3>
+        <p>At CERN in 1977, muons circling a ring at γ ≈ 29.3 lived about 29 times longer than muons at rest, matching Einstein to about 0.1%. Fermilab's Muon g-2 experiment uses the same speed, so its muons survive long enough to be measured.</p>
+        <span class="link"><b>In the demo:</b> push the speed slider to 0.9994c for a γ of about 29.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Particle physics</span>
+        <h3>Catching short-lived particles</h3>
+        <p>A B meson lasts about 1.5 trillionths of a second, enough to move less than half a millimetre at light speed. In the LHCb detector, time dilation stretches that to about a centimetre, long enough to see where it decays and measure its lifetime.</p>
+        <span class="link"><b>In the demo:</b> the ship covers far more ground than its own clock seems to allow.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Measurement</span>
+        <h3>Clocks on planes and benches</h3>
+        <p>In 1971 Hafele and Keating flew caesium clocks around the world on airliners. Eastbound they lost about 59 nanoseconds and westbound gained about 273, close to relativity's predictions. In 2010 NIST's aluminium-ion clocks detected the slowing at speeds below 10 m/s.</p>
+        <span class="link"><b>In the demo:</b> any speed above zero gives a γ above 1.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Spaceflight</span>
+        <h3>Astronauts come home younger</h3>
+        <p>Orbiting at about 7.7 km/s, an astronaut's clock loses roughly 25 microseconds a day compared with Earth, after allowing for gravity. Cosmonaut Sergei Krikalev's 803 days in orbit left him about 1/50 of a second younger than if he had stayed home.</p>
+        <span class="link"><b>In the demo:</b> a real-life twin paradox, at a γ of 1.0000000003.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. The ship coasts at constant speed and turns around instantly; real speeding up and slowing down would change the numbers but not the result. Light clocks are drawn in slow motion.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="time-dilation.js"></script>
+</body>
+</html>
