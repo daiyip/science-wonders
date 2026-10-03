@@ -171,9 +171,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   sel.addEventListener("change", () => {
     try { localStorage.setItem("science-wonders-lang", sel.value); } catch (e) {}
+    // Put the choice in the URL: a navigation to the same URL (e.g. one with a
+    // #hash) would only scroll, not reload.
     const u = new URL(location.href);
-    u.searchParams.delete("lang");
-    location.replace(u.href);
+    u.searchParams.set("lang", sel.value);
+    if (u.href === location.href) location.reload();
+    else location.replace(u.href);
   });
   nav.append(sel);
 });
