@@ -126,6 +126,7 @@
       <h2>What you're seeing</h2>
       <p>The bars show what share of the numbers begin with each digit. The white marks are Benford's prediction: digit d leads with probability log<sub>10</sub>(1 + 1/d), which is 30.1% for 1, 17.6% for 2, down to 4.6% for 9.</p>
       <p>The strip below places every number on a logarithmic scale and folds it into one decade, from 1 to 10. The nine bands are the stretches where each digit leads. On a log scale, the 1 band is six and a half times wider than the 9 band.</p>
+      <p data-depth="deep">The page never builds huge numbers like 1000! or 2<sup>3000</sup>. It keeps each number's logarithm to base 10, which is all a first digit needs: factorials add up log₁₀ n term by term, and Fibonacci numbers past the 75th use Binet's formula. The strip's horizontal position is the fractional part of that logarithm.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -139,6 +140,18 @@
       <h2>Why it's strange</h2>
       <p>You might expect each digit to lead one time in nine. But if a set of numbers has no preferred scale, so that measuring in dollars or yen or doubling everything leaves the pattern unchanged, then the numbers must be spread evenly on a log scale. Benford's law is the only first-digit rule with that property.</p>
       <p>It needs data spanning several orders of magnitude. Heights of adults, dice rolls, or prices capped at $10 don't follow it, and that is fine.</p>
+      <p data-depth="deep">The same logic reaches past the first digit. In Benford data the second digit is 0 about 12.0% of the time and 9 about 8.5%, much closer to even, and later digits get more even still. Fraud checks sometimes test the first two digits together for that reason.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">P(d) = log₁₀(1 + 1/d) = log₁₀(d + 1) − log₁₀ d</div>
+      <p>Benford's law for the leading digit d = 1 to 9. The second form shows where it comes from: it is the width of the stretch from d to d + 1 on a log scale between 1 and 10. The nine shares add up to log₁₀ 10 = 1. P(1) = 30.1% and P(9) = 4.6%, a ratio of about 6.6.</p>
+      <div class="eq" data-depth="deep" translate="no">x = 10<sup>k + f</sup>, &nbsp;&nbsp; 0 ≤ f &lt; 1 &nbsp;&nbsp;⇒&nbsp;&nbsp; d = ⌊10<sup>f</sup>⌋</div>
+      <p>Any positive number splits into a whole power of ten k and a fractional part f of its logarithm. The leading digit depends only on f, and the strip plots f. If f is spread evenly between 0 and 1, the digits follow Benford exactly. For powers of 2, f = n·log₁₀ 2 with the whole part dropped; because log₁₀ 2 is irrational, these values fill the interval evenly, so powers of 2 obey the law in the long run. The same holds for Fibonacci numbers and factorials.</p>
+      <div class="eq" data-depth="deep" translate="no">L<sub>t+1</sub> = L<sub>t</sub> + u<sub>t</sub>, &nbsp;&nbsp; u<sub>t</sub> ∈ [−log₁₀ 2, +log₁₀ 2], &nbsp;&nbsp; σ<sub>60</sub> = log₁₀ 2 · √(60/3) ≈ 1.35</div>
+      <p>The growing populations. L is a town's log₁₀ size, starting at log₁₀ 5000, and each generation adds a uniform random step u, which multiplies the size by between ×0.5 and ×2. After 60 generations the logs have spread with a standard deviation of about 1.35 powers of ten. Once the spread passes about one decade, the fractional parts are close to uniform, and the bars settle onto Benford's marks.</p>
+      <div class="eq" data-depth="deep" translate="no">χ² = ∑<sub>d</sub> (O<sub>d</sub> − N·P(d))² ÷ (N·P(d)), &nbsp;&nbsp; MAD = (1/9) ∑<sub>d</sub> |O<sub>d</sub>/N − P(d)|</div>
+      <p>O<sub>d</sub> is how many of the N numbers start with d. χ² is compared against a chi-square distribution with 8 degrees of freedom; the page computes its p-value exactly with e<sup>−χ²/2</sup>(1 + χ²/2 + (χ²/2)²/2 + (χ²/2)³/6). For a fixed small mismatch χ² grows in proportion to N, so with thousands of numbers it flags trivial differences. MAD does not grow with N, which is why the verdict uses Nigrini's MAD bands: below 0.006 close, below 0.012 acceptable, below 0.015 marginal.</p>
     </section>
   </div>
 

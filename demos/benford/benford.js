@@ -1,16 +1,53 @@
 (function () {
-  const W = 960, H = 470;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
   const $ = (id) => document.getElementById(id);
 
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   const SANS = "'IBM Plex Sans', system-ui, sans-serif";
   const BLUE = "#8fa6ff", AMBER = "#f0b35a", DIM = "#7f8ea6", FAINT = "#56647c", GRID = "#1a2436";
 
-  // Chart geometry
-  const BX0 = 70, BX1 = 930, BY0 = 58, BY1 = 286;
-  const SX0 = 70, SX1 = 930, SY0 = 352, SY1 = 420;
+  // Chart geometry. Wide screens: a fixed 960 x 470 drawing. Below 640 CSS px the
+  // drawing is laid out at its displayed width (1:1), with the titles stacked
+  // above the bars so every label stays readable on a phone.
+  let W = 960, H = 470, ctx, NW = false;
+  let BX0 = 70, BX1 = 930, BY0 = 58, BY1 = 286;
+  let SX0 = 70, SX1 = 930, SY0 = 352, SY1 = 420;
+  function layout() {
+    const cw = canvas.clientWidth || 960;
+    NW = cw < 640;
+    if (NW) {
+      W = Math.max(300, Math.round(cw));
+      BX0 = 40; BX1 = W - 10; BY0 = 112; BY1 = 306;
+      SX0 = 14; SX1 = W - 14; SY0 = BY1 + 82; SY1 = SY0 + 60;
+      H = SY1 + 30;
+    } else {
+      W = 960; H = 470;
+      BX0 = 70; BX1 = 930; BY0 = 58; BY1 = 286;
+      SX0 = 70; SX1 = 930; SY0 = 352; SY1 = 420;
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  let lastCW = canvas.clientWidth;
+  if (window.ResizeObserver) new ResizeObserver(() => {
+    const cw = canvas.clientWidth;
+    if (cw && cw !== lastCW) { lastCW = cw; layout(); }
+  }).observe(canvas.parentElement);
+  function wrapText(text, x, y, maxW, lh) {
+    // Translate the whole sentence before wrapping; Chinese wraps per character.
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+    return y;
+  }
 
   const BENFORD = [0];
   for (let d = 1; d <= 9; d++) BENFORD[d] = Math.log10(1 + 1 / d);
@@ -207,20 +244,24 @@
     ctx.font = "12px " + MONO;
     ctx.fillStyle = DIM;
     ctx.textAlign = "left";
-    ctx.fillText("SHARE OF NUMBERS BY LEADING DIGIT", BX0, 28);
+    // Phone: the second title sits on its own line under the first.
+    let tx = BX1, ty = 28;
+    if (NW) { tx = 12; ty = wrapText("SHARE OF NUMBERS BY LEADING DIGIT", 12, 22, W - 24, 16) + 4; }
+    else ctx.fillText("SHARE OF NUMBERS BY LEADING DIGIT", BX0, 28);
     if (state.dataset === "growth") {
-      ctx.textAlign = "right";
+      ctx.textAlign = NW ? "left" : "right";
       ctx.fillStyle = state.growing ? AMBER : DIM;
-      ctx.fillText("GENERATION " + state.gen + " OF " + GENERATIONS, BX1, 28);
+      ctx.fillText("GENERATION " + state.gen + " OF " + GENERATIONS, tx, ty);
     } else if (n > 0 && state.items[n - 1].label) {
-      ctx.textAlign = "right";
+      ctx.textAlign = NW ? "left" : "right";
       const it = state.items[n - 1];
-      const txt = state.dataset === "custom" ? it.label : it.label + " = " + sci(it.L);
-      ctx.fillText(txt, BX1, 28);
+      let txt = state.dataset === "custom" ? it.label : it.label + " = " + sci(it.L);
+      if (NW) while (txt.length > 4 && ctx.measureText(txt).width > W - 24) txt = txt.slice(0, -2) + "…";
+      ctx.fillText(txt, tx, ty);
     }
 
     // Grid
-    ctx.font = "10px " + MONO;
+    ctx.font = (NW ? "11px " : "10px ") + MONO;
     const stepP = state.yMax > 0.6 ? 0.2 : 0.1;
     for (let p = 0; p <= state.yMax + 1e-9; p += stepP) {
       ctx.strokeStyle = GRID;
@@ -246,7 +287,8 @@
         ctx.font = "11px " + MONO;
         ctx.fillStyle = BLUE;
         const yLab = Math.min(by(h) - 8, state.showBenford ? by(BENFORD[d]) - 8 : 1e9);
-        ctx.fillText((100 * share[d]).toFixed(1) + "%", x, Math.max(BY0 - 10, yLab));
+        // Narrow slots only fit whole percentages.
+        ctx.fillText(NW ? Math.round(100 * share[d]) + "%" : (100 * share[d]).toFixed(1) + "%", x, Math.max(BY0 - 10, yLab));
       }
       if (state.showBenford) {
         const yb = by(BENFORD[d]);
@@ -267,17 +309,18 @@
       }
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.font = "11px " + SANS;
+      ctx.font = (NW ? "12px " : "11px ") + SANS;
       ctx.fillStyle = "#e9eef7";
-      ctx.textAlign = "right";
-      ctx.fillText("white marks: Benford, log₁₀(1 + 1/d)", BX1, BY0 + 2);
+      ctx.textAlign = NW ? "left" : "right";
+      ctx.fillText("white marks: Benford, log₁₀(1 + 1/d)", NW ? 12 : BX1, NW ? 82 : BY0 + 2);
     }
 
     // Log strip
     ctx.font = "12px " + MONO;
     ctx.fillStyle = DIM;
     ctx.textAlign = "left";
-    ctx.fillText("EVERY NUMBER ON A LOG SCALE, FOLDED INTO ONE DECADE (1 TO 10)", SX0, SY0 - 14);
+    if (NW) wrapText("EVERY NUMBER ON A LOG SCALE, FOLDED INTO ONE DECADE (1 TO 10)", 12, SY0 - 30, W - 24, 16);
+    else ctx.fillText("EVERY NUMBER ON A LOG SCALE, FOLDED INTO ONE DECADE (1 TO 10)", SX0, SY0 - 14);
     for (let d = 1; d <= 9; d++) {
       const x0 = sx(Math.log10(d)), x1 = sx(Math.log10(d + 1));
       ctx.fillStyle = d % 2 ? "#0e1626" : "#0a101c";
@@ -285,11 +328,12 @@
       ctx.strokeStyle = "#26324a";
       ctx.beginPath(); ctx.moveTo(x0 + 0.5, SY0); ctx.lineTo(x0 + 0.5, SY1 + 6); ctx.stroke();
       ctx.fillStyle = FAINT;
-      ctx.font = "10px " + MONO;
+      ctx.font = (NW ? "11px " : "10px ") + MONO;
       ctx.textAlign = "center";
       ctx.fillText(String(d), x0, SY1 + 18);
-      if (x1 - x0 > 80) {
-        ctx.fillText((100 * BENFORD[d]).toFixed(1) + "% wide", (x0 + x1) / 2, SY1 + 18);
+      const wide = (100 * BENFORD[d]).toFixed(1) + "% wide";
+      if (NW ? x1 - x0 > ctx.measureText(wide).width + 8 : x1 - x0 > 80) {
+        ctx.fillText(wide, (x0 + x1) / 2, SY1 + 18);
       }
     }
     ctx.strokeStyle = "#26324a";
@@ -309,7 +353,9 @@
       ctx.fillStyle = FAINT;
       ctx.font = "13px " + SANS;
       ctx.textAlign = "center";
-      ctx.fillText(state.dataset === "custom" ? "Paste some numbers below the bench, then press Count my numbers." : "Counting…", (BX0 + BX1) / 2, (BY0 + BY1) / 2);
+      const msg = state.dataset === "custom" ? "Paste some numbers below the bench, then press Count my numbers." : "Counting…";
+      if (NW) wrapText(msg, (BX0 + BX1) / 2, (BY0 + BY1) / 2 - 10, BX1 - BX0 - 20, 18);
+      else ctx.fillText(msg, (BX0 + BX1) / 2, (BY0 + BY1) / 2);
     }
   }
 

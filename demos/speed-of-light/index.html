@@ -53,6 +53,11 @@
   .verdict { font-size: var(--step--1); min-height: 3.2em; }
   .verdict.bad { color: var(--warn); font-weight: 600; }
   .verdict.ok { color: var(--good); font-weight: 600; }
+  @media (max-width: 640px) {
+    .controls button, .card button { min-height: 40px; }
+    .controls input[type="range"] { height: 32px; }
+    .control select { min-height: 40px; }
+  }
 </style>
 </head>
 <body>
@@ -157,6 +162,7 @@
       <h2>What you're seeing</h2>
       <p>Each trip is drawn to scale between Earth on the left and the destination on the right, and the pulse moves at exactly the speed of light, sped up by the playback factor. The ruler at the top uses a log scale so a 1-second trip and a 4-year trip fit side by side.</p>
       <p>Mars is the odd one out: its distance changes by a factor of seven as Earth and Mars swing around the Sun, so radio messages take between 3 and 22 minutes.</p>
+      <p data-depth="deep">The scales are hard to hold in your head. The gap to the Moon would fit 30 Earths in a row. The Sun is 390 times farther than the Moon, and Proxima Centauri about 270,000 times farther than the Sun. On the Proxima track, the whole Solar System out to Voyager 1 is squeezed into the first pixel.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -165,12 +171,25 @@
         <li>Send light to the Sun in real time and make a cup of tea. The sunlight on your face left the Sun about 8 minutes 20 seconds ago.</li>
         <li>Try to stop the rover with Mars at its farthest. You can't: it reaches the boulder before your picture of it starting even arrives.</li>
       </ul>
+      <p data-depth="deep">Lunar ranging stations time the echo to about 10 picoseconds, the time light takes to cross 3 mm; since the light goes there and back, that is a 1.5 mm step in distance. The precision comes from averaging many returns, since only a tiny fraction of the photons sent ever make it back from the reflectors left on the Moon.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Every observer, however they move, measures the same speed for light. That one fact forces time and space to bend to keep it constant, which is Einstein's special relativity.</p>
       <p>It also means there is no universal "now". You see the Moon as it was a second ago, the Sun 8 minutes ago and Proxima Centauri over 4 years ago. Looking out is always looking back.</p>
       <p class="muted">Since 1983 the metre has been defined as the distance light travels in 1/299,792,458 of a second, so the speed of light is now exact by definition.</p>
+      <p data-depth="deep">The <i>c</i> of relativity is the speed in a vacuum. In water light travels at about <i>c</i>/1.33 and in glass at about <i>c</i>/1.5; nothing that carries energy or information goes faster than <i>c</i>.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no"><i>t</i> = <i>d</i> / <i>c</i><br><i>c</i> = 299 792 458 m/s</div>
+      <p>Light time is distance divided by the speed of light. For the Moon, 384,400 km / 299,792 km/s ≈ 1.28 s; for the Sun, 1 AU / <i>c</i> ≈ 499 s, which is 8 min 19 s. The page moves the pulse a fraction (elapsed time ÷ light time) of the way along the track, with elapsed time running at real time multiplied by the playback speed. The ruler at the top places each trip at log₁₀ <i>t</i>.</p>
+      <div class="eq" data-depth="deep" translate="no">1 ly = <i>c</i> × 1 yr ≈ 9.46 × 10¹² km</div>
+      <p>A light-year is a distance: how far light goes in one Julian year of 365.25 days. Proxima Centauri at 4.24 light-years is about 4.0 × 10¹³ km away, so its light time is simply 4.24 years.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>c</i> Δ<i>t</i> = |<i>r</i><sub>J</sub> − <i>r</i><sub>E</sub>| − (<i>R</i><sub>J</sub> − <i>R</i><sub>E</sub>)<br>Δ<i>t</i><sub>max</sub> = 2<i>R</i><sub>E</sub> / <i>c</i> ≈ 16.6 min</div>
+      <p>How late an eclipse of Io is seen, compared with when Earth and Jupiter are closest. <i>r</i><sub>J</sub> and <i>r</i><sub>E</sub> are the planets' positions, and <i>R</i><sub>J</sub> = 5.2 AU and <i>R</i><sub>E</sub> = 1 AU the radii of their orbits. The simulation puts both planets on circular orbits in one plane, fires an eclipse every 1.769 days of Io's orbit, applies this delay, and skips eclipses when Jupiter is within 20° of the Sun, where it could not be observed.</p>
+      <div class="eq" data-depth="deep" translate="no">Δ<i>x</i> = <i>v</i> × 2<i>d</i> / <i>c</i></div>
+      <p>How far a rover moving at speed <i>v</i> drives between the moment your picture shows it and the moment your stop command arrives: the picture is <i>d</i>/<i>c</i> old and the command needs another <i>d</i>/<i>c</i>. At the page's 4.2 cm/s with 12.5 minutes each way, that is 63 m, more than the 50 m to the boulder; at the closest approach (3 minutes) it is about 15 m.</p>
     </section>
   </div>
 

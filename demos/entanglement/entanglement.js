@@ -36,9 +36,26 @@
   const binOf = (a, b) => Math.round(foldDiff(a - b) / 2.5);
 
   // ---------- Apparatus ----------
-  const W = 960, H = 330;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
-  const CX = W / 2, CY = 120, AX = 170, BX = 790, DET_OFF = 78;
+  // Two layouts: the desktop one (960 wide) and a narrower, taller one for phones,
+  // chosen from the canvas's displayed width so canvas text stays readable.
+  let W = 960, H = 330, ctx, compact = null;
+  let CX, CY, AX, BX, DET_OFF, NAME_Y, SUB_Y, SRC_Y;
+  let TAPE_N, CELL, GAP, ROW_A, ROW_B, CAP_Y, MONO_S, MONO_M;
+  function benchGeometry() {
+    if (!compact) {
+      W = 960; H = 330;
+      CX = W / 2; CY = 120; AX = 170; BX = 790; DET_OFF = 78;
+      NAME_Y = 30; SUB_Y = 48; SRC_Y = 48;
+      TAPE_N = 40; CELL = 18; GAP = 4; ROW_A = 222; ROW_B = 274; CAP_Y = 206;
+      MONO_S = 11; MONO_M = 12;
+    } else {
+      W = 340; H = 330;
+      CX = W / 2; CY = 128; AX = 92; BX = 248; DET_OFF = 70;
+      NAME_Y = 62; SUB_Y = 79; SRC_Y = 20;
+      TAPE_N = 20; CELL = 13; GAP = 3; ROW_A = 258; ROW_B = 302; CAP_Y = 204;
+      MONO_S = 12; MONO_M = 13;
+    }
+  }
   const FLIGHT_MS = 900;
 
   function record(A, B, animate) {
@@ -80,10 +97,10 @@
     ctx.restore();
     ctx.fillStyle = "#c9d4e3"; ctx.textAlign = "center";
     ctx.font = "600 15px 'IBM Plex Sans', system-ui, sans-serif";
-    ctx.fillText(label, x, 30);
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.fillText(label, x, NAME_Y);
+    ctx.font = MONO_M + "px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText(sub, x, 48);
+    ctx.fillText(sub, x, SUB_Y);
   }
 
   function drawLamp(x, lit, passed) {
@@ -97,25 +114,30 @@
     }
     ctx.fillStyle = passed === null ? "#26324a" : `rgb(${col})`;
     ctx.beginPath(); ctx.arc(x, CY, 9, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#7f8ea6"; ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace"; ctx.textAlign = "center";
-    ctx.fillText(passed === null ? "—" : on ? "PASS" : "BLOCK", x, CY + 30);
+    ctx.fillStyle = "#7f8ea6"; ctx.font = MONO_S + "px 'IBM Plex Mono', ui-monospace, monospace"; ctx.textAlign = "center";
+    const word = passed === null ? "—" : on ? "PASS" : "BLOCK";
+    const half = ctx.measureText(word).width / 2;
+    ctx.fillText(word, Math.max(3 + half, Math.min(W - 3 - half, x)), CY + 30);
   }
 
   function drawTapes() {
     const n = state.tapeA.length;
-    const cell = 18, gap = 4, cols = 40;
+    const cell = CELL, gap = GAP, cols = TAPE_N;
     const total = cols * (cell + gap) - gap;
     const x0 = (W - total) / 2;
-    const rows = [{ y: 222, tape: state.tapeA, name: "ALICE" }, { y: 274, tape: state.tapeB, name: "BOB" }];
-    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    const rows = [{ y: ROW_A, tape: state.tapeA, name: "ALICE" }, { y: ROW_B, tape: state.tapeB, name: "BOB" }];
+    ctx.font = MONO_S + "px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.textAlign = "left"; ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("LAST 40 PAIRS  ·  filled = pass, hollow = blocked, gold link = results agree", x0, 206);
-    for (let i = 0; i < n; i++) {
+    const caption = "LAST " + TAPE_N + " PAIRS  ·  filled = pass, hollow = blocked, gold link = results agree";
+    if (!compact) ctx.fillText(caption, x0, CAP_Y);
+    else wrapText(caption, x0, CAP_Y, total, 16);
+    const first = Math.max(0, n - cols);
+    for (let i = first; i < n; i++) {
       const x = x0 + (cols - n + i) * (cell + gap);
       const same = state.tapeA[i] === state.tapeB[i];
       if (same) {
         ctx.fillStyle = "rgba(240,179,90,0.55)";
-        ctx.fillRect(x + cell / 2 - 1, 222 + cell, 2, 274 - 222 - cell);
+        ctx.fillRect(x + cell / 2 - 1, ROW_A + cell, 2, ROW_B - ROW_A - cell);
       }
       for (const r of rows) {
         const passed = r.tape[i];
@@ -129,8 +151,24 @@
     ctx.lineWidth = 1;
     if (!n) {
       ctx.fillStyle = "#56647c"; ctx.textAlign = "center";
-      ctx.fillText("No pairs measured yet", W / 2, 260);
+      ctx.fillText("No pairs measured yet", W / 2, (ROW_A + ROW_B + cell) / 2 + 4);
     }
+  }
+
+  // Translate the whole sentence first, then wrap; Chinese wraps per character.
+  function wrapText(text, x, y, maxW, lh) {
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(/\s+/);
+    const sep = cjk ? "" : " ";
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line.trim(), x, y); y += lh; line = w.trim(); }
+      else line = t;
+    }
+    if (line.trim()) { ctx.fillText(line.trim(), x, y); y += lh; }
+    return y;
   }
 
   function drawBench(dt) {
@@ -144,10 +182,10 @@
     g.addColorStop(0, "rgba(201,170,255,0.9)"); g.addColorStop(1, "rgba(201,170,255,0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(CX, CY, 30, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#c9d4e3"; ctx.textAlign = "center";
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = MONO_M + "px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("ENTANGLED PAIR SOURCE", CX, 48);
-    ctx.fillText(state.model === "quantum" ? "quantum rules" : "hidden instructions", CX, 66);
+    ctx.fillText("ENTANGLED PAIR SOURCE", CX, SRC_Y);
+    ctx.fillText(state.model === "quantum" ? "quantum rules" : "hidden instructions", CX, SRC_Y + 18);
 
     drawPolarizer(AX, state.a, "Alice", state.a.toFixed(1).replace(/\.0$/, "") + "°");
     drawPolarizer(BX, state.b, "Bob", state.b.toFixed(1).replace(/\.0$/, "") + "°");
@@ -177,15 +215,18 @@
   }
 
   // ---------- Agreement chart ----------
-  const CW = 560, CH = 320;
-  const cctx = Lab.setupCanvas($("chart"), CW, CH);
-  const P = { l: 48, r: 16, t: 18, b: 44 };
+  let CW = 560, CH = 320, cctx, chartCompact = null, CFONT = 11, LEG_X = 196;
+  let P = { l: 48, r: 16, t: 18, b: 44 };
+  function chartGeometry() {
+    if (!chartCompact) { CW = 560; CH = 320; P = { l: 48, r: 16, t: 18, b: 44 }; CFONT = 11; LEG_X = 196; }
+    else { CW = 280; CH = 296; P = { l: 40, r: 12, t: 14, b: 88 }; CFONT = 12; LEG_X = 150; }
+  }
   const xOf = (d) => P.l + (d / 90) * (CW - P.l - P.r);
   const yOf = (p) => CH - P.b - p * (CH - P.t - P.b);
 
   function drawChart() {
     cctx.fillStyle = "#05080e"; cctx.fillRect(0, 0, CW, CH);
-    cctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    cctx.font = CFONT + "px 'IBM Plex Mono', ui-monospace, monospace";
     // Grid
     for (const p of [0, 0.25, 0.5, 0.75, 1]) {
       cctx.strokeStyle = "#141d2d"; cctx.beginPath(); cctx.moveTo(P.l, yOf(p)); cctx.lineTo(CW - P.r, yOf(p)); cctx.stroke();
@@ -193,9 +234,17 @@
     }
     for (const d of [0, 22.5, 45, 67.5, 90]) {
       cctx.strokeStyle = "#141d2d"; cctx.beginPath(); cctx.moveTo(xOf(d), P.t); cctx.lineTo(xOf(d), CH - P.b); cctx.stroke();
-      cctx.fillStyle = "#7f8ea6"; cctx.textAlign = "center"; cctx.fillText(d + "°", xOf(d), CH - P.b + 16);
+      cctx.fillStyle = "#7f8ea6"; cctx.textAlign = "center"; cctx.fillText(chartCompact && d % 45 ? "" : d + "°", xOf(d), CH - P.b + 16);
     }
-    cctx.fillText("angle difference between polarizers", (P.l + CW - P.r) / 2, CH - 8);
+    {
+      // Axis title: centred under the plot, shrunk a little (never below 11 px) if it would not fit.
+      const t = "angle difference between polarizers";
+      let f = CFONT;
+      while (f > 11 && cctx.measureText(t).width > CW - 8) { f -= 0.5; cctx.font = f + "px 'IBM Plex Mono', ui-monospace, monospace"; }
+      const w = cctx.measureText(t).width;
+      cctx.fillText(t, Math.max(4 + w / 2, Math.min(CW - 4 - w / 2, (P.l + CW - P.r) / 2)), chartCompact ? CH - P.b + 38 : CH - 8);
+      cctx.font = CFONT + "px 'IBM Plex Mono', ui-monospace, monospace";
+    }
 
     // Shade the quantum excess over the best classical line
     cctx.fillStyle = "rgba(143,166,255,0.10)";
@@ -216,10 +265,12 @@
 
     // Legend
     cctx.textAlign = "left";
-    cctx.fillStyle = "#8fa6ff"; cctx.fillRect(CW - P.r - 196, P.t + 4, 14, 3);
-    cctx.fillStyle = "#c9d4e3"; cctx.fillText("quantum: cos²(Δ)", CW - P.r - 176, P.t + 9);
-    cctx.fillStyle = "#f0b35a"; cctx.fillRect(CW - P.r - 196, P.t + 22, 14, 3);
-    cctx.fillStyle = "#c9d4e3"; cctx.fillText("hidden instructions", CW - P.r - 176, P.t + 27);
+    // On phones the legend sits under the axis title instead of over the plot.
+    const lx = chartCompact ? P.l : CW - P.r - LEG_X, ly = chartCompact ? CH - 30 : P.t + 9;
+    cctx.fillStyle = "#8fa6ff"; cctx.fillRect(lx, ly - 5, 14, 3);
+    cctx.fillStyle = "#c9d4e3"; cctx.fillText("quantum: cos²(Δ)", lx + 20, ly);
+    cctx.fillStyle = "#f0b35a"; cctx.fillRect(lx, ly + 13, 14, 3);
+    cctx.fillStyle = "#c9d4e3"; cctx.fillText("hidden instructions", lx + 20, ly + 18);
 
     // Measured points for the current universe
     const bins = state.data[state.model];
@@ -337,6 +388,21 @@
     if (dirtyStats) { updateStats(); drawChart(); }
     requestAnimationFrame(frame);
   }
+
+  // ---------- Layout ----------
+  function layout() {
+    const bc = $("bench"), cc = $("chart");
+    const nb = (bc.clientWidth || 960) < 640, nc = (cc.clientWidth || 560) < 400;
+    if (nb !== compact) { compact = nb; benchGeometry(); ctx = Lab.setupCanvas(bc, W, H); }
+    if (nc !== chartCompact) { chartCompact = nc; chartGeometry(); cctx = Lab.setupCanvas(cc, CW, CH); dirtyStats = true; }
+  }
+  layout();
+  let resizeTimer = 0;
+  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(layout, 120); };
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(onResize);
+    ro.observe($("bench").parentElement); ro.observe($("chart").parentElement);
+  } else window.addEventListener("resize", onResize);
 
   // Seed a little history so the first view shows the idea.
   for (let i = 0; i < 24; i++) sendPair(false);

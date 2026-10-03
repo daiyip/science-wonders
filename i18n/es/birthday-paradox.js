@@ -138,3 +138,26 @@ I18N.add({
   "−pairs/{0}": "−parejas/{0}",
   "≈ {0}%. You would need {1} other people to reach even odds.": "≈ {0} %. Harían falta {1} personas más para llegar al cincuenta por ciento."
 });
+
+// Deeper explanations and phone layout
+I18N.add({
+  "Each simulated room starts empty and adds people with random birthdays one at a time until two share a day, then records how many people that took. The amber value at n is the share of rooms whose first match came at n people or fewer. With {0} rooms, the random scatter around {1}% is about ±{2} percentage points, so small wiggles around the white curve are expected.": "Cada sala simulada empieza vacía y va añadiendo personas con cumpleaños al azar, de una en una, hasta que dos comparten día; entonces anota cuántas personas hicieron falta. El valor ámbar en n es la proporción de salas cuya primera coincidencia llegó con n personas o menos. Con {0} salas, la dispersión aleatoria alrededor del {1}% es de unos ±{2} puntos porcentuales, así que es normal que la línea oscile un poco alrededor de la curva blanca.",
+  "Real birthdays are not spread perfectly evenly: births vary by season and by day of the week. Any unevenness makes a match more likely, because the chance of no match is largest when every day is equally likely. So {0} is an upper bound for real people, though the difference is small.": "Los cumpleaños reales no se reparten de forma perfectamente uniforme: los nacimientos varían según la estación y el día de la semana. Cualquier desigualdad hace más probable una coincidencia, porque la probabilidad de que no haya ninguna es máxima cuando todos los días son igual de probables. Así que {0} es una cota superior para personas reales, aunque la diferencia es pequeña.",
+  "The exact chance. The second person must miss {0} day, the third must miss {1}, and so on; multiply those chances to get the probability of no match at all, then subtract from {2}. The page builds the white curve from this product one factor at a time, which avoids the enormous factorials. P({3}) = {4} and P({5}) = {6}.": "La probabilidad exacta. La segunda persona tiene que evitar {0} día, la tercera {1}, y así sucesivamente; se multiplican esas probabilidades para obtener la de que no haya ninguna coincidencia y se resta de {2}. La página construye la curva blanca con este producto factor a factor, lo que evita los factoriales enormes. P({3}) = {4} y P({5}) = {6}.",
+  "<html>The pairs estimate, drawn as the dashed line. There are n(n − {0})/{1} pairs, each matching with chance {2}/{3}, and treating them as independent gives ({4} − {5}/{6})<sup>pairs</sup> ≈ e<sup>−pairs/{7}</sup> for no match. The pairs are not quite independent, but at {8} people the estimate gives {9}% against the exact {10}%.": "La estimación por parejas, dibujada como línea discontinua. Hay n(n − {0})/{1} parejas, cada una coincide con probabilidad {2}/{3}, y si se tratan como independientes la probabilidad de que no haya coincidencia es ({4} − {5}/{6})<sup>parejas</sup> ≈ e<sup>−parejas/{7}</sup>. Las parejas no son del todo independientes, pero con {8} personas la estimación da {9}% frente al {10}% exacto.",
+  "Setting the estimate equal to one half gives the room size for even odds when there are N equally likely labels. For N = {0} it gives {1}, so {2} people. Because it grows with √N, a million labels still collide after only about {3} draws. This is the rule behind hash collisions and random IDs.": "Igualar la estimación a un medio da el tamaño de sala para tener las mismas probabilidades cuando hay N etiquetas igual de probables. Para N = {0} da {1}, es decir, {2} personas. Como crece con √N, incluso con un millón de etiquetas aparece una colisión tras solo unas {3} extracciones. Esta es la regla detrás de las colisiones de hash y los identificadores aleatorios.",
+  "K is the number of people in the room when the first match appears, exactly the number each simulated room records. Its average for N = {0} is about {1}, a little above the median of {2} because a few rooms run long. Pressing \"Add people until a match\" draws one value of K.": "K es el número de personas en la sala cuando aparece la primera coincidencia, justo el número que anota cada sala simulada. Para N = {0} su media es de unos {1}, algo por encima de la mediana de {2} porque algunas salas tardan mucho. Pulsar «Añadir hasta coincidir» saca un valor de K.",
+  "{0} JAN": "{0} ENE",
+  "{0} FEB": "{0} FEB",
+  "{0} MAR": "{0} MAR",
+  "{0} APR": "{0} ABR",
+  "{0} MAY": "{0} MAY",
+  "{0} JUN": "{0} JUN",
+  "{0} JUL": "{0} JUL",
+  "{0} AUG": "{0} AGO",
+  "{0} SEP": "{0} SEP",
+  "{0} OCT": "{0} OCT",
+  "{0} NOV": "{0} NOV",
+  "{0} DEC": "{0} DIC"
+});
+I18N.add({"pairs": "parejas"});

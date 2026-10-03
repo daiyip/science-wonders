@@ -174,6 +174,7 @@
       <h2>What you're seeing</h2>
       <p>In the hotel, every rule is a one-to-one pairing between guests and room numbers. "1 new guest" uses n → n + 1. "A bus" uses n → 2n for current guests and the odd rooms 2k − 1 for passengers. For infinitely many buses, the zigzag walks the grid of (bus, seat) along its diagonals; the prime-power plan sends current guests to 2<sup>n</sup> and bus b's passengers to the b-th odd prime raised to the seat number.</p>
       <p>In the diagonal grid, row k is the k-th string on the list. Binary digits are flipped. Decimal digits become 5, or 4 if they were already 5, which avoids the 0.0999… = 0.1000… double-spelling problem.</p>
+      <p data-depth="deep">Each rule is one formula applied to every room number at once, so no guest has to wait to see where anyone else goes. The page evaluates the same formulas for the 16 rooms and the first few seats of each bus it has space to draw. A guest whose new room is above 16 slides off to the right; the room still exists.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -188,6 +189,18 @@
       <h2>Why it's strange</h2>
       <p>For finite sets, a part is always smaller than the whole. For infinite sets that fails: the even numbers are half of the counting numbers, yet pair off with them perfectly. Galileo noticed this with square numbers in 1638 and concluded infinite sets can't be compared. Cantor showed they can, and that they don't all match.</p>
       <p>His 1874 paper proved the real numbers can't be listed; the diagonal argument of 1891 made it a one-line idea and showed there is no largest infinity at all. Whether any size sits between the countable and the reals (the continuum hypothesis) turned out to be unprovable either way from the standard axioms (Gödel 1940, Cohen 1963).</p>
+      <p data-depth="deep">Written as sizes, the hotel's moves say ℵ₀ + 1 = ℵ₀, ℵ₀ + ℵ₀ = ℵ₀ and ℵ₀ × ℵ₀ = ℵ₀. The diagonal works on any set: the collection of all subsets of a set is always strictly bigger than the set itself (Cantor's theorem). So 2<sup>ℵ₀</sup> is bigger than ℵ₀, the subsets of the reals are bigger again, and the ladder of infinities never ends.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">f(n) = n + 1 &nbsp;&nbsp; g(n) = 2n &nbsp;&nbsp; h(k) = 2k − 1</div>
+      <p>The three simple moves. Each is one-to-one: two different inputs never give the same room. f frees room 1 for the new guest, g puts the current guests in the even rooms, and h puts the passengers of one bus in the odd rooms. Between them g and h use every room exactly once, which is the statement ℵ₀ + ℵ₀ = ℵ₀.</p>
+      <div class="eq" data-depth="deep" translate="no">π(b, k) = s(s + 1)/2 + b + 1, &nbsp;&nbsp; s = b + k − 1</div>
+      <p>The zigzag, known as Cantor's pairing function. Bus b, seat k lies on diagonal s of the grid. The diagonals before it hold 1 + 2 + … + s = s(s + 1)/2 cells, and b counts the steps along its own diagonal. Every pair gets a different room and every room is used, so pairs of counting numbers are no more numerous than the counting numbers: ℵ₀ × ℵ₀ = ℵ₀. The hotel guests are bus 0, so room n goes to π(0, n) = n(n − 1)/2 + 1: rooms 1, 2, 4, 7, 11, … This is exactly the formula the page uses.</p>
+      <div class="eq" data-depth="deep" translate="no">(b, k) ↦ p<sub>b</sub><sup>k</sup>, &nbsp;&nbsp; p<sub>0</sub> = 2, p<sub>1</sub> = 3, p<sub>2</sub> = 5, p<sub>3</sub> = 7, …</div>
+      <p>The prime-power plan. Every whole number above 1 factors into primes in only one way, so a power of one prime never equals a power of another, and no two guests collide. Numbers that are not prime powers, like 6, 10, 12 and 15, are never assigned, and seats start at 1 so room 1 also stays empty. One-to-one is all the hotel needs; filling every room is optional.</p>
+      <div class="eq" data-depth="deep" translate="no">d<sub>j</sub> ≠ a<sub>jj</sub> &nbsp;∀j &nbsp;&nbsp;⇒&nbsp;&nbsp; d ≠ a<sub>i</sub> &nbsp;∀i &nbsp;&nbsp;⇒&nbsp;&nbsp; ℵ₀ &lt; 2<sup>ℵ₀</sup> = |ℝ|</div>
+      <p>a<sub>ij</sub> is digit j of row i, and d is the new string. Because d differs from row i at digit i, it matches no row, whatever the list. In binary the page sets d<sub>j</sub> = 1 − a<sub>jj</sub>; in decimal it writes 5, or 4 when the diagonal digit is 5. Infinite strings of 0s and 1s match the subsets of the counting numbers (1 at position n means n is in the subset), so there are 2<sup>ℵ₀</sup> of them, the same number as the real numbers. The page makes each row's digits from a hash of the row and column numbers, so any digit of the endless list can be looked up on demand.</p>
     </section>
   </div>
 

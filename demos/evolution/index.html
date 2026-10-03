@@ -103,6 +103,7 @@
     <section>
       <h2>What you're seeing</h2>
       <p>Each creature has two inherited traits: its shade, from near black to pale cream, and how fast it can run. Hawks wander the ground. Every moment a hawk glances at one creature in range and notices it with a chance that grows with how much it stands out from the ground. A noticed creature runs; if the hawk closes in before it tires, it eats.</p>
+      <p data-depth="deep">In numbers: a hawk sees 105 px around itself and glances at one random creature in that circle each tick. A creature that exactly matches the ground is noticed 1% of the time, one that is 0.5 off on the 0 to 1 shade scale about 24% of the time. A chased creature flees at 1 + 2.4 × its speed trait in px per tick, against the hawk's 2.9, and the hawk gives up after 75 ticks. Only creatures with speed above about 0.8 can outrun a hawk outright; the rest survive by being slow to be noticed or by the hawk running out of time.</p>
       <p>At the end of each generation the survivors breed back to 100. Each baby copies one parent's traits with a small random error. Running fast burns energy, so faster creatures raise fewer young. Nothing else is programmed.</p>
     </section>
     <section>
@@ -113,11 +114,24 @@
         <li>Take all the hawks away. Colour stops tracking the background and drifts at random, and speed slowly falls because nothing pays for its cost.</li>
         <li>Add hawks and watch average speed climb: escape is now worth the energy.</li>
       </ul>
+      <p data-depth="deep">Selection does not create variation, it uses it up. With mutation off, each generation's 100 parents carry only a sample of the shades already present, so the spread shrinks every generation and nothing refills it. Mutation adds a spread of μ² to the variance every generation, which is what lets the population keep tracking a changing background.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>No creature changes during its life and none is trying to adapt. Random copying errors have no direction at all. Direction appears only because the hawks remove some variants more often than others, and that bias, repeated every generation, builds something that looks designed.</p>
       <p class="muted">This happened in real moths. Dark peppered moths were first recorded near Manchester in 1848 and made up about 98% of the local population by 1895 as soot blackened the trees. After clean-air laws they became rare again.</p>
+      <p data-depth="deep">The model is simpler than real moths. Here each creature is a clone of one parent with a small random change, and shade varies smoothly. In peppered moths the dark form comes from a single dominant allele of the gene cortex, caused by a piece of mobile DNA that inserted itself around 1819. Evolution there was a change in how common that allele was, but the logic is the same: heritable variation plus a bias in who survives.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">p = 0.01 + 0.9 (s − g)²</div>
+      <p>The chance that a hawk notices a creature on one glance. s is the creature's shade and g the ground's tone, both from 0 (soot black) to 1 (pale cream): 0.86 for pale sand, 0.5 for leaf litter and 0.12 for sooty bark. Because the contrast is squared, small mismatches cost little and large ones a lot, which pulls the population toward the ground tone.</p>
+      <div class="eq" data-depth="deep" translate="no">w = 1 − 0.3 v</div>
+      <p>The cost of speed. Each of the 100 young picks its parent from the survivors with probability proportional to w, where v is the parent's speed from 0 to 1. The fastest creatures raise 30% fewer young than the slowest, so speed only spreads when hawks eat enough slow ones to outweigh that.</p>
+      <div class="eq" data-depth="deep" translate="no">Δz̄ = Cov(W, z) ÷ W̄</div>
+      <p>The Price equation for the change in the average of a trait z from one generation to the next, when copying adds no bias. W is each creature's number of young: zero if eaten, otherwise on average a share of the next 100 in proportion to w. Traits that go with more young rise in the average, in proportion to how strongly they vary together. Mutation here is unbiased except at the ends of the 0 to 1 scale, where traits are clipped.</p>
+      <div class="eq" data-depth="deep" translate="no">z<sub>child</sub> = z<sub>parent</sub> + μ ε,   ε ~ N(0, 1)</div>
+      <p>Inheritance. Each baby copies both traits from one parent and adds a normally distributed error with standard deviation μ, the Mutation size slider. With no hawks, selection on shade stops and the average wanders by chance alone: picking 100 parents at random shifts the mean by about √(V/100) per generation, where V is the variance of shade in the population.</p>
     </section>
   </div>
 

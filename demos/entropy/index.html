@@ -100,6 +100,7 @@
       <h2>What you're seeing</h2>
       <p>Each dot is a gas particle bouncing off the walls and off each other with no friction, so no energy is lost. They all start in the left half. The top graph tracks what fraction is on the left; it drops to one half and then just jitters there.</p>
       <p>The bottom graph is the entropy. Count the ways to choose which <i>n</i> of the <i>N</i> particles sit on the left: that is <span class="formula">C(N, n)</span>. Boltzmann's entropy is <span class="formula">S = k ln W</span>, the log of that count. An even split has by far the most ways, so that is where the gas spends nearly all of its time.</p>
+      <p data-depth="deep">The particles are soft disks: when two overlap, each is pushed apart in proportion to the overlap, and the walls push back the same way. Positions are stored as whole numbers in steps of 1/65,536 of a pixel and advanced with the Verlet rule, rounding each acceleration to that grid. Because nothing else is rounded, swapping the current and previous positions runs the film backwards bit for bit, with no drift at all.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -108,11 +109,24 @@
         <li>Turn on the nudge and reverse again. One particle, shown in orange, moves 1/65,536 of a pixel. Each collision magnifies the error and passes it on, and soon the reversed gas stays mixed.</li>
         <li>Drop to 4 particles. All four land on the left about one look in sixteen, so you will see it often. At 100 particles the odds are about 1 in 10<sup>30</sup>.</li>
       </ul>
+      <p data-depth="deep">Why the nudge wins: when two disks collide, a small error in where one of them is changes the angle it bounces off at, and by the next collision that angle error has become a position error roughly ℓ/r times bigger, where ℓ is the distance travelled between collisions and r the disk radius. At the density used here ℓ/r is about 8, so after only six or seven collisions an error of 1/65,536 of a pixel is as large as a particle.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>The laws behind every collision here run equally well forwards and backwards. A film of any single bounce looks fine in reverse. In 1876 Josef Loschmidt used this to challenge Boltzmann: if each step is reversible, how can entropy only go up?</p>
       <p>Boltzmann's answer was counting. Mixed arrangements outnumber sorted ones so hugely that almost every path leads toward mixing. Going back needs every velocity reversed with perfect precision, and chaos turns the tiniest error into a total one. The deeper puzzle is why the universe started in such a low-entropy state at all.</p>
+      <p data-depth="deep">The entropy on the graph only counts how many particles are on each side. It deliberately ignores the exact positions and speeds. If you tracked those too, the count of compatible states would never change: Liouville's theorem says the exact dynamics carries a region of states along without changing its size. Entropy grows only once you describe the gas coarsely, which is how we always describe real gases.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">S = k ln W<br>W = C(N, n)<br>&nbsp;&nbsp;= N! ÷ ( n! (N − n)! )</div>
+      <p>Boltzmann's entropy for this box. N is the number of particles, n the number in the left half and W the number of ways to pick which ones they are. The page computes ln C(N, n) exactly from a table of ln n! and shows S in units of k, Boltzmann's constant. With all particles on the left, W = 1 and S = 0.</p>
+      <div class="eq" data-depth="deep" translate="no">S<sub>max</sub> = k ln C(N, N/2)<br>&nbsp;&nbsp;≈ k [ N ln 2 − ½ ln(πN/2) ]</div>
+      <p>The largest entropy, at an even split. This is Stirling's approximation; for 200 particles it gives 135.75 k, matching the exact value to two decimals (the graph shows it as max 135.8). Nearly all of the 2<sup>N</sup> possible arrangements are close to an even split.</p>
+      <div class="eq" data-depth="deep" translate="no">P(n = N) = 2<sup>−N</sup><br>σ<sub>f</sub> = 1 ÷ (2√N)</div>
+      <p>If each particle is equally likely to be on either side, independently, the chance that all are on the left is one in 2<sup>N</sup>, and the fraction on the left wobbles around ½ with standard deviation σ<sub>f</sub>. The shaded band on the top graph is ½ ± σ<sub>f</sub>: about ±0.035 for 200 particles and ±0.25 for 4. The independence assumption is only approximate for disks that take up space, but it is close for this dilute gas.</p>
+      <div class="eq" data-depth="deep" translate="no">x<sub>t+1</sub> = 2x<sub>t</sub> − x<sub>t−1</sub><br>&nbsp;&nbsp;+ a(x<sub>t</sub>) Δt²<br>a = K (σ − d),   d &lt; σ</div>
+      <p>The position Verlet rule, with Δt one step (480 steps make one simulated second) and K = 0.3. d is the distance between two disk centres and σ their diameter; the push acts only while they overlap (d &lt; σ) and grows linearly with the overlap. The rule is symmetric in time: written for x<sub>t−1</sub> it has the same form, which is why swapping the two stored positions reverses the motion exactly.</p>
     </section>
   </div>
 

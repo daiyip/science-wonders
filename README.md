@@ -20,6 +20,9 @@ Twenty experiments in four categories, each with controls to play with, a short 
 - **Quiz** (three questions) and **related experiments**
 - **Guided tours** (`tours/`, defined in `assets/tours.js`), with a step bar when a page is opened with `?tour=<id>`
 - **Presenter mode** for projectors
+- **Embed** code (`?embed=1` shows only the apparatus and controls, with a link back)
+- **Record a clip** of the experiment as a video (MP4 or WebM, up to 20 seconds, made in the browser)
+- **Simple / Deeper** explanations: elements marked `data-depth="deep"` (including a "The math" section with `.eq` equation blocks) appear only in Deeper mode; `?depth=deep` links straight to it
 - **Progress** (visited pages, predictions, quiz scores), stored only in the browser's localStorage
 
 The site also has a web manifest and service worker (`sw.js`) so it can be installed and used offline. Link-preview images live in `assets/og/`.

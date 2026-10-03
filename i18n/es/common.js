@@ -115,7 +115,7 @@ I18N.add({
   "Pause": "Pausa",
   "Physics": "Física",
   "Pick a door, watch the host reveal a goat, and find out why switching wins two times out of three.": "Elige una puerta, mira cómo el presentador descubre una cabra y averigua por qué cambiar gana dos de cada tres veces.",
-  "Play": "Jugar",
+  "Play": "Reproducir",
   "Play ten games always switching, then try {0} doors.": "Juega diez partidas cambiando siempre y luego prueba con {0} puertas.",
   "Play the GW{0} chirp: the sound of two black holes merging.": "Reproduce el chirrido de GW{0}: el sonido de dos agujeros negros fusionándose.",
   "Predict first.": "Primero, predice.",
@@ -228,3 +228,20 @@ I18N.add({
   "{0} s": "{0} s"
 });
 I18N.add({"<html>Science <span>Wonders</span>": "<span>Maravillas</span> de la Ciencia"});
+I18N.add({
+ "Embed": "Insertar",
+ "Embed code": "Código para insertar",
+ "Copy embed code": "Copiar código para insertar",
+ "Copied": "Copiado",
+ "Paste this into any web page to show the experiment with your current settings.": "Pega esto en cualquier página web para mostrar el experimento con tus ajustes actuales.",
+ "Record a clip": "Grabar un clip",
+ "Stop recording ({0}:{1})": "Detener grabación ({0}:{1})",
+ "This browser can't record the experiment.": "Este navegador no puede grabar el experimento.",
+ "Clip ready.": "Clip listo.",
+ "Save the clip": "Guardar el clip",
+ "Recording the experiment. Play with the controls, then press stop (up to {0} seconds).": "Grabando el experimento. Mueve los controles y luego pulsa detener (hasta {0} segundos).",
+ "Explanations": "Explicaciones",
+ "Simple": "Sencillas",
+ "Deeper": "A fondo",
+ "The math": "Las matemáticas"
+});

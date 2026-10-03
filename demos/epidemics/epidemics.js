@@ -1,14 +1,35 @@
 (function () {
-  const W = 960, H = 460;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
   const $ = (id) => document.getElementById(id);
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
+  let W = 960, H = 460, narrow = false, ctx;
 
-  // Layout
-  const AX = 14, AY = 14, AW = 500, AH = 432;     // arena
-  const CX = 572, CW = 372, CY = 34, CH = 250;    // chart
-  const GY = 372;                                  // herd-immunity gauge
+  // Layout. People always move in a 500 x 432 arena at (AX, AY). On a wide bench
+  // it is drawn 1:1 with the chart and gauge beside it. On a narrow bench (phones)
+  // the logical width matches the displayed CSS width, the arena is drawn scaled
+  // by AS at (AOX, AOY), and the chart and gauge stack underneath.
+  const AX = 14, AY = 14, AW = 500, AH = 432;     // arena (world coordinates)
+  let AS = 1, AOX = AX, AOY = AY;
+  let CX = 572, CW = 372, CY = 34, CH = 250;      // chart
+  let GX = 572, GWID = 372, GY = 372;             // herd-immunity gauge
+  const fpx = (n) => (narrow ? Math.max(11, n) : n) + "px ";
+  function layout() {
+    const cw = Math.round(canvas.clientWidth || canvas.parentElement.clientWidth || 960);
+    narrow = cw < 640;
+    if (!narrow) {
+      W = 960; H = 460; AS = 1; AOX = AX; AOY = AY;
+      CX = 572; CW = 372; CY = 34; CH = 250;
+      GX = 572; GWID = 372; GY = 372;
+    } else {
+      W = Math.max(280, cw);
+      AOX = 8; AOY = 8; AS = (W - 16) / AW;
+      CX = 42; CW = W - CX - 16; CY = Math.round(AOY + AH * AS + 38); CH = 160;
+      GX = 10; GWID = W - 20; GY = CY + CH + 136;
+      H = GY + 84;
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
 
   // Model
   const N = 400;
@@ -155,6 +176,12 @@
 
   // ---------- Drawing ----------
   function drawArena() {
+    ctx.save();
+    if (narrow) {
+      ctx.translate(AOX - AX * AS, AOY - AY * AS); ctx.scale(AS, AS);
+      ctx.beginPath(); ctx.rect(AX, AY, AW, AH); ctx.clip();
+    }
+    const dot = narrow ? 1.4 : 1;   // dots drawn a little larger when the arena is shrunk
     ctx.fillStyle = "#070b13";
     ctx.fillRect(AX, AY, AW, AH);
     ctx.strokeStyle = "#26324a";
@@ -167,17 +194,19 @@
     }
     for (const p of state.people) {
       ctx.fillStyle = COL[p.s];
-      if (p.still) ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
-      else { ctx.beginPath(); ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2); ctx.fill(); }
+      if (p.still) ctx.fillRect(p.x - 3 * dot, p.y - 3 * dot, 6 * dot, 6 * dot);
+      else { ctx.beginPath(); ctx.arc(p.x, p.y, 3.2 * dot, 0, Math.PI * 2); ctx.fill(); }
     }
+    ctx.restore();
     ctx.font = "11px " + MONO;
     ctx.textAlign = "left";
     const label = "DAY " + Math.floor(state.tick / TICKS_PER_DAY) + (state.over ? " · OUTBREAK OVER" : "");
     const tw = ctx.measureText(label).width;
+    const m = narrow ? 6 : 8;
     ctx.fillStyle = "rgba(5,8,14,0.8)";
-    ctx.fillRect(AX + 8, AY + 8, tw + 14, 20);
+    ctx.fillRect(AOX + m, AOY + m, tw + 14, 20);
     ctx.fillStyle = state.over ? "#4cc48d" : "#c9d4e3";
-    ctx.fillText(label, AX + 15, AY + 22);
+    ctx.fillText(label, AOX + m + 7, AOY + m + 14);
   }
 
   function drawChart() {
@@ -193,13 +222,14 @@
     // Grid
     ctx.strokeStyle = "#1a2436";
     ctx.fillStyle = "#56647c";
-    ctx.font = "10px " + MONO;
+    ctx.font = fpx(10) + MONO;
     for (const f of [0, 0.25, 0.5, 0.75, 1]) {
       ctx.beginPath(); ctx.moveTo(CX, Y(f) + 0.5); ctx.lineTo(CX + CW, Y(f) + 0.5); ctx.stroke();
       ctx.textAlign = "right"; ctx.fillText(Math.round(f * 100) + "%", CX - 6, Y(f) + 3);
     }
     ctx.textAlign = "center";
-    const tickStep = span > 200 ? 50 : span > 100 ? 25 : 10;
+    let tickStep = span > 200 ? 50 : span > 100 ? 25 : 10;
+    if (narrow && CW / (span / tickStep) < 34) tickStep *= 2;
     for (let d = 0; d <= span; d += tickStep) ctx.fillText(String(d), X(d), CY + CH + 14);
     ctx.textAlign = "right";
     ctx.fillText("day", CX + CW, CY + CH + 28);
@@ -248,19 +278,22 @@
     }
     ctx.lineWidth = 1;
 
-    // Legend
-    const ly = CY + CH + 46;
+    // Legend (two per row on a narrow bench)
+    let ly = CY + CH + 46;
     ctx.font = "11px " + MONO;
     ctx.textAlign = "left";
-    let lx = CX;
-    for (const [t, col] of [["susceptible", COL[S]], ["infected", COL[I]], ["recovered", COL[R]], ["vaccinated", COL[V]]]) {
+    const lx0 = narrow ? GX : CX;
+    let lx = lx0;
+    [["susceptible", COL[S]], ["infected", COL[I]], ["recovered", COL[R]], ["vaccinated", COL[V]]].forEach(([t, col], i) => {
+      if (narrow && i === 2) { lx = lx0; ly += 18; }
       ctx.fillStyle = col; ctx.fillRect(lx, ly - 5, 12, 3);
       ctx.fillStyle = "#97a6b9"; ctx.fillText(t, lx + 16, ly);
-      lx += 16 + ctx.measureText(t).width + 14;
-    }
+      lx += narrow ? Math.max(GWID / 2, 16 + ctx.measureText(t).width + 14) : 16 + ctx.measureText(t).width + 14;
+    });
     if (state.ode) {
       ctx.fillStyle = "#56647c";
-      ctx.fillText("solid: the dots · dashed: SIR equations, no distancing", CX, ly + 18);
+      if (narrow) wrapText("solid: the dots · dashed: SIR equations, no distancing", lx0, ly + 18, GWID, 15);
+      else ctx.fillText("solid: the dots · dashed: SIR equations, no distancing", CX, ly + 18);
     }
   }
 
@@ -271,23 +304,54 @@
     ctx.font = "11px " + MONO;
     ctx.fillStyle = "#7f8ea6";
     ctx.textAlign = "left";
-    ctx.fillText("VACCINATED VS HERD-IMMUNITY THRESHOLD", CX, GY);
+    if (narrow) fitText("VACCINATED VS HERD-IMMUNITY THRESHOLD", GX, GY, GWID);
+    else ctx.fillText("VACCINATED VS HERD-IMMUNITY THRESHOLD", GX, GY);
     ctx.fillStyle = "#121a26";
-    ctx.fillRect(CX, y, CW, h);
+    ctx.fillRect(GX, y, GWID, h);
     ctx.fillStyle = COL[V];
-    ctx.fillRect(CX, y, CW * vFrac, h);
-    const mx = CX + CW * herd;
+    ctx.fillRect(GX, y, GWID * vFrac, h);
+    const mx = GX + GWID * herd;
     ctx.fillStyle = "#f0b35a";
     ctx.fillRect(mx - 1, y - 5, 2, h + 10);
-    ctx.font = "10px " + MONO;
-    ctx.textAlign = mx > CX + CW - 90 ? "right" : "left";
+    ctx.font = fpx(10) + MONO;
+    const hl = "1 − 1/R0 = " + Math.round(herd * 100) + "%";
+    ctx.textAlign = mx > GX + GWID - (narrow ? ctx.measureText(hl).width + 8 : 90) ? "right" : "left";
     ctx.fillText("1 − 1/R0 = " + Math.round(herd * 100) + "%", mx + (ctx.textAlign === "right" ? -5 : 5), y + h + 14);
     ctx.textAlign = "left";
     const above = vFrac > herd;
     ctx.fillStyle = above ? "#4cc48d" : "#ff8a7a";
     ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
-    ctx.fillText(above ? "Above the threshold: outbreaks should die out."
-                       : "Below the threshold: an outbreak can take off.", CX, y + h + 34);
+    const msg = above ? "Above the threshold: outbreaks should die out." : "Below the threshold: an outbreak can take off.";
+    if (narrow) wrapText(msg, GX, y + h + 34, GWID, 16);
+    else ctx.fillText(msg, GX, y + h + 34);
+  }
+
+  // Shrink a one-line label (down to 10 px) only if it would not fit.
+  function fitText(text, x, y, maxW) {
+    const base = ctx.font;
+    const m = /(\d+(?:\.\d+)?)px/.exec(base);
+    let size = m ? +m[1] : 12;
+    while (size > 10 && ctx.measureText(text).width > maxW) {
+      size -= 0.5;
+      ctx.font = base.replace(/\d+(?:\.\d+)?px/, size + "px");
+    }
+    ctx.fillText(text, x, y);
+    ctx.font = base;
+  }
+  // Wrap by words; translate the whole sentence first. Chinese wraps per character.
+  function wrapText(text, x, y, maxW, lh) {
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+    return y;
   }
 
   function draw() {
@@ -372,6 +436,18 @@
   $("presetFlu").addEventListener("click", () => preset(1.3, "Seasonal flu spreads slowly, with an R0 around 1.3. The threshold is only 23%, but with R0 this close to 1 chance matters: run it a few times and some outbreaks die out early."));
   $("presetCovid").addEventListener("click", () => preset(2.5, "The original COVID-19 virus had an R0 of roughly 2.5 to 3 before any measures. The threshold is 60%. Later variants spread faster and pushed it higher."));
   $("presetMeasles").addEventListener("click", () => preset(15, "Measles: R0 about 12 to 18. The threshold here is 93%. Try 90% vaccinated, then 95%."));
+
+  // Re-layout when the bench changes width; the simulation state is kept.
+  let lastCW = 0;
+  function onResize() {
+    const cw = Math.round(canvas.parentElement.clientWidth);
+    if (cw === lastCW) return;
+    lastCW = cw;
+    layout();
+    draw();
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(canvas.parentElement);
+  else window.addEventListener("resize", onResize);
 
   // ---------- Start ----------
   calibrate();

@@ -1,15 +1,33 @@
 (function () {
-  const W = 960, H = 460;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
+  let W = 960, H = 460, ctx;
+  let compact = false;            // phone layout: film and histogram stacked under the side view
 
-  // Geometry of the drawing (logical pixels).
-  const CY = 240;                 // optical axis
-  const SRC_X = 50, BAR_X = 250, SCR_X = 560;
-  const SCR_TOP = 50, SCR_BOT = 430;
-  const FILM_X = 600, FILM_W = 150;
-  const HIST_X = 776, HIST_W = 168;
+  // Geometry of the drawing (logical pixels). Set by layout().
+  let CY, SRC_X, BAR_X, SCR_X, SCR_TOP, SCR_BOT;   // side view
+  let FILM_X, FILM_W, HIST_X, HIST_W;               // face-on view and histogram
+  let PAN_TOP, PAN_BOT, LABEL_Y, PAN_LABEL_Y;       // vertical span of face-on view and histogram
+  let LABEL_FONT = 12, TICK_FONT = 10;
 
+  function setGeometry() {
+    if (!compact) {
+      W = 960; H = 460;
+      CY = 240; SRC_X = 50; BAR_X = 250; SCR_X = 560;
+      SCR_TOP = 50; SCR_BOT = 430;
+      FILM_X = 600; FILM_W = 150; HIST_X = 776; HIST_W = 168;
+      PAN_TOP = SCR_TOP; PAN_BOT = SCR_BOT;
+      LABEL_Y = 28; PAN_LABEL_Y = 28;
+      LABEL_FONT = 12; TICK_FONT = 10;
+    } else {
+      W = 340; H = 620;
+      SCR_TOP = 44; SCR_BOT = 300; CY = (SCR_TOP + SCR_BOT) / 2;
+      SRC_X = 26; BAR_X = 130; SCR_X = 312;
+      PAN_TOP = 350; PAN_BOT = 606;
+      FILM_X = 30; FILM_W = 136; HIST_X = 182; HIST_W = 150;
+      LABEL_Y = 24; PAN_LABEL_Y = PAN_TOP - 14;
+      LABEL_FONT = 13; TICK_FONT = 12;
+    }
+  }
   // Physics (real units). The screen shows ±HALF mm, L metres away.
   const L_MM = 1000;
   const HALF = 15;
@@ -26,7 +44,7 @@
 
   // Offscreen "film" so thousands of dots cost nothing to redraw.
   const film = document.createElement("canvas");
-  const filmCtx = Lab.setupCanvas(film, FILM_W, SCR_BOT - SCR_TOP);
+  let filmCtx;
 
   const $ = (id) => document.getElementById(id);
 
@@ -70,7 +88,8 @@
   }
 
   // ---------- Mapping helpers ----------
-  const mmToY = (x) => CY - (x / HALF) * ((SCR_BOT - SCR_TOP) / 2);
+  const mmToY = (x) => CY - (x / HALF) * ((SCR_BOT - SCR_TOP) / 2);        // side view
+  const mmToPanY = (x) => (PAN_TOP + PAN_BOT) / 2 - (x / HALF) * ((PAN_BOT - PAN_TOP) / 2); // face-on + histogram
   const slitGapPx = () => 14 + (state.d - 0.1) / 0.5 * 56;     // exaggerated for visibility
   const slitWidthPx = () => 3 + (state.a - 0.02) / 0.1 * 9;
   const slitYs = () => {
@@ -81,16 +100,19 @@
   const rgba = (a) => { const [r, g, b] = colour(); return `rgba(${r},${g},${b},${a})`; };
 
   // ---------- Firing ----------
+  function dot(h) {
+    filmCtx.beginPath();
+    filmCtx.arc(4 + h.fu * (FILM_W - 8), mmToPanY(h.x) - PAN_TOP, 1.4, 0, Math.PI * 2);
+    filmCtx.fill();
+  }
+
   function land(x) {
-    const yPx = mmToY(x);
-    const fx = 4 + Math.random() * (FILM_W - 8);
-    state.hits.push({ x, fx });
+    const h = { x, fu: Math.random() };
+    state.hits.push(h);
     const b = Math.floor((x + HALF) / (2 * HALF) * BINS);
     if (b >= 0 && b < BINS) state.counts[b]++;
     filmCtx.fillStyle = rgba(0.9);
-    filmCtx.beginPath();
-    filmCtx.arc(fx, yPx - SCR_TOP, 1.4, 0, Math.PI * 2);
-    filmCtx.fill();
+    dot(h);
     $("count").textContent = state.hits.length.toLocaleString();
   }
 
@@ -115,7 +137,7 @@
     state.hits = [];
     state.counts.fill(0);
     state.flights = [];
-    filmCtx.clearRect(0, 0, FILM_W, SCR_BOT - SCR_TOP);
+    filmCtx.clearRect(0, 0, FILM_W, PAN_BOT - PAN_TOP);
     $("count").textContent = "0";
   }
 
@@ -126,14 +148,12 @@
     ctx.fillStyle = "#05080e";
     ctx.fillRect(0, 0, W, H);
 
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.fillStyle = "#7f8ea6";
-    ctx.textAlign = "center";
-    ctx.fillText("SOURCE", SRC_X, 28);
-    ctx.fillText(state.bothOpen ? "DOUBLE SLIT" : "ONE SLIT", BAR_X, 28);
-    ctx.fillText("SCREEN", SCR_X, 28);
-    ctx.fillText("SCREEN, FACE-ON", FILM_X + FILM_W / 2, 28);
-    ctx.fillText("HITS PER BAND", HIST_X + HIST_W / 2, 28);
+    label("SOURCE", SRC_X, LABEL_Y, 2 * SRC_X + 40);
+    label(state.bothOpen ? "DOUBLE SLIT" : "ONE SLIT", BAR_X, LABEL_Y, compact ? 170 : 220);
+    label("SCREEN", SCR_X, LABEL_Y, compact ? 130 : 160);
+    label("SCREEN, FACE-ON", FILM_X + FILM_W / 2, PAN_LABEL_Y, FILM_W + (compact ? 4 : 24));
+    label("HITS PER BAND", HIST_X + HIST_W / 2, PAN_LABEL_Y, HIST_W - (compact ? 10 : 0));
 
     // Optical axis
     ctx.strokeStyle = "#1a2436";
@@ -193,39 +213,53 @@
     }
 
     // Film (face-on view)
+    const PH = PAN_BOT - PAN_TOP;
     ctx.fillStyle = "#0a0f19";
-    ctx.fillRect(FILM_X, SCR_TOP, FILM_W, SCR_BOT - SCR_TOP);
-    ctx.drawImage(film, FILM_X, SCR_TOP, FILM_W, SCR_BOT - SCR_TOP);
+    ctx.fillRect(FILM_X, PAN_TOP, FILM_W, PH);
+    ctx.drawImage(film, FILM_X, PAN_TOP, FILM_W, PH);
     ctx.strokeStyle = "#1f2a3f";
-    ctx.strokeRect(FILM_X + 0.5, SCR_TOP + 0.5, FILM_W - 1, SCR_BOT - SCR_TOP - 1);
+    ctx.strokeRect(FILM_X + 0.5, PAN_TOP + 0.5, FILM_W - 1, PH - 1);
 
     drawHistogram();
 
     // Scale on the film: ±10 mm ticks
     ctx.fillStyle = "#56647c";
     ctx.textAlign = "right";
-    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = TICK_FONT + "px 'IBM Plex Mono', ui-monospace, monospace";
     for (const mm of [-10, -5, 0, 5, 10]) {
-      const y = mmToY(mm);
+      const y = mmToPanY(mm);
       ctx.fillRect(FILM_X - 5, y, 4, 1);
     }
     ctx.textAlign = "left";
-    ctx.fillText("+10 mm", FILM_X + 4, mmToY(10) - 4);
-    ctx.fillText("−10 mm", FILM_X + 4, mmToY(-10) + 12);
+    ctx.fillText("+10 mm", FILM_X + 4, mmToPanY(10) - 4);
+    ctx.fillText("−10 mm", FILM_X + 4, mmToPanY(-10) + TICK_FONT + 2);
+  }
+
+  // A centred label that shrinks (never below the layout's tick size) to fit maxW,
+  // and stays inside the canvas.
+  function label(text, x, y, maxW) {
+    let f = LABEL_FONT;
+    const set = () => { ctx.font = f + "px 'IBM Plex Mono', ui-monospace, monospace"; };
+    set();
+    while (f > TICK_FONT && ctx.measureText(text).width > maxW) { f -= 0.5; set(); }
+    const w = ctx.measureText(text).width;
+    const cx = Math.min(W - 4 - w / 2, Math.max(4 + w / 2, x));
+    ctx.textAlign = "center";
+    ctx.fillText(text, cx, y);
   }
 
   function drawHistogram() {
     const n = state.hits.length;
-    const binH = (SCR_BOT - SCR_TOP) / BINS;
+    const binH = (PAN_BOT - PAN_TOP) / BINS;
     const maxExpected = n * Math.max(...state.pdf);
     const scale = Math.max(1, ...state.counts, maxExpected) * 1.08;
     ctx.strokeStyle = "#1f2a3f";
-    ctx.beginPath(); ctx.moveTo(HIST_X + 0.5, SCR_TOP); ctx.lineTo(HIST_X + 0.5, SCR_BOT); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(HIST_X + 0.5, PAN_TOP); ctx.lineTo(HIST_X + 0.5, PAN_BOT); ctx.stroke();
     ctx.fillStyle = rgba(0.75);
     for (let b = 0; b < BINS; b++) {
       const c = state.counts[b];
       if (!c) continue;
-      const y = SCR_BOT - (b + 1) * binH;
+      const y = PAN_BOT - (b + 1) * binH;
       ctx.fillRect(HIST_X + 1, y + 0.4, (c / scale) * HIST_W, binH - 0.8);
     }
     if (state.showTheory && n > 0) {
@@ -233,7 +267,7 @@
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       for (let b = 0; b < BINS; b++) {
-        const y = SCR_BOT - (b + 0.5) * binH;
+        const y = PAN_BOT - (b + 0.5) * binH;
         const x = HIST_X + 1 + (n * state.pdf[b] / scale) * HIST_W;
         b === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
@@ -243,8 +277,8 @@
     if (n === 0) {
       ctx.fillStyle = "#56647c";
       ctx.textAlign = "center";
-      ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
-      ctx.fillText("Waiting for photons…", HIST_X + HIST_W / 2, CY);
+      ctx.font = (compact ? 13 : 12) + "px 'IBM Plex Sans', system-ui, sans-serif";
+      ctx.fillText("Waiting for photons…", HIST_X + HIST_W / 2, (PAN_TOP + PAN_BOT) / 2);
     }
   }
 
@@ -262,13 +296,16 @@
           if (f.t < legA) {
             const r = f.t * (SCR_X - SRC_X) - off;
             if (r <= 0) continue;
+            ctx.save();
+            ctx.beginPath(); ctx.rect(0, 0, BAR_X, SCR_BOT + 10); ctx.clip();
             ctx.strokeStyle = rgba(0.55 * (1 - off / 40));
             ctx.beginPath(); ctx.arc(SRC_X, CY, r, -1.1, 1.1); ctx.stroke();
+            ctx.restore();
           } else {
             const r = (f.t - legA) * (SCR_X - SRC_X) - off;
             if (r <= 0) continue;
             ctx.save();
-            ctx.beginPath(); ctx.rect(BAR_X + 4, 0, SCR_X - BAR_X - 4, H); ctx.clip();
+            ctx.beginPath(); ctx.rect(BAR_X + 4, 0, SCR_X - BAR_X - 4, SCR_BOT + 10); ctx.clip();
             ctx.strokeStyle = rgba(0.5 * (1 - off / 40));
             for (const y of ys) { ctx.beginPath(); ctx.arc(BAR_X, y, r, -1.3, 1.3); ctx.stroke(); }
             ctx.restore();
@@ -363,6 +400,24 @@
   }
   $("slitsBoth").addEventListener("click", () => setSlits(true));
   $("slitsTop").addEventListener("click", () => setSlits(false));
+
+  // ---------- Layout (desktop vs phone) ----------
+  function layout() {
+    const cssW = canvas.clientWidth || 960;
+    const next = cssW < 640;
+    if (ctx && next === compact) return;
+    compact = next;
+    setGeometry();
+    ctx = Lab.setupCanvas(canvas, W, H);
+    filmCtx = Lab.setupCanvas(film, FILM_W, PAN_BOT - PAN_TOP);
+    filmCtx.fillStyle = rgba(0.9);
+    for (const h of state.hits) dot(h);
+  }
+  layout();
+  let resizeTimer = 0;
+  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(layout, 120); };
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(canvas.parentElement);
+  else window.addEventListener("resize", onResize);
 
   // Start with a pattern already forming so the first view isn't empty.
   state.rate = Math.max(1, Math.round(Math.pow(400, $("rate").value / 100)));

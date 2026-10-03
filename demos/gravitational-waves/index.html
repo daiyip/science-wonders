@@ -34,6 +34,11 @@
     font-size: var(--step--1);
     max-width: 80ch;
   }
+  @media (max-width: 640px) {
+    .controls button { min-height: 40px; }
+    .button-row button.preset { padding: 8px 12px; }
+    .controls input[type="range"] { height: 32px; }
+  }
 </style>
 </head>
 <body>
@@ -118,6 +123,7 @@
       <h2>What you're seeing</h2>
       <p>On the left, two black holes orbit their shared centre of mass. Their separation is drawn to scale, and so are their event horizons. Every orbit sends out two crests of gravitational wave, which carry energy away, so the pair sinks closer and orbits faster.</p>
       <p>On the right, a ring of free-floating particles feels the wave go by, face-on. Space stretches one way while it squeezes the other, then swaps, twice per orbit. Below, the strain h(t) is the fractional stretch a detector records: the "chirp" of rising pitch and loudness, then a fast ringdown as the merged black hole settles.</p>
+      <p data-depth="deep">The separation follows Kepler's third law, <i>a</i>³ = <i>GM</i>/(π<i>f</i>)², where <i>f</i> is the wave frequency, twice the orbital frequency. That picture fails in the last orbit or two, so the page hands over to a ringdown once the frequency reaches 2.2 times that of the innermost stable orbit.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -126,12 +132,25 @@
         <li>Make the black holes lighter. The chirp sweeps to higher frequencies and lasts longer, because lighter objects can orbit closer before they touch.</li>
         <li>Double the distance and the peak strain halves. Wave amplitude falls as 1/distance, not 1/distance², which is why detectors can hear so far.</li>
       </ul>
+      <p data-depth="deep">The time left before merger, from a given frequency, scales as the chirp mass to the power −5/3. From 20 Hz, the GW150914 pair has under a second to go, a 10 + 8 M☉ pair about 7 s, and two neutron stars (chirp mass 1.19 M☉) nearly three minutes, which is why neutron-star signals sit in the detectors for so long.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Nothing physical moves between the black holes and the ring. Space itself changes length, and rulers stretch with it, so LIGO measures the wave with light: a laser crossing each 4 km arm takes a slightly different time. For GW150914 the arms changed length by about 4 × 10⁻¹⁸ m, a few thousandths of a proton.</p>
       <p>In a fifth of a second, three Suns' worth of mass vanished into waves. For that moment the merger outshone all the stars in the observable universe combined, yet it emitted no light at all.</p>
+      <p data-depth="deep">Three solar masses is about 5 × 10⁴⁷ J. At the peak, the power was around 3.6 × 10⁴⁹ W. Yet the strain reaching Earth was only 10⁻²¹, because spacetime is extremely stiff: the energy carried by a wave grows with the square of its strain and of its frequency, multiplied by <i>c</i>³/<i>G</i>, a huge number.</p>
       <p class="muted">Einstein predicted the waves in 1916 and doubted they could ever be measured.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">𝓜 = (<i>m</i><sub>1</sub><i>m</i><sub>2</sub>)<sup>3/5</sup> / (<i>m</i><sub>1</sub> + <i>m</i><sub>2</sub>)<sup>1/5</sup></div>
+      <p>The chirp mass, the one combination of the two masses that sets how fast the inspiral speeds up. For 36 and 29 M☉ it is 28.1 M☉, the "Chirp mass" readout. Measuring how quickly the pitch rises is how LIGO weighs the pair.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>f</i>(τ) = (1/π) (5 / 256τ)<sup>3/8</sup><br>× (<i>G</i>𝓜/<i>c</i>³)<sup>−5/8</sup></div>
+      <p>The wave frequency at a time τ before the two would meet, from the leading-order (quadrupole) formula: the orbit loses energy to waves, shrinks and speeds up. The simulation uses exactly this, with the matching phase, for the inspiral. It starts 16 cycles before the end, and plays the event in slow motion that eases off as the pitch rises (the "Slow motion" readout).</p>
+      <div class="eq" data-depth="deep" translate="no"><i>h</i> = (2/5) × 4 (<i>G</i>𝓜)<sup>5/3</sup> (π<i>f</i>)<sup>2/3</sup><br>÷ (<i>c</i><sup>4</sup> <i>d</i>)</div>
+      <p>The strain amplitude at distance <i>d</i>. The factor 4 is for a binary seen face-on; the 2/5 averages over sky position and orientation. The page uses this formula, which grows as the frequency rises and falls as 1/<i>d</i>. It ignores the expansion of the universe, so the peak it shows for GW150914, about 9 × 10⁻²², is close to but not exactly the 10⁻²¹ LIGO measured.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>h</i>(<i>t</i>) ∝ e<sup>−<i>t</i>/τ<sub>d</sub></sup> cos(2π<i>f</i><sub>rd</sub><i>t</i>)<br>τ<sub>d</sub> = <i>Q</i> / (π<i>f</i><sub>rd</sub>)</div>
+      <p>The ringdown: the merged black hole vibrates at one main frequency and settles within a few cycles. The page takes <i>f</i><sub>rd</sub> and the quality factor <i>Q</i> from published fits for a black hole of the final mass and spin (Berti, Cardoso and Will), and the mass lost to waves and the final spin from simple fits for non-spinning pairs. The join between inspiral and ringdown is a simple smooth bridge, not a solution of Einstein's equations; real waveforms come from supercomputer simulations of that last moment.</p>
     </section>
   </div>
 

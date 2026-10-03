@@ -100,6 +100,7 @@
       <h2>What you're seeing</h2>
       <p>Each dot is a person, placed on a ring of 365 days at their birthday. Birthdays are random and equally likely; February 29 is left out. When two people share a day, both dots turn amber.</p>
       <p>The white curve is the exact chance that at least one pair matches: <span class="formula">P = 1 − 365! / ((365 − n)! · 365<sup>n</sup>)</span>. It passes 50.7% at 23 people and 99.9% at 70. The amber line is the share of simulated rooms that had a match at each size.</p>
+      <p data-depth="deep">Each simulated room starts empty and adds people with random birthdays one at a time until two share a day, then records how many people that took. The amber value at n is the share of rooms whose first match came at n people or fewer. With 1,000 rooms, the random scatter around 50% is about ±1.6 percentage points, so small wiggles around the white curve are expected.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -113,6 +114,18 @@
       <h2>Why it's strange</h2>
       <p>We picture ourselves in the room: what are the odds someone shares <em>my</em> birthday? With 23 people that is only 1 − (364/365)<sup>22</sup> ≈ 5.9%. You would need 253 other people to reach even odds.</p>
       <p>But the question is about any pair at all, and pairs grow with the square of the room. Each pair matches with chance 1/365, so the chance of no match is roughly e<sup>−pairs/365</sup>, which drops below one half once there are about 253 pairs.</p>
+      <p data-depth="deep">Real birthdays are not spread perfectly evenly: births vary by season and by day of the week. Any unevenness makes a match more likely, because the chance of no match is largest when every day is equally likely. So 23 is an upper bound for real people, though the difference is small.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">P(n) = 1 − (365/365) · (364/365) · (363/365) ⋯ ((365 − n + 1)/365) = 1 − 365! ÷ ((365 − n)! · 365<sup>n</sup>)</div>
+      <p>The exact chance. The second person must miss 1 day, the third must miss 2, and so on; multiply those chances to get the probability of no match at all, then subtract from 1. The page builds the white curve from this product one factor at a time, which avoids the enormous factorials. P(23) = 0.507 and P(70) = 0.999.</p>
+      <div class="eq" data-depth="deep" translate="no">P(n) ≈ 1 − e<sup>−n(n − 1) / (2 · 365)</sup></div>
+      <p>The pairs estimate, drawn as the dashed line. There are n(n − 1)/2 pairs, each matching with chance 1/365, and treating them as independent gives (1 − 1/365)<sup>pairs</sup> ≈ e<sup>−pairs/365</sup> for no match. The pairs are not quite independent, but at 23 people the estimate gives 50.0% against the exact 50.7%.</p>
+      <div class="eq" data-depth="deep" translate="no">n<sub>½</sub> ≈ √(2 · ln 2 · N) ≈ 1.18 √N</div>
+      <p>Setting the estimate equal to one half gives the room size for even odds when there are N equally likely labels. For N = 365 it gives 22.5, so 23 people. Because it grows with √N, a million labels still collide after only about 1,180 draws. This is the rule behind hash collisions and random IDs.</p>
+      <div class="eq" data-depth="deep" translate="no">E[K] ≈ √(πN/2) + 2/3 ≈ 24.6</div>
+      <p>K is the number of people in the room when the first match appears, exactly the number each simulated room records. Its average for N = 365 is about 24.6, a little above the median of 23 because a few rooms run long. Pressing "Add people until a match" draws one value of K.</p>
     </section>
   </div>
 

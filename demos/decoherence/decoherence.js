@@ -1,15 +1,50 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const W = 960, H = 460;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
+  const canvas = $("bench");
+  // Logical canvas size: 960 wide on desktop; a taller 480-wide layout when the bench is narrow (phones),
+  // with the panels stacked under the interferometer so canvas text stays readable.
+  let W = 960, H = 460, narrow = false, ctx;
 
   // ---------- Layout ----------
-  const SRC = { x: 40, y: 220 }, BS1 = { x: 104, y: 220 }, BS2 = { x: 486, y: 220 };
   const UP_Y = 150, LO_Y = 290;
-  const BOX = { x0: 170, y0: 78, x1: 420, y1: 362 };
   const BLOB_R = 16, P_R = 2.5;
   const blobs = [{ x: 295, y: UP_Y, flash: 0 }, { x: 295, y: LO_Y, flash: 0 }];
-  const RX = 566, RW = 380;
+  let SRC, BS1, BS2, BOX, DX, RX, RW, MAT_Y, FR_Y, TR_Y;
+  function setGeometry() {
+    if (!narrow) {
+      W = 960; H = 460;
+      SRC = { x: 40, y: 220 }; BS1 = { x: 104, y: 220 }; BS2 = { x: 486, y: 220 };
+      BOX = { x0: 170, y0: 78, x1: 420, y1: 362 };
+      blobs[0].x = blobs[1].x = 295; DX = 542;
+      RX = 566; RW = 380; MAT_Y = 28; FR_Y = 200; TR_Y = 340;
+    } else {
+      W = 480;
+      SRC = { x: 24, y: 220 }; BS1 = { x: 66, y: 220 }; BS2 = { x: 412, y: 220 };
+      BOX = { x0: 118, y0: 78, x1: 368, y1: 362 }; // same size as on desktop, so the rates match
+      blobs[0].x = blobs[1].x = 243; DX = 454;
+      RX = 16; RW = 448; MAT_Y = 462;
+      // FR_Y, TR_Y and H depend on how long the (translated) labels are: see narrowFlow().
+      FR_Y = 708; TR_Y = 892; H = 1048;
+    }
+  }
+  function applyLayout(n) {
+    const old = BOX;
+    narrow = n;
+    setGeometry();
+    ctx = Lab.setupCanvas(canvas, W, H);
+    if (narrow) { narrowFlow(); ctx = Lab.setupCanvas(canvas, W, H); }
+    if (old) {
+      // Carry the gas over into the new chamber.
+      for (const p of state.particles) {
+        p.x = BOX.x0 + (p.x - old.x0) * (BOX.x1 - BOX.x0) / (old.x1 - old.x0);
+        p.y = BOX.y0 + (p.y - old.y0) * (BOX.y1 - BOX.y0) / (old.y1 - old.y0);
+      }
+    }
+  }
+  const wantNarrow = () => {
+    const w = canvas.getBoundingClientRect().width;
+    return w > 0 && w < (narrow ? 656 : 640);
+  };
 
   const COL = {
     bg: "#05080e", label: "#7f8ea6", dim: "#56647c", rule: "#1f2a3f", metal: "#3a4760",
@@ -94,9 +129,81 @@
   function label(text, x, y, align, colour) {
     ctx.fillStyle = colour || COL.label;
     ctx.textAlign = align || "center";
+    if (ctx.textAlign === "center") {
+      // Keep centred labels (which may be translated and longer) inside the canvas.
+      const half = ctx.measureText(text).width / 2;
+      x = Math.max(half + 4, Math.min(W - half - 4, x));
+    }
     ctx.fillText(text, x, y);
   }
-  const mono = (px) => { ctx.font = `${px}px 'IBM Plex Mono', ui-monospace, monospace`; };
+  // Narrow layout: every font is 6 px larger (the canvas is drawn at about 0.64 scale on a phone).
+  const fpx = (px) => (narrow ? px + 6 : px);
+  const mono = (px) => { ctx.font = `${fpx(px)}px 'IBM Plex Mono', ui-monospace, monospace`; };
+  const sans = (px) => { ctx.font = `${fpx(px)}px 'IBM Plex Sans', system-ui, sans-serif`; };
+  // Wrap a sentence to maxW; translate it whole first (Chinese wraps per character).
+  function wrapLines(text, maxW) {
+    if (window.I18N) text = window.I18N.t(text);
+    text = text.replace(/ →/g, "\u00a0→"); // never leave the arrow alone on a line
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    const lines = [];
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; }
+      else line = t;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+  function wrapText(text, x, y, maxW, lh) {
+    for (const l of wrapLines(text, maxW)) { ctx.fillText(l, x, y); y += lh; }
+    return y;
+  }
+
+  // ---------- Narrow layout: matrix, fringes and trace flow down the page ----------
+  let MAT = null, FR_TWO_ROWS = false;
+  function matrixGeometry() {
+    mono(10);
+    const rowW = Math.max(ctx.measureText("upper").width, ctx.measureText("lower").width);
+    if (!narrow) return { gx: RX + 34, gy: MAT_Y + 16, cell: 62 };
+    // Cells wide enough for the (translated) column labels.
+    const cell = Math.max(62, Math.ceil(rowW) + 10);
+    const gx = RX + Math.max(34, rowW + 12);
+    return { gx, gy: MAT_Y + 32, cell, tx: gx + 2 * cell + 18 };
+  }
+  // The key beside the matrix; returns the y below its last line.
+  function drawMatrixKey(m, draw) {
+    const mw = W - m.tx - 6;
+    let y = m.gy + 14;
+    const put = (text, colour, lh) => {
+      ctx.fillStyle = colour; ctx.textAlign = "left";
+      const lines = wrapLines(text, mw);
+      if (draw) lines.forEach((l, k) => ctx.fillText(l, m.tx, y + k * lh));
+      y += lines.length * lh;
+    };
+    mono(11); put("diagonal", COL.obj, 20);
+    sans(12); put("odds of each path", "#aab6c8", 21);
+    y += 14;
+    mono(11); put("off-diagonal", COL.coh, 20);
+    sans(12); put("how well the paths", "#aab6c8", 21);
+    put("can still interfere", "#aab6c8", 21);
+    return y;
+  }
+  function narrowFlow() {
+    const m = matrixGeometry();
+    const bottom = Math.max(m.gy + 2 * m.cell, drawMatrixKey(m, false) - 16);
+    FR_Y = Math.round(bottom + 46);
+    mono(11);
+    FR_TWO_ROWS = ctx.measureText("OUTPUT IF RECOMBINED NOW").width + ctx.measureText("visibility 100%").width + 12 > RW;
+    mono(10);
+    const chance = wrapLines("chance at D0 as the path difference is scanned →", RW).length;
+    const frBottom = FR_Y + (FR_TWO_ROWS ? 32 : 12) + 22 + 10 + 52 + 20 + (chance - 1) * 20;
+    TR_Y = frBottom + 40;
+    const legendLines = Math.max(...["dashed: average over many runs", "solid: this run · dashed: average", "solid: this run"].map((t) => wrapLines(t, RW).length));
+    H = TR_Y + 16 + 82 + 20 + 24 + (legendLines - 1) * 20 + 14;
+  }
 
   function drawApparatus() {
     ctx.fillStyle = COL.bg;
@@ -121,30 +228,31 @@
     ctx.stroke();
     ctx.strokeStyle = "rgba(143,166,255,0.35)";
     ctx.beginPath();
-    ctx.moveTo(BS2.x, BS2.y); ctx.lineTo(536, 192);
-    ctx.moveTo(BS2.x, BS2.y); ctx.lineTo(536, 248);
+    ctx.moveTo(BS2.x, BS2.y); ctx.lineTo(DX - 6, 192);
+    ctx.moveTo(BS2.x, BS2.y); ctx.lineTo(DX - 6, 248);
     ctx.stroke();
     ctx.lineWidth = 1;
 
     // Source, beam splitters, detectors
     ctx.fillStyle = COL.obj;
     ctx.beginPath(); ctx.arc(SRC.x, SRC.y, 5, 0, Math.PI * 2); ctx.fill();
-    label("SOURCE", SRC.x, SRC.y + 26);
+    if (narrow) label("SOURCE", 6, SRC.y - 16, "left");
+    else label("SOURCE", SRC.x, SRC.y + 26);
     for (const [bs, name] of [[BS1, "SPLIT"], [BS2, "JOIN"]]) {
       ctx.save(); ctx.translate(bs.x, bs.y); ctx.rotate(Math.PI / 4);
       ctx.fillStyle = "rgba(143,166,255,0.2)"; ctx.strokeStyle = COL.obj;
       ctx.fillRect(-8, -8, 16, 16); ctx.strokeRect(-8, -8, 16, 16);
       ctx.restore();
-      label(name, bs.x, bs.y + 30);
+      label(name, bs.x, bs.y + (narrow ? 34 : 30));
     }
     const p0 = (1 + state.C) / 2; // detector odds at zero phase
     for (const [y, name, p] of [[192, "D0", p0], [248, "D1", 1 - p0]]) {
       ctx.fillStyle = `rgba(143,166,255,${0.15 + 0.75 * p})`;
-      ctx.beginPath(); ctx.arc(542, y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(DX, y, 8, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = COL.obj;
-      ctx.beginPath(); ctx.arc(542, y, 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(DX, y, 8, 0, Math.PI * 2); ctx.stroke();
       mono(10);
-      label(name, 542, y + (y < 220 ? -14 : 24));
+      label(name, DX, y + (y < 220 ? -14 : (narrow ? 28 : 24)));
       mono(12);
     }
 
@@ -189,20 +297,22 @@
     }
     mono(10);
     label("upper path", blobs[0].x, UP_Y - BLOB_R - 14, "center", COL.obj);
-    label("lower path", blobs[1].x, LO_Y + BLOB_R + 22, "center", COL.obj);
-    // Legend
-    ctx.fillStyle = COL.gas; ctx.beginPath(); ctx.arc(BOX.x0 + 4, BOX.y1 + 22, 3, 0, Math.PI * 2); ctx.fill();
-    label("gas particle", BOX.x0 + 12, BOX.y1 + 26, "left");
-    ctx.fillStyle = COL.record; ctx.beginPath(); ctx.arc(BOX.x0 + 110, BOX.y1 + 22, 3, 0, Math.PI * 2); ctx.fill();
-    label("carries a which-path record", BOX.x0 + 118, BOX.y1 + 26, "left", COL.record);
+    label("lower path", blobs[1].x, LO_Y + BLOB_R + (narrow ? 26 : 22), "center", COL.obj);
+    // Legend (two rows on the narrow layout)
+    const lx2 = narrow ? BOX.x0 : BOX.x0 + 110, ly2 = narrow ? BOX.y1 + 50 : BOX.y1 + 26;
+    const ly1 = narrow ? BOX.y1 + 26 : BOX.y1 + 26;
+    ctx.fillStyle = COL.gas; ctx.beginPath(); ctx.arc(BOX.x0 + 4, ly1 - 4 - (narrow ? 2 : 0), 3, 0, Math.PI * 2); ctx.fill();
+    label("gas particle", BOX.x0 + 12, ly1, "left");
+    ctx.fillStyle = COL.record; ctx.beginPath(); ctx.arc(lx2 + 4 - (narrow ? 0 : 4), ly2 - 4 - (narrow ? 2 : 0), 3, 0, Math.PI * 2); ctx.fill();
+    label("carries a which-path record", lx2 + (narrow ? 12 : 8), ly2, "left", COL.record);
     mono(12);
   }
 
   function drawMatrix() {
     mono(11);
-    label("DENSITY MATRIX ρ", RX, 28, "left");
-    const gx = RX + 34, gy = 44, cell = 62;
+    label("DENSITY MATRIX ρ", RX, MAT_Y, "left");
     const rho = [[0.5, 0.5 * state.C], [0.5 * state.C, 0.5]];
+    const m = matrixGeometry(), gx = m.gx, gy = m.gy, cell = m.cell;
     mono(10);
     label("upper", gx + cell / 2, gy - 4, "center", COL.dim);
     label("lower", gx + cell * 1.5, gy - 4, "center", COL.dim);
@@ -222,24 +332,29 @@
       ctx.fillText(v.toFixed(2), x + cell / 2, y + cell / 2 + 4);
     }
     const tx = gx + 2 * cell + 22;
+    if (narrow) { drawMatrixKey(m, true); return; }
+    const ty = [16, 32, 66, 82, 97];
     mono(11);
-    label("diagonal", tx, gy + 16, "left", COL.obj);
-    ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
-    label("odds of each path", tx, gy + 32, "left", "#aab6c8");
+    label("diagonal", tx, gy + ty[0], "left", COL.obj);
+    sans(12);
+    label("odds of each path", tx, gy + ty[1], "left", "#aab6c8");
     mono(11);
-    label("off-diagonal", tx, gy + 66, "left", COL.coh);
-    ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
-    label("how well the paths", tx, gy + 82, "left", "#aab6c8");
-    label("can still interfere", tx, gy + 97, "left", "#aab6c8");
+    label("off-diagonal", tx, gy + ty[2], "left", COL.coh);
+    sans(12);
+    label("how well the paths", tx, gy + ty[3], "left", "#aab6c8");
+    label("can still interfere", tx, gy + ty[4], "left", "#aab6c8");
   }
 
   function drawFringes() {
-    const top = 200, x0 = RX, w = RW;
+    const top = FR_Y, x0 = RX, w = RW;
     mono(11);
     label("OUTPUT IF RECOMBINED NOW", x0, top, "left");
-    label(`visibility ${(state.C * 100).toFixed(0)}%`, x0 + w, top, "right", COL.coh);
+    const visText = `visibility ${(state.C * 100).toFixed(0)}%`;
+    // Narrow: if the title and the visibility don't fit on one line, the visibility drops to a second line.
+    const twoRows = narrow && FR_TWO_ROWS;
+    label(visText, x0 + w, twoRows ? top + 22 : top, "right", COL.coh);
     // Stripe band: what a screen at the output would show as the phase is scanned
-    const bandY = top + 10, bandH = 22;
+    const bandY = top + (narrow ? (twoRows ? 32 : 12) : 10), bandH = 22;
     for (let i = 0; i < w; i += 2) {
       const phi = (i / w) * 6 * Math.PI;
       const I = (1 + state.C * Math.cos(phi)) / 2;
@@ -270,11 +385,12 @@
     ctx.stroke();
     ctx.lineWidth = 1;
     mono(10);
-    label("chance at D0 as the path difference is scanned →", x0, cy0 + ch + 14, "left", COL.dim);
+    ctx.fillStyle = COL.dim; ctx.textAlign = "left";
+    wrapText("chance at D0 as the path difference is scanned →", x0, cy0 + ch + (narrow ? 20 : 14), w, 20);
   }
 
   function drawTrace() {
-    const top = 340, x0 = RX + 26, w = RW - 26, y0 = top + 12, h = 82;
+    const top = TR_Y, x0 = RX + 26, w = RW - 26, y0 = top + (narrow ? 16 : 12), h = 82;
     mono(11);
     label("COHERENCE OVER TIME", RX, top, "left");
     mono(10);
@@ -311,10 +427,12 @@
       ctx.stroke();
       ctx.lineWidth = 1;
     }
-    label("0 s", x0, y0 + h + 14, "left", COL.dim);
-    label(`${state.win.toFixed(state.win < 10 ? 1 : 0)} s`, x0 + w, y0 + h + 14, "right", COL.dim);
+    const yl = y0 + h + (narrow ? 20 : 14);
+    label("0 s", x0, yl, "left", COL.dim);
+    label(`${state.win.toFixed(state.win < 10 ? 1 : 0)} s`, x0 + w, yl, "right", COL.dim);
     const legend = Lab.reducedMotion ? "dashed: average over many runs" : (state.showAvg ? "solid: this run · dashed: average" : "solid: this run");
-    label(legend, x0 + w / 2, y0 + h + 14, "center", COL.dim);
+    if (narrow) { ctx.fillStyle = COL.dim; ctx.textAlign = "left"; wrapText(legend, RX, yl + 24, RW, 20); }
+    else label(legend, x0 + w / 2, yl, "center", COL.dim);
   }
 
   function draw() {
@@ -443,6 +561,15 @@
   $("environ").addEventListener("change", updateScale);
 
   // ---------- Start ----------
+  applyLayout(wantNarrow());
+  new ResizeObserver(() => {
+    const n = wantNarrow();
+    if (n === narrow) return;
+    applyLayout(n);
+    if (Lab.reducedMotion) draw();
+  }).observe(canvas.parentElement);
+  // The narrow layout measures text, so redo it once the web fonts have arrived.
+  if (document.fonts) document.fonts.ready.then(() => { if (narrow) { applyLayout(true); if (Lab.reducedMotion) draw(); } });
   setParticleCount(state.N);
   readouts();
   updateScale();

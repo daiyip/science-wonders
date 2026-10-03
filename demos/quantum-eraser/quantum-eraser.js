@@ -1,7 +1,11 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const W = 960, H = 500;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
+  const canvas = $("bench");
+  // Logical canvas size: 960 wide on desktop; a taller 480-wide layout when the bench is narrow (phones),
+  // so canvas text stays readable. Simulation state survives a layout switch.
+  let W = 960, H = 500, narrow = false, ctx;
+  const MONO = "'IBM Plex Mono', ui-monospace, monospace", SANS = "'IBM Plex Sans', system-ui, sans-serif";
+  const font = (px, fam) => { ctx.font = `${narrow ? px + 6 : px}px ${fam || MONO}`; };
   const DEG = Math.PI / 180;
 
   // ---------- Physics (real units, mm) ----------
@@ -59,13 +63,29 @@
   }
 
   // ---------- Layout ----------
-  const LASER = { x: 40, y: 250 }, CRY = { x: 110, y: 250 };
-  const SIG_Y = 140, BAR_X = 250, SCR_X = 400, SCR_TOP = 60, SCR_BOT = 220;
-  const IDL_Y = 360, COIL_X = 232, PBS = { x: 320, y: IDL_Y }, D1 = { x: 408, y: IDL_Y }, D2 = { x: PBS.x, y: 448 };
-  const SORT = { x: 408, y: 290 };
-  const PX = 486, PW = 458, PANEL_H = 140, PANEL_GAP = 12, PANEL_TOP = 40;
+  let LASER, CRY, SIG_Y, BAR_X, SCR_X, SCR_TOP, SCR_BOT, IDL_Y, COIL_X, PBS, D1, D2, SORT;
+  let PX, PW, PANEL_H, PANEL_GAP, PANEL_TOP, Y_AXIS;
   const FILM_H = 30, HIST_H = 78;
   const SLIT_GAP = 22;
+  function setGeometry() {
+    LASER = { x: 40, y: 250 }; CRY = { x: 110, y: 250 };
+    SIG_Y = 140; BAR_X = 250; SCR_X = 400; SCR_TOP = 60; SCR_BOT = 220;
+    if (!narrow) {
+      W = 960; H = 500;
+      IDL_Y = 360; COIL_X = 232; PBS = { x: 320, y: IDL_Y }; D1 = { x: 408, y: IDL_Y }; D2 = { x: PBS.x, y: 448 };
+      SORT = { x: 408, y: 290 };
+      PX = 486; PW = 458; PANEL_H = 140; PANEL_GAP = 12; PANEL_TOP = 40;
+      Y_AXIS = PANEL_TOP + 3 * (PANEL_H + PANEL_GAP) - 2;
+    } else {
+      // Apparatus on top, the three sorted panels stacked underneath.
+      W = 480;
+      IDL_Y = 380; COIL_X = 232; PBS = { x: 320, y: IDL_Y }; D1 = { x: 408, y: IDL_Y }; D2 = { x: PBS.x, y: 468 };
+      SORT = { x: 428, y: 270 };
+      PX = 16; PW = 448; PANEL_H = 140; PANEL_GAP = 26; PANEL_TOP = 556;
+      Y_AXIS = PANEL_TOP + 2 * (PANEL_H + PANEL_GAP) + FILM_H + 6 + HIST_H + 26;
+      H = Y_AXIS + 14;
+    }
+  }
 
   const COL = {
     bg: "#05080e", label: "#7f8ea6", dim: "#56647c", rule: "#1f2a3f",
@@ -78,10 +98,21 @@
   const binOf = (x) => Math.min(BINS - 1, Math.max(0, Math.floor((x + HALF) / (2 * HALF) * BINS)));
 
   // Offscreen films for the three panels, so thousands of dots cost nothing per frame.
-  const films = [0, 1, 2].map(() => {
-    const c = document.createElement("canvas");
-    return { c, g: Lab.setupCanvas(c, PW, FILM_H) };
-  });
+  let films = [];
+  function applyLayout(n) {
+    narrow = n;
+    setGeometry();
+    ctx = Lab.setupCanvas(canvas, W, H);
+    films = [0, 1, 2].map(() => {
+      const c = document.createElement("canvas");
+      return { c, g: Lab.setupCanvas(c, PW, FILM_H) };
+    });
+    rebuild();
+  }
+  const wantNarrow = () => {
+    const w = canvas.getBoundingClientRect().width;
+    return w > 0 && w < (narrow ? 656 : 640);
+  };
   function dot(film, x, fy, colour) {
     film.g.fillStyle = colour;
     film.g.fillRect(((x + HALF) / (2 * HALF)) * PW - 0.8, 2 + fy * (FILM_H - 5), 1.6, 1.6);
@@ -157,6 +188,11 @@
   function label(text, x, y, align, colour) {
     ctx.fillStyle = colour || COL.label;
     ctx.textAlign = align || "center";
+    if (ctx.textAlign === "center") {
+      // Keep centred labels (which may be translated and longer) inside the canvas.
+      const half = ctx.measureText(text).width / 2;
+      x = Math.max(half + 4, Math.min(W - half - 4, x));
+    }
     ctx.fillText(text, x, y);
   }
 
@@ -181,7 +217,7 @@
   function drawApparatus() {
     ctx.fillStyle = COL.bg;
     ctx.fillRect(0, 0, W, H);
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    font(12);
 
     // Beams
     ctx.lineWidth = 1.2;
@@ -209,10 +245,12 @@
     ctx.fillStyle = "rgba(143,166,255,0.25)"; ctx.strokeStyle = "#8fa6ff";
     ctx.fillRect(-9, -9, 18, 18); ctx.strokeRect(-9, -9, 18, 18);
     ctx.restore();
-    label("CRYSTAL", CRY.x, CRY.y + 30);
-    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
-    label("makes twins", CRY.x, CRY.y + 43, "center", COL.dim);
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    // On the narrow layout the crystal label sits under the pump, clear of the twin's beam.
+    const cryLx = narrow ? 58 : CRY.x;
+    label("CRYSTAL", cryLx, CRY.y + (narrow ? 36 : 30));
+    font(10);
+    label("makes twins", cryLx, CRY.y + (narrow ? 56 : 43), "center", COL.dim);
+    font(12);
 
     // Double slit
     label("DOUBLE SLIT", BAR_X, 32);
@@ -226,13 +264,13 @@
       // Tag markers: H (horizontal arrow) on top slit, V (vertical arrow) on bottom
       ctx.strokeStyle = COL.d1; ctx.fillStyle = COL.d1;
       ctx.beginPath(); ctx.moveTo(BAR_X + 9, sTop); ctx.lineTo(BAR_X + 23, sTop); ctx.stroke();
-      ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+      font(10);
       label("H", BAR_X + 30, sTop + 4, "left", COL.d1);
       ctx.strokeStyle = COL.d2;
       ctx.beginPath(); ctx.moveTo(BAR_X + 16, sBot - 6); ctx.lineTo(BAR_X + 16, sBot + 7); ctx.stroke();
       label("V", BAR_X + 30, sBot + 4, "left", COL.d2);
-      label("tags", BAR_X + 20, SCR_BOT + 26, "center", COL.dim);
-      ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+      label("tags", BAR_X + 20, SCR_BOT + (narrow ? 30 : 26), "center", COL.dim);
+      font(12);
     }
 
     // Screen (side view) with the accumulated glow
@@ -249,16 +287,17 @@
     }
 
     // Twin path: delay coil, polarizer, detectors
-    label("TWIN", 170, IDL_Y - 14, "center");
+    if (narrow) label("TWIN", 150, IDL_Y - 8, "right");
+    else label("TWIN", 170, IDL_Y - 14, "center");
     if (state.delay) {
       ctx.strokeStyle = state.coil > 0 ? `rgba(240,179,90,${0.5 + 0.4 * state.coil})` : "#5c6a86";
       for (let i = 0; i < 5; i++) {
         ctx.beginPath(); ctx.ellipse(COIL_X - 12 + i * 6, IDL_Y, 6, 16, 0, 0, Math.PI * 2); ctx.stroke();
       }
-      label("DELAY LINE", COIL_X, IDL_Y - 26);
-      ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
-      label(`${state.waiting.toLocaleString()} waiting`, COIL_X, IDL_Y + 32, "center", state.waiting ? COL.d2 : COL.dim);
-      ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+      label("DELAY LINE", COIL_X, IDL_Y - (narrow ? 30 : 26));
+      font(10);
+      label(`${state.waiting.toLocaleString()} waiting`, COIL_X, IDL_Y + (narrow ? 40 : 32), "center", state.waiting ? COL.d2 : COL.dim);
+      font(12);
     }
     // Polarizing beam splitter, with a dial showing its axis
     ctx.fillStyle = "rgba(143,166,255,0.18)"; ctx.strokeStyle = "#8fa6ff";
@@ -280,20 +319,28 @@
     drawDetector(D2, "D2", COL.d2, state.flash2);
 
     // Sorter: matches each hit with its twin's detector
+    font(11);
+    const sw = Math.max(72, ctx.measureText("SORTER").width + 16), sh = narrow ? 28 : 24;
+    if (narrow) SORT.x = Math.min(428, W - 10 - sw / 2);
     ctx.strokeStyle = "#2c3a55"; ctx.setLineDash([3, 4]);
     ctx.beginPath();
-    ctx.moveTo(SCR_X, SCR_BOT + 4); ctx.lineTo(SORT.x, SORT.y - 12);
-    ctx.moveTo(D1.x, D1.y - 12); ctx.lineTo(SORT.x, SORT.y + 12);
-    ctx.moveTo(D2.x + 12, D2.y - 6); ctx.quadraticCurveTo(D1.x + 30, D2.y - 10, SORT.x + 30, SORT.y + 8);
-    ctx.moveTo(SORT.x + 36, SORT.y); ctx.lineTo(PX - 8, SORT.y);
+    ctx.moveTo(SCR_X, SCR_BOT + 4); ctx.lineTo(SORT.x, SORT.y - sh / 2);
+    ctx.moveTo(D1.x, D1.y - 12); ctx.lineTo(SORT.x, SORT.y + sh / 2);
+    if (!narrow) {
+      ctx.moveTo(D2.x + 12, D2.y - 6); ctx.quadraticCurveTo(D1.x + 30, D2.y - 10, SORT.x + 30, SORT.y + 8);
+      ctx.moveTo(SORT.x + 36, SORT.y); ctx.lineTo(PX - 8, SORT.y);
+    } else {
+      // Sorted hits feed the panels stacked below.
+      ctx.moveTo(D2.x + 12, D2.y - 6); ctx.quadraticCurveTo(W - 10, D2.y + 2, SORT.x + 30, SORT.y + 14);
+      ctx.moveTo(SORT.x + sw / 2, SORT.y); ctx.lineTo(W - 8, SORT.y); ctx.lineTo(W - 8, PANEL_TOP - 32);
+    }
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "#0b1220"; ctx.strokeStyle = "#3a4760";
-    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(SORT.x - 36, SORT.y - 12, 72, 24, 5) : ctx.rect(SORT.x - 36, SORT.y - 12, 72, 24);
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(SORT.x - sw / 2, SORT.y - sh / 2, sw, sh, 5) : ctx.rect(SORT.x - sw / 2, SORT.y - sh / 2, sw, sh);
     ctx.fill(); ctx.stroke();
-    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
-    label("SORTER", SORT.x, SORT.y + 4, "center", COL.white);
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    label("SORTER", SORT.x, SORT.y + (narrow ? 6 : 4), "center", COL.white);
+    font(12);
   }
 
   function drawDetector(d, name, colour, flash) {
@@ -307,7 +354,7 @@
     }
     ctx.strokeStyle = colour;
     ctx.beginPath(); ctx.arc(d.x, d.y, 10, 0, Math.PI * 2); ctx.stroke();
-    label(name, d.x, d.y + 28, "center", colour);
+    label(name, d.x, d.y + (narrow ? 32 : 28), "center", colour);
   }
 
   function drawPanels() {
@@ -321,7 +368,7 @@
     const bw = PW / BINS;
     panels.forEach((p, i) => {
       const top = PANEL_TOP + i * (PANEL_H + PANEL_GAP);
-      ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+      font(11);
       label(p.title, PX, top - 6, "left", p.colour);
       label(p.n.toLocaleString(), PX + PW, top - 6, "right", COL.label);
       // Film strip
@@ -354,13 +401,13 @@
         ctx.lineWidth = 1;
       }
       if (i > 0 && p.n === 0) {
-        ctx.font = "12px 'IBM Plex Sans', system-ui, sans-serif";
+        font(12, SANS);
         label(state.waiting ? "Twins not measured yet: nothing to sort" : "Waiting for photons…", PX + PW / 2, base - HIST_H / 2, "center", COL.dim);
       }
     });
     // Axis note under the last panel
-    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
-    const yAxis = PANEL_TOP + 3 * (PANEL_H + PANEL_GAP) - 2;
+    font(10);
+    const yAxis = Y_AXIS;
     label("−12 mm", PX, yAxis, "left", COL.dim);
     label("position on screen", PX + PW / 2, yAxis, "center", COL.dim);
     label("+12 mm", PX + PW, yAxis, "right", COL.dim);
@@ -489,6 +536,8 @@
   // Start with a sorted pattern already on screen so the first view tells the story.
   state.rate = Math.max(1, Math.round(Math.pow(200, $("rate").value / 100)));
   $("rateOut").textContent = state.rate;
+  applyLayout(wantNarrow());
+  new ResizeObserver(() => { const n = wantNarrow(); if (n !== narrow) applyLayout(n); }).observe(canvas.parentElement);
   computePdf();
   for (let i = 0; i < 2400; i++) land(sampleX());
   updateReadouts();

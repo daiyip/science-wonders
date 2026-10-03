@@ -1,13 +1,38 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const W = 960, H = 460;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
+  const canvas = $("bench");
+  let W = 960, H = 460, narrow = false, ctx;
 
   // ---------- Layout (logical pixels) ----------
-  const BOX_X = 20, BOX_Y = 46, BW = 540, BH = 380;   // the box
+  // The physics always runs in a 540 x 380 px box. On a wide bench the box is
+  // drawn at that size with the plots beside it; on a narrow bench (phones) the
+  // logical width matches the displayed CSS width, the box is drawn scaled down
+  // by BS and the plots sit underneath, so canvas text keeps its real size.
+  const BW = 540, BH = 380;                             // the box, in physics pixels
   const MID = BW / 2;                                   // partition, in box coordinates
-  const PX = 610, PW = 330;                             // plots
-  const P1 = { y: 46, h: 160 }, P2 = { y: 266, h: 160 };
+  let BOX_X = 20, BOX_Y = 46, BS = 1;                   // where and how big the box is drawn
+  let PX = 610, PW = 330;                               // plots
+  let P1 = { y: 46, h: 160 }, P2 = { y: 266, h: 160 };
+  function layout() {
+    const cw = Math.round(canvas.clientWidth || canvas.parentElement.clientWidth || 960);
+    narrow = cw < 640;
+    if (!narrow) {
+      W = 960; H = 460;
+      BOX_X = 20; BOX_Y = 46; BS = 1;
+      PX = 610; PW = 330;
+      P1 = { y: 46, h: 160 }; P2 = { y: 266, h: 160 };
+    } else {
+      W = Math.max(280, cw);
+      BOX_X = 9; BS = (W - 18) / BW; BOX_Y = 30;
+      PX = 9; PW = W - 18;
+      const ph = Math.round(Math.min(150, Math.max(100, W * 0.36)));
+      P1 = { y: Math.round(BOX_Y + BH * BS + 38), h: ph };
+      P2 = { y: P1.y + ph + 38, h: ph };
+      H = P2.y + ph + 26;
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
   const HIST = 1200;                                    // plot window, in frames (about 20 s)
 
   // ---------- Physics ----------
@@ -177,37 +202,38 @@
 
   function drawBox() {
     // Halves
+    const bw = BW * BS, bh = BH * BS, mid = MID * BS;
     ctx.fillStyle = "#0a101b";
-    ctx.fillRect(BOX_X, BOX_Y, BW, BH);
+    ctx.fillRect(BOX_X, BOX_Y, bw, bh);
     ctx.fillStyle = "rgba(143,166,255,0.035)";
-    ctx.fillRect(BOX_X, BOX_Y, MID, BH);
+    ctx.fillRect(BOX_X, BOX_Y, mid, bh);
     ctx.strokeStyle = "#3a4760"; ctx.lineWidth = 2;
-    ctx.strokeRect(BOX_X - 1, BOX_Y - 1, BW + 2, BH + 2);
+    ctx.strokeRect(BOX_X - 1, BOX_Y - 1, bw + 2, bh + 2);
     ctx.lineWidth = 1;
     // Centre line or partition
     if (state.partition) {
       ctx.fillStyle = "#5c6a86";
-      ctx.fillRect(BOX_X + MID - 2, BOX_Y, 4, BH);
+      ctx.fillRect(BOX_X + mid - 2, BOX_Y, 4, bh);
     } else {
       ctx.strokeStyle = "#26324a";
       ctx.setLineDash([4, 6]);
-      ctx.beginPath(); ctx.moveTo(BOX_X + MID + 0.5, BOX_Y); ctx.lineTo(BOX_X + MID + 0.5, BOX_Y + BH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(BOX_X + mid + 0.5, BOX_Y); ctx.lineTo(BOX_X + mid + 0.5, BOX_Y + bh); ctx.stroke();
       ctx.setLineDash([]);
     }
 
     // Particles
-    const r = Math.max(2, state.sigma / 2 - 0.5);
+    const r = Math.max(narrow ? 1.5 : 2, (state.sigma / 2 - 0.5) * BS);
     ctx.fillStyle = state.dir === 1 ? "#8fa6ff" : "#7fd6c2";
     ctx.beginPath();
     for (let i = 0; i < state.N; i++) {
       if (i === state.nudged) continue;
-      const x = BOX_X + X[i] / SCALE, y = BOX_Y + Y[i] / SCALE;
+      const x = BOX_X + X[i] / SCALE * BS, y = BOX_Y + Y[i] / SCALE * BS;
       ctx.moveTo(x + r, y);
       ctx.arc(x, y, r, 0, Math.PI * 2);
     }
     ctx.fill();
     if (state.nudged >= 0) {
-      const x = BOX_X + X[state.nudged] / SCALE, y = BOX_Y + Y[state.nudged] / SCALE;
+      const x = BOX_X + X[state.nudged] / SCALE * BS, y = BOX_Y + Y[state.nudged] / SCALE * BS;
       ctx.fillStyle = "#f08a5d";
       ctx.beginPath(); ctx.arc(x, y, r + 1.5, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "rgba(240,138,93,0.6)";
@@ -218,27 +244,84 @@
     ctx.font = "12px " + MONO;
     ctx.textAlign = "left";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("LEFT " + state.nLeft, BOX_X, BOX_Y - 12);
+    const ly = BOX_Y - (narrow ? 10 : 12);
+    ctx.fillText("LEFT " + state.nLeft, BOX_X, ly);
+    const lw = ctx.measureText("LEFT " + state.nLeft).width;
     ctx.textAlign = "right";
-    ctx.fillText("RIGHT " + (state.N - state.nLeft), BOX_X + BW, BOX_Y - 12);
+    ctx.fillText("RIGHT " + (state.N - state.nLeft), BOX_X + bw, ly);
+    const rw = ctx.measureText("RIGHT " + (state.N - state.nLeft)).width;
     ctx.textAlign = "center";
     ctx.fillStyle = state.dir === 1 ? "#c9d4e3" : "#7fd6c2";
     ctx.font = "600 13px " + MONO;
-    ctx.fillText(state.dir === 1 ? "TIME ▶ FORWARD" : "◀ TIME REVERSED", BOX_X + MID, BOX_Y - 12);
+    const room = narrow ? bw - 2 * Math.max(lw, rw) - 16 : bw;
+    fitText(state.dir === 1 ? "TIME ▶ FORWARD" : "◀ TIME REVERSED", BOX_X + mid, ly, room);
 
     if (state.message) {
-      ctx.fillStyle = "rgba(5,8,14,0.82)";
-      const mw = 420, mh = 58;
-      ctx.fillRect(BOX_X + MID - mw / 2, BOX_Y + BH / 2 - mh / 2, mw, mh);
-      ctx.strokeStyle = state.message.good ? "#4cc48d" : "#f08a5d";
-      ctx.strokeRect(BOX_X + MID - mw / 2 + 0.5, BOX_Y + BH / 2 - mh / 2 + 0.5, mw - 1, mh - 1);
-      ctx.fillStyle = "#e4eaf2";
-      ctx.font = "600 17px " + SANS;
-      ctx.fillText(state.message.a, BOX_X + MID, BOX_Y + BH / 2 - 4);
-      ctx.font = "14px " + SANS;
-      ctx.fillStyle = "#c9d4e3";
-      ctx.fillText(state.message.b, BOX_X + MID, BOX_Y + BH / 2 + 17);
+      const cx = BOX_X + mid, cy = BOX_Y + bh / 2;
+      if (!narrow) {
+        ctx.fillStyle = "rgba(5,8,14,0.82)";
+        const mw = 420, mh = 58;
+        ctx.fillRect(cx - mw / 2, cy - mh / 2, mw, mh);
+        ctx.strokeStyle = state.message.good ? "#4cc48d" : "#f08a5d";
+        ctx.strokeRect(cx - mw / 2 + 0.5, cy - mh / 2 + 0.5, mw - 1, mh - 1);
+        ctx.fillStyle = "#e4eaf2";
+        ctx.font = "600 17px " + SANS;
+        ctx.fillText(state.message.a, cx, cy - 4);
+        ctx.font = "14px " + SANS;
+        ctx.fillStyle = "#c9d4e3";
+        ctx.fillText(state.message.b, cx, cy + 17);
+      } else {
+        // Narrow: wrap both lines and size the panel to fit them.
+        const mw = bw - 16, tw = mw - 20;
+        ctx.font = "600 14px " + SANS;
+        const la = wrapLines(state.message.a, tw);
+        ctx.font = "12px " + SANS;
+        const lb = wrapLines(state.message.b, tw);
+        const mh = la.length * 18 + lb.length * 16 + 18;
+        const top = cy - mh / 2;
+        ctx.fillStyle = "rgba(5,8,14,0.85)";
+        ctx.fillRect(cx - mw / 2, top, mw, mh);
+        ctx.strokeStyle = state.message.good ? "#4cc48d" : "#f08a5d";
+        ctx.strokeRect(cx - mw / 2 + 0.5, top + 0.5, mw - 1, mh - 1);
+        let y = top + 22;
+        ctx.fillStyle = "#e4eaf2";
+        ctx.font = "600 14px " + SANS;
+        for (const l of la) { ctx.fillText(l, cx, y); y += 18; }
+        ctx.fillStyle = "#c9d4e3";
+        ctx.font = "12px " + SANS;
+        for (const l of lb) { ctx.fillText(l, cx, y); y += 16; }
+      }
     }
+  }
+
+  // Shrink a one-line label (down to 10 px) only if it would not fit.
+  function fitText(text, x, y, maxW) {
+    const base = ctx.font;
+    const m = /(\d+(?:\.\d+)?)px/.exec(base);
+    let size = m ? +m[1] : 12;
+    while (size > 10 && ctx.measureText(text).width > maxW) {
+      size -= 0.5;
+      ctx.font = base.replace(/\d+(?:\.\d+)?px/, size + "px");
+    }
+    ctx.fillText(text, x, y);
+    ctx.font = base;
+  }
+  // Split a sentence into lines that fit maxW. The whole sentence is translated
+  // first; Chinese wraps per character.
+  function wrapLines(text, maxW) {
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    const lines = [];
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; }
+      else line = t;
+    }
+    if (line) lines.push(line);
+    return lines;
   }
 
   function drawPlot(p, title, value, maxV, band, refLabel, refV, colour) {
@@ -249,7 +332,7 @@
     ctx.font = "12px " + MONO;
     ctx.textAlign = "left";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText(title, x0, y0 - 12);
+    ctx.fillText(title, x0, y0 - (narrow ? 9 : 12));
     // Typical fluctuation band
     if (band) {
       ctx.fillStyle = "rgba(143,166,255,0.10)";
@@ -444,6 +527,18 @@
       : "The wall is out again. Note that changing the wall alters the history, so a later reversal may not land exactly on the start.");
     updateReadouts();
   });
+
+  // Re-layout when the bench changes width; the simulation state is kept.
+  let lastCW = 0;
+  function onResize() {
+    const cw = Math.round(canvas.parentElement.clientWidth);
+    if (cw === lastCW) return;
+    lastCW = cw;
+    layout();
+    draw();
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(canvas.parentElement);
+  else window.addEventListener("resize", onResize);
 
   // ---------- Start ----------
   state.N = COUNTS[+$("count").value];

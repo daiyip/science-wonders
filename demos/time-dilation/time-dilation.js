@@ -1,7 +1,41 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const W = 960, H = 560;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
+  const canvas = $("bench");
+  // Wide layout: 960 x 560 with panels side by side. Narrow (phones): 480 wide,
+  // panels stacked, larger type so text stays readable once scaled down.
+  let W = 960, H = 560, NARROW = false, ctx;
+  const PANEL_H = { clocks: 320, dials: 300, trip: 320, st: 290 };
+  function layout() {
+    const cssW = canvas.parentElement.clientWidth || 960;
+    NARROW = cssW < 640;
+    W = NARROW ? 480 : 960;
+    H = NARROW ? PANEL_H.clocks + PANEL_H.dials + PANEL_H.trip + PANEL_H.st : 560;
+    canvas.setAttribute("width", W); canvas.setAttribute("height", H);
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  // Font size in logical px: unchanged on wide, scaled up (min 17) on narrow.
+  const fs = (px) => (NARROW ? Math.max(17, Math.round(px * 1.42)) : px) + "px ";
+  const tr = (t) => (window.I18N ? I18N.t(t) : t);
+  // Draw text, squeezing it horizontally only if a translation runs long.
+  function fit(text, x, y, maxW) {
+    const t = tr(text);
+    if (ctx.measureText(t).width > maxW) ctx.fillText(t, x, y, maxW); else ctx.fillText(t, x, y);
+  }
+  // Wrap a sentence (translated whole first; Chinese wraps per character).
+  function wrap(text, x, y, maxW, lh) {
+    text = tr(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + (cjk ? "" : " ") + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) ctx.fillText(line, x, y);
+    return y;
+  }
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 
@@ -59,7 +93,8 @@
 
   // ---------- Light clocks ----------
   const C_PX = 200;          // light speed on screen, px per second
-  const MIR_TOP = 72, MIR_BOT = 222, LC = MIR_BOT - MIR_TOP;
+  let MIR_TOP = 72, MIR_BOT = 222;
+  const LC = MIR_BOT - MIR_TOP;
   const REST_X = 82;
   const LANE_X0 = 196, LANE_X1 = 446;
 
@@ -97,13 +132,22 @@
     const restPeriod = 2 * LC / vyRest, movePeriod = 2 * LC / vyMove;
     const LIGHT = "255,226,140";
 
-    ctx.font = "12px " + MONO;
+    ctx.font = fs(12) + MONO;
     ctx.textAlign = "center";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("EARTH CLOCK", REST_X, 30);
-    ctx.fillText("AT REST", REST_X, 46);
-    ctx.fillText("SHIP CLOCK, SEEN FROM EARTH", (LANE_X0 + LANE_X1) / 2, 30);
-    ctx.fillText("MOVING AT " + fmtBeta(state.beta).toUpperCase(), (LANE_X0 + LANE_X1) / 2, 46);
+    if (NARROW) {
+      // Titles wrap within their column; the mirrors sit lower to leave room.
+      MIR_TOP = 100; MIR_BOT = MIR_TOP + LC;
+      wrap("AT REST", REST_X, wrap("EARTH CLOCK", REST_X, 24, 150, 22) + 22, 150, 22);
+      wrap("MOVING AT " + fmtBeta(state.beta).toUpperCase(), (LANE_X0 + LANE_X1) / 2,
+        wrap("SHIP CLOCK, SEEN FROM EARTH", (LANE_X0 + LANE_X1) / 2, 24, 300, 22) + 22, 300, 22);
+    } else {
+      MIR_TOP = 72; MIR_BOT = MIR_TOP + LC;
+      ctx.fillText("EARTH CLOCK", REST_X, 30);
+      ctx.fillText("AT REST", REST_X, 46);
+      ctx.fillText("SHIP CLOCK, SEEN FROM EARTH", (LANE_X0 + LANE_X1) / 2, 30);
+      ctx.fillText("MOVING AT " + fmtBeta(state.beta).toUpperCase(), (LANE_X0 + LANE_X1) / 2, 46);
+    }
 
     // Lane for the moving clock
     ctx.strokeStyle = "#1a2436";
@@ -137,25 +181,31 @@
 
     const mx = movingX(s);
     ctx.save();
-    ctx.beginPath(); ctx.rect(LANE_X0 - 30, 50, LANE_X1 - LANE_X0 + 60, 200); ctx.clip();
+    ctx.beginPath(); ctx.rect(LANE_X0 - 30, MIR_TOP - 22, LANE_X1 - LANE_X0 + 60, LC + 50); ctx.clip();
     mirrors(mx);
     ctx.restore();
     glowDot(mx, bounceY(s, vyMove), 3, LIGHT);
 
     // Tick counters
     const ticksRest = Math.floor(s / restPeriod), ticksMove = Math.floor(s / movePeriod);
-    ctx.font = "12px " + MONO;
+    ctx.font = fs(12) + MONO;
     ctx.fillStyle = "#c9d4e3";
-    ctx.fillText(ticksRest + (ticksRest === 1 ? " tick" : " ticks"), REST_X, 252);
-    ctx.fillText(ticksMove + (ticksMove === 1 ? " tick" : " ticks") + " · 1 tick per " + fmtGamma(state.gamma) + " Earth ticks", (LANE_X0 + LANE_X1) / 2, 252);
+    ctx.fillText(ticksRest + (ticksRest === 1 ? " tick" : " ticks"), REST_X, MIR_BOT + 30);
+    if (NARROW) {
+      ctx.fillText(ticksMove + (ticksMove === 1 ? " tick" : " ticks"), (LANE_X0 + LANE_X1) / 2, MIR_BOT + 30);
+      ctx.fillStyle = "#97a6b9";
+      fit("1 tick per " + fmtGamma(state.gamma) + " Earth ticks", W / 2, MIR_BOT + 56, W - 20);
+    } else {
+      ctx.fillText(ticksMove + (ticksMove === 1 ? " tick" : " ticks") + " · 1 tick per " + fmtGamma(state.gamma) + " Earth ticks", (LANE_X0 + LANE_X1) / 2, 252);
+    }
   }
 
   // ---------- Twins' dials ----------
   function drawDial(cx, cy, r, title, elapsed, colour) {
-    ctx.font = "12px " + MONO;
+    ctx.font = fs(12) + MONO;
     ctx.textAlign = "center";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText(title, cx, 30);
+    fit(title, cx, 30, NARROW ? 216 : 210);
 
     ctx.fillStyle = "#0b1220";
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
@@ -186,26 +236,27 @@
     ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill();
 
     ctx.fillStyle = "#e9eef7";
-    ctx.font = "500 16px " + MONO;
-    ctx.fillText("+" + fmtYears(elapsed, false), cx, cy + r + 24);
+    ctx.font = "500 " + fs(16) + MONO;
+    ctx.fillText("+" + fmtYears(elapsed, false), cx, cy + r + (NARROW ? 30 : 24));
     const age = START_AGE + elapsed;
-    ctx.font = "12px " + SANS;
+    ctx.font = fs(12) + SANS;
     ctx.fillStyle = "#97a6b9";
-    ctx.fillText(age < 125 ? "now aged " + age.toFixed(1) : "would be " + Math.round(age).toLocaleString("en-US"), cx, cy + r + 42);
+    fit(age < 125 ? "now aged " + age.toFixed(1) : "would be " + Math.round(age).toLocaleString("en-US"), cx, cy + r + (NARROW ? 54 : 42), 210);
   }
 
   // ---------- Trip map ----------
-  const MAP_X0 = 70, MAP_X1 = 540, MAP_Y = 360;
+  let MAP_X0 = 70, MAP_X1 = 540, MAP_Y = 360;
   function drawTrip() {
+    MAP_X1 = NARROW ? 420 : 540; MAP_Y = NARROW ? 384 : 360;
     const t = state.p * state.T;
     const tShip = t / state.gamma;
     const x = shipX(t);
     const outbound = t < state.T / 2;
 
-    ctx.font = "12px " + MONO;
+    ctx.font = fs(12) + MONO;
     ctx.textAlign = "left";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("THE ROUND TRIP, EARTH'S VIEW", 20, 306);
+    fit("THE ROUND TRIP, EARTH'S VIEW", 20, 306, NARROW ? W - 40 : 570);
 
     // Track
     ctx.strokeStyle = "#26324a";
@@ -225,10 +276,12 @@
     ctx.textAlign = "center";
     ctx.fillText("Earth", MAP_X0, MAP_Y - 22);
     ctx.textAlign = "right";
-    ctx.fillText(DESTS[state.dest].name, 594, MAP_Y - 26);
+    if (NARROW) fit(DESTS[state.dest].name, W - 16, MAP_Y - 50, W - 40);
+    else ctx.fillText(DESTS[state.dest].name, 594, MAP_Y - 26);
     ctx.textAlign = "center";
     ctx.fillStyle = "#97a6b9";
-    ctx.fillText(state.D.toLocaleString("en-US") + " light-years", (MAP_X0 + MAP_X1) / 2, MAP_Y - 22);
+    if (NARROW) fit(state.D.toLocaleString("en-US") + " light-years", (MAP_X0 + MAP_X1) / 2 + 20, MAP_Y - 22, 230);
+    else ctx.fillText(state.D.toLocaleString("en-US") + " light-years", (MAP_X0 + MAP_X1) / 2, MAP_Y - 22);
 
     // Contracted distance as measured on board
     const contracted = (MAP_X1 - MAP_X0) / state.gamma;
@@ -240,7 +293,7 @@
     ctx.stroke();
     ctx.fillStyle = "#f0b35a";
     ctx.textAlign = "left";
-    ctx.fillText("on board it measures " + fmtLy(state.D / state.gamma), MAP_X0, MAP_Y + 46);
+    fit("on board it measures " + fmtLy(state.D / state.gamma), MAP_X0, MAP_Y + (NARROW ? 50 : 46), W - MAP_X0 - 16);
 
     // Ship
     const sx = MAP_X0 + (MAP_X1 - MAP_X0) * (x / state.D);
@@ -263,23 +316,24 @@
     else if (state.p >= 1) phase = "Home again. The traveller is " + fmtYears(t - tShip, true) + " younger than the twin who stayed.";
     else phase = (outbound ? "Outbound" : "Coming home") + " · Earth year " + t.toFixed(t < 100 ? 1 : 0) + " · ship year " + tShip.toFixed(tShip < 100 ? 1 : 0);
     ctx.fillStyle = state.p >= 1 ? "#4cc48d" : "#c9d4e3";
-    ctx.font = (state.p >= 1 ? "600 " : "") + "13px " + SANS;
-    ctx.fillText(phase, 20, 440);
+    ctx.font = (state.p >= 1 ? "600 " : "") + fs(13) + SANS;
+    if (NARROW) wrap(phase, 20, 462, W - 40, 22);
+    else ctx.fillText(phase, 20, 440);
 
     // Elapsed bars
-    const BX = 20, BW = 560;
+    const BX = 20, BW = NARROW ? W - 40 : 560;
     const rows = [
-      { y: 470, label: "EARTH TWIN", v: t, col: "143,166,255" },
-      { y: 512, label: "TRAVELLER", v: tShip, col: "240,179,90" },
+      { y: NARROW ? 524 : 470, label: "EARTH TWIN", v: t, col: "143,166,255" },
+      { y: NARROW ? 568 : 512, label: "TRAVELLER", v: tShip, col: "240,179,90" },
     ];
     for (const r of rows) {
-      ctx.font = "11px " + MONO;
+      ctx.font = fs(11) + MONO;
       ctx.fillStyle = "#7f8ea6";
       ctx.textAlign = "left";
       ctx.fillText(r.label, BX, r.y - 6);
       ctx.textAlign = "right";
       ctx.fillStyle = "#c9d4e3";
-      ctx.fillText(fmtYears(r.v, true) + " lived", BX + BW, r.y - 6);
+      fit(fmtYears(r.v, true) + " lived", BX + BW, r.y - 6, BW - ctx.measureText(tr(r.label)).width - 16);
       ctx.fillStyle = "#121b2b";
       ctx.fillRect(BX, r.y, BW, 10);
       ctx.fillStyle = `rgb(${r.col})`;
@@ -289,12 +343,12 @@
 
   // ---------- Spacetime diagram ----------
   function drawSpacetime() {
-    const X0 = 640, X1 = 940, Y0 = 318, Y1 = 520;
+    const X0 = NARROW ? 20 : 640, X1 = NARROW ? W - 20 : 940, Y0 = NARROW ? 336 : 318, Y1 = NARROW ? 540 : 520;
     const t = state.p * state.T;
-    ctx.font = "12px " + MONO;
+    ctx.font = fs(12) + MONO;
     ctx.textAlign = "left";
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("SPACETIME DIAGRAM", X0, 306);
+    fit("SPACETIME DIAGRAM", X0, 306, X1 - X0);
 
     const ox = X0 + 28, oy = Y1;
     const s = (Y1 - Y0) / state.T;            // px per year and per light-year (light at 45°)
@@ -304,10 +358,11 @@
     ctx.strokeStyle = "#26324a";
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, Y0 - 4); ctx.moveTo(ox, oy); ctx.lineTo(X1, oy); ctx.stroke();
     ctx.fillStyle = "#56647c";
-    ctx.font = "10px " + MONO;
+    ctx.font = fs(10) + MONO;
     ctx.textAlign = "left";
-    ctx.fillText("distance →", X1 - 70, oy + 14);
-    ctx.save(); ctx.translate(ox - 10, oy); ctx.rotate(-Math.PI / 2); ctx.fillText("Earth time →", 0, 0); ctx.restore();
+    if (NARROW) { ctx.textAlign = "right"; ctx.fillText("distance →", X1, oy + 22); ctx.textAlign = "left"; }
+    else ctx.fillText("distance →", X1 - 70, oy + 14);
+    ctx.save(); ctx.translate(ox - 10, oy); ctx.rotate(-Math.PI / 2); fit("Earth time →", 0, 0, Y1 - Y0); ctx.restore();
 
     // Light ray from launch
     ctx.strokeStyle = "rgba(255,226,140,0.35)";
@@ -316,7 +371,7 @@
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(px(lr), py(lr)); ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(255,226,140,0.6)";
-    ctx.fillText("light", px(lr) - 30, py(lr) + 4);
+    ctx.fillText("light", px(lr) - (NARROW ? 46 : 30), py(lr) + 4);
 
     // Worldlines up to now
     ctx.lineWidth = 2;
@@ -349,13 +404,13 @@
       ctx.setLineDash([]);
     }
 
-    ctx.font = "10px " + MONO;
+    ctx.font = fs(10) + MONO;
     ctx.fillStyle = "#97a6b9";
     ctx.textAlign = "left";
     const stepLabel = step >= 1 ? step.toLocaleString("en-US") + (step === 1 ? " year" : " years") : fmtYears(step, true);
     ctx.textAlign = "right";
-    ctx.fillText("dots: every " + stepLabel, X1, oy - 30);
-    ctx.fillText("of each twin's own time", X1, oy - 17);
+    ctx.fillText("dots: every " + stepLabel, X1, oy - (NARROW ? 46 : 30));
+    ctx.fillText("of each twin's own time", X1, oy - (NARROW ? 24 : 17));
   }
 
   // ---------- Frame ----------
@@ -363,15 +418,31 @@
     ctx.fillStyle = "#05080e";
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "#121b2b";
+    const t = state.p * state.T;
+    if (NARROW) {
+      const yD = PANEL_H.clocks, yT = yD + PANEL_H.dials, yS = yT + PANEL_H.trip;
+      for (const y of [yD, yT, yS]) ctx.fillRect(20, y - 6, W - 40, 1);
+      drawLightClocks();
+      ctx.save(); ctx.translate(0, yD);
+      drawDial(130, 128, 70, "EARTH TWIN", t, "143,166,255");
+      drawDial(350, 128, 70, "TRAVELLING TWIN", t / state.gamma, "240,179,90");
+      ctx.font = fs(11) + SANS;
+      ctx.fillStyle = "#7f8ea6";
+      ctx.textAlign = "center";
+      fit("one full turn = the whole trip in Earth time", W / 2, 284, W - 20);
+      ctx.restore();
+      ctx.save(); ctx.translate(0, yT - 280); drawTrip(); ctx.restore();
+      ctx.save(); ctx.translate(0, yS - 280); drawSpacetime(); ctx.restore();
+      return;
+    }
     ctx.fillRect(480, 20, 1, 240);
     ctx.fillRect(20, 280, W - 40, 1);
     ctx.fillRect(610, 296, 1, 240);
 
     drawLightClocks();
-    const t = state.p * state.T;
     drawDial(605, 128, 70, "EARTH TWIN", t, "143,166,255");
     drawDial(825, 128, 70, "TRAVELLING TWIN", t / state.gamma, "240,179,90");
-    ctx.font = "11px " + SANS;
+    ctx.font = fs(11) + SANS;
     ctx.fillStyle = "#56647c";
     ctx.textAlign = "center";
     ctx.fillText("one full turn = the whole trip in Earth time", 715, 266);
@@ -442,6 +513,17 @@
   $("launch").addEventListener("click", launch);
   $("pause").addEventListener("click", () => { state.playing = !state.playing; setPlayButton(); });
   $("trail").addEventListener("change", (e) => { state.trail = e.target.checked; if (Lab.reducedMotion) draw(); });
+
+  // Switch layouts when the bench crosses the phone breakpoint; keep the simulation state.
+  let rzTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => {
+      const was = NARROW;
+      const cssW = canvas.parentElement.clientWidth || 960;
+      if ((cssW < 640) !== was) { layout(); draw(); }
+    }, 120);
+  }).observe(canvas.parentElement);
 
   // ---------- Start ----------
   state.beta = Math.tanh(+$("speed").value);

@@ -35,6 +35,10 @@
     max-width: 80ch;
   }
   [hidden] { display: none !important; }
+  @media (max-width: 640px) {
+    .controls button { min-height: 40px; }
+    .controls input[type="range"] { height: 32px; }
+  }
 </style>
 </head>
 <body>
@@ -128,6 +132,7 @@
       <h2>What you're seeing</h2>
       <p>A non-rotating black hole of mass M sits at the centre. The black disc is its event horizon at the Schwarzschild radius r<sub>s</sub> = 2GM/c². The funnel is Flamm's paraboloid, the standard embedding diagram of how space around the hole is curved, with its depth scaled to fit.</p>
       <p>Einstein's particles follow the exact Schwarzschild orbit equation, d²u/dφ² + u = GM/h² + 3GMu²/c² with u = 1/r. The last term is the whole difference from Newton. Light obeys the same equation without the GM/h² term.</p>
+      <p data-depth="deep">The funnel's height is z = 2√(r<sub>s</sub>(r − r<sub>s</sub>)). Its slope shows how much more radial distance there is between two circles than flat space would have: a ruler laid outward measures dr / √(1 − r<sub>s</sub>/r). The sheet shows only the curvature of space at one instant. For slow particles the curving of time matters more, and that part cannot be drawn on a sheet.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -141,6 +146,18 @@
       <h2>Why it's strange</h2>
       <p>Nothing pulls on the planets. Each one moves as straight as it can through curved spacetime, and the curve shows up as an orbit. Close to the hole the geometry gets so steep that no stable orbit exists below 3 r<sub>s</sub>, and at 1.5 r<sub>s</sub> even light, the fastest thing there is, can only circle.</p>
       <p class="muted">Einstein explained Mercury's orbit with this in 1915. Eddington's eclipse expedition measured starlight bending by the Sun in 1919, twice the amount a Newtonian calculation gives.</p>
+      <p data-depth="deep">For Mercury the extra turn is tiny: 43 arcseconds per century, out of about 575 in total, the rest coming from the pull of the other planets. Starlight grazing the Sun bends by 1.75 arcseconds; the Newtonian figure is 0.87.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">d²<i>r</i>/dτ² =<br>−<i>GM</i>/<i>r</i>² + <i>h</i>²/<i>r</i>³ − 3<i>GMh</i>²/(<i>c</i>²<i>r</i>⁴)</div>
+      <p>The radial motion of a particle around a non-rotating mass, with τ the particle's own time and <i>h</i> = <i>r</i>² dφ/dτ its angular momentum per unit mass, which stays constant. The first two terms are Newton's gravity and the centrifugal term; the third is Einstein's correction, which only matters within a few tens of <i>r</i><sub>s</sub>. The simulation writes this as an acceleration −(<i>GM</i>/<i>r</i>³)(1 + 3<i>h</i>²/(<i>c</i>²<i>r</i>²)) pointing at the centre and integrates it with a fourth-order Runge-Kutta step that shrinks close to the hole, in units where <i>G</i> = <i>c</i> = <i>M</i> = 1. Newton's particles use the same integrator without the extra factor.</p>
+      <div class="eq" data-depth="deep" translate="no">Δφ ≈ 6π<i>G</i>²<i>M</i>²/(<i>c</i>²<i>h</i>²)<br>= 6π<i>GM</i>/(<i>c</i>²<i>a</i>(1 − <i>e</i>²))</div>
+      <p>The weak-field shift of the orbit per lap, in radians, for an orbit of semi-major axis <i>a</i> and eccentricity <i>e</i>. The "Weak-field formula" readout uses the first form. The "Einstein" readout is measured instead: the code records the direction of each closest approach and reports how far past a full turn the next one comes. Far from the hole the two agree; close in, the exact orbit turns further.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>r</i><sub>s</sub> = 2<i>GM</i>/<i>c</i>²<br><i>r</i><sub>isco</sub> = 3<i>r</i><sub>s</sub><br><i>r</i><sub>ph</sub> = 1.5<i>r</i><sub>s</sub><br><i>b</i><sub>c</sub> = (3√3/2) <i>r</i><sub>s</sub> ≈ 2.598 <i>r</i><sub>s</sub></div>
+      <p>The horizon, the innermost stable circular orbit, the photon sphere where light can circle, and the critical impact parameter below which incoming light is captured. A circular orbit at radius <i>r</i> needs <i>v</i> = √(<i>GM</i>/(<i>r</i> − 3<i>GM</i>/<i>c</i>²)) in the simulation's variables, against √(<i>GM</i>/<i>r</i>) for Newton; the Circular and Last stable presets launch at exactly these speeds, the latter nudged 0.2% slow to show the orbit is only marginally stable.</p>
+      <div class="eq" data-depth="deep" translate="no">d²<i>u</i>/dφ² + <i>u</i> = 3<i>GMu</i>²/<i>c</i>²<br>α ≈ 4<i>GM</i>/(<i>c</i>²<i>b</i>) = 2<i>r</i><sub>s</sub>/<i>b</i></div>
+      <p>The path of light, with <i>u</i> = 1/<i>r</i>, and the bending angle α of a ray passing at impact parameter <i>b</i> far from the hole. Newton, treating light as a particle moving at <i>c</i>, gets half of α. The simulation traces each ray with the same Runge-Kutta integrator, starting it far to the left, and adds up how much its direction turns; that total is the "Bending" readout, which grows far beyond 4<i>GM</i>/(<i>c</i>²<i>b</i>) as <i>b</i> approaches <i>b</i><sub>c</sub>.</p>
     </section>
   </div>
 

@@ -37,12 +37,39 @@
     if (km >= 1e6) return Math.round(km / 1e6).toLocaleString() + " million km";
     return Math.round(km).toLocaleString() + " km";
   }
-  function label(ctx, text, x, y, align, color, size, font) {
-    ctx.font = (size || 12) + "px " + (font || MONO);
+  // Phone layouts: each canvas switches to a narrower logical width with larger type
+  // when it is shown narrow, so text stays readable once scaled down.
+  let NM = false, NR = false, NV = false;
+  let ctx, rctx, vctx;
+  function sz(c, px) {
+    if (c === ctx && NM) return Math.max(17, Math.round(px * 1.42));
+    if ((c === rctx && NR) || (c === vctx && NV)) return Math.max(14, Math.round(px * 1.3));
+    return px;
+  }
+  const tr = (t) => (window.I18N ? I18N.t(t) : t);
+  // maxW: squeeze horizontally only if a translation would run past it.
+  function label(ctx, text, x, y, align, color, size, font, maxW) {
+    ctx.font = sz(ctx, size || 12) + "px " + (font || MONO);
     ctx.fillStyle = color || "#7f8ea6";
     ctx.textAlign = align || "left";
-    ctx.fillText(text, x, y);
+    const t = tr(text);
+    if (maxW && ctx.measureText(t).width > maxW) ctx.fillText(t, x, y, maxW); else ctx.fillText(t, x, y);
   }
+  // Split a sentence into lines (translated whole first; Chinese breaks per character).
+  function lines(c, text, maxW) {
+    text = tr(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const out = [];
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + (cjk ? "" : " ") + w : w;
+      if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+    }
+    if (line) out.push(line);
+    return out;
+  }
+  const narrowFor = (canvas, limit) => (canvas.parentElement.clientWidth || 960) < limit;
   function glowDot(ctx, x, y, r, rgb, a) {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, `rgba(${rgb},${a})`);
@@ -54,10 +81,16 @@
   // =====================================================================
   // Main bench: a light pulse from Earth
   // =====================================================================
-  const W = 960, H = 430;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
-  const RUL = { x0: 70, x1: 900, y: 74, l0: -0.5, l1: 9 };   // log10 seconds
-  const EX = 90, TX = 880, TY = 250;
+  let W = 960, H = 430;
+  let RUL, EX, TX, TY;
+  function layoutMain() {
+    NM = narrowFor($("bench"), 640);
+    if (NM) { W = 480; H = 486; RUL = { x0: 40, x1: 450, y: 96, l0: -0.5, l1: 9 }; EX = 40; TX = 440; TY = 336; }
+    else { W = 960; H = 430; RUL = { x0: 70, x1: 900, y: 74, l0: -0.5, l1: 9 }; EX = 90; TX = 880; TY = 250; }
+    $("bench").setAttribute("width", W); $("bench").setAttribute("height", H);
+    ctx = Lab.setupCanvas($("bench"), W, H);
+  }
+  layoutMain();
 
   const state = {
     dest: "moon", speed: 1, elapsed: 0, hold: 0, flash: 0,
@@ -73,22 +106,25 @@
     ctx.fillRect(0, 0, W, H);
     drawRuler();
     ctx.strokeStyle = "#1a2436";
-    ctx.beginPath(); ctx.moveTo(14, 140.5); ctx.lineTo(W - 14, 140.5); ctx.stroke();
+    const dv = NM ? 160.5 : 140.5;
+    ctx.beginPath(); ctx.moveTo(14, dv); ctx.lineTo(W - 14, dv); ctx.stroke();
     drawTrack();
   }
 
   function drawRuler() {
-    label(ctx, "HOW LONG LIGHT TAKES (LOG SCALE)", 18, 24);
+    label(ctx, "HOW LONG LIGHT TAKES (LOG SCALE)", 18, NM ? 28 : 24, "left", null, 12, MONO, W - 36);
     ctx.strokeStyle = "#26324a";
     ctx.beginPath(); ctx.moveTo(RUL.x0, RUL.y + 0.5); ctx.lineTo(RUL.x1, RUL.y + 0.5); ctx.stroke();
-    ctx.font = "10px " + MONO;
-    ctx.fillStyle = "#56647c";
+    ctx.font = sz(ctx, 10) + "px " + MONO;
+    ctx.fillStyle = NM ? "#7f8ea6" : "#56647c";
     ctx.textAlign = "center";
-    for (const [s, t] of [[1, "1 s"], [60, "1 min"], [3600, "1 h"], [86400, "1 day"], [YEAR / 12, "1 month"], [YEAR, "1 yr"], [10 * YEAR, "10 yr"]]) {
+    // On phones the tick labels alternate between two rows so they don't collide.
+    [[1, "1 s"], [60, "1 min"], [3600, "1 h"], [86400, "1 day"], [YEAR / 12, "1 month"], [YEAR, "1 yr"], [10 * YEAR, "10 yr"]].forEach(([s, t], i) => {
       const x = rulX(s);
       ctx.fillRect(x, RUL.y, 1, 6);
-      ctx.fillText(t, x, RUL.y + 19);
-    }
+      if (NM && i % 2) ctx.fillRect(x, RUL.y + 6, 1, 18);
+      ctx.fillText(t, x, RUL.y + (NM ? (i % 2 ? 42 : 22) : 19));
+    });
     // Mars range
     const m0 = rulX(55e6 / C_KM), m1 = rulX(401e6 / C_KM);
     ctx.fillStyle = "rgba(224,122,74,0.35)";
@@ -105,7 +141,7 @@
       const active = dest().name.startsWith(n);
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.arc(x, RUL.y - 2, active ? 4.5 : 3, 0, Math.PI * 2); ctx.fill();
-      label(ctx, n, x, RUL.y - (i % 2 ? 26 : 12), "center", active ? "#e9eef7" : "#7f8ea6", 11);
+      label(ctx, n, x, RUL.y - (NM ? (i % 2 ? 36 : 14) : (i % 2 ? 26 : 12)), "center", active ? "#e9eef7" : "#7f8ea6", 11);
     });
     // The pulse's progress on the ruler
     if (state.elapsed > 0) {
@@ -119,12 +155,23 @@
   function drawTrack() {
     const d = dest();
     const pxKm = (TX - EX) / d.km;
-    label(ctx, "EARTH TO " + d.name.toUpperCase() + ", TO SCALE", 18, 166);
+    label(ctx, "EARTH TO " + d.name.toUpperCase() + ", TO SCALE", 18, NM ? 190 : 166, "left", null, 12, MONO, W - 36);
     // Clock
     const lt = lightTime();
     const shown = Math.min(state.elapsed, totalTime());
-    label(ctx, fmtDur(shown), W / 2, 196, "center", "#e9eef7", 28, SANS);
-    label(ctx, "of " + fmtDur(totalTime()) + (state.roundTrip ? " there and back" : " one way") + (state.speed > 1 ? " · playing " + speedName() : " · real time"), W / 2, 216, "center", "#7f8ea6", 12);
+    // Translated in two halves, so every duration and speed combination is covered.
+    const sub = tr("of " + fmtDur(totalTime()) + (state.roundTrip ? " there and back" : " one way")) + " · " +
+      (state.speed > 1 ? tr("playing " + speedName()) : tr("real time"));
+    if (NM) {
+      // Left-aligned and wrapped, leaving room on the right for the Mars inset.
+      const mw = state.dest === "mars" ? W - 160 : W - 36;
+      label(ctx, fmtDur(shown), 18, 230, "left", "#e9eef7", 24, SANS);
+      ctx.font = sz(ctx, 12) + "px " + MONO;
+      lines(ctx, sub, mw).slice(0, 3).forEach((l, i) => ctx.fillText(l, 18, 256 + i * 21));
+    } else {
+      label(ctx, fmtDur(shown), W / 2, 196, "center", "#e9eef7", 28, SANS);
+      label(ctx, sub, W / 2, 216, "center", "#7f8ea6", 12);
+    }
     // Path
     ctx.strokeStyle = "#1a2436";
     ctx.setLineDash([3, 5]);
@@ -139,14 +186,14 @@
       if (x - EX < 14) continue;
       ctx.fillStyle = "#56647c";
       ctx.fillRect(x, TY - 6, 1, 12);
-      if (x - lastX > 60) { label(ctx, lm.name, x, TY + 22, "center", "#56647c", 10); lastX = x; }
+      if (x - lastX > (NM ? 80 : 60) && (!NM || TX - x > 70)) { label(ctx, lm.name, x, TY + (NM ? 24 : 22), "center", NM ? "#7f8ea6" : "#56647c", 10); lastX = x; }
     }
     // Earth
     const rE = Math.max(4, 6371 * pxKm);
     glowDot(ctx, EX, TY, rE * 2.2, "90,150,255", 0.25);
     ctx.fillStyle = "#4f8bff";
     ctx.beginPath(); ctx.arc(EX, TY, rE, 0, Math.PI * 2); ctx.fill();
-    label(ctx, "Earth", EX, TY + Math.max(rE, 6) + 30, "center", "#c9d4e3", 12);
+    label(ctx, "Earth", NM ? 12 : EX, TY + Math.max(rE, 6) + (NM ? 42 : 30), NM ? "left" : "center", "#c9d4e3", 12);
     // Destination
     if (d.r === 0) {
       ctx.fillStyle = d.col;
@@ -159,7 +206,8 @@
       ctx.fillStyle = d.col;
       ctx.beginPath(); ctx.arc(TX, TY, rT, 0, Math.PI * 2); ctx.fill();
     }
-    label(ctx, d.name, TX, TY + 30, "center", "#c9d4e3", 12);
+    if (NM) label(ctx, d.name, W - 12, TY + 48, "right", "#c9d4e3", 12, MONO, W - 120);
+    else label(ctx, d.name, TX, TY + 30, "center", "#c9d4e3", 12);
     if (state.flash > 0) {
       ctx.strokeStyle = `rgba(255,255,255,${state.flash})`;
       ctx.beginPath(); ctx.arc(state.flashX, TY, 10 + 20 * (1 - state.flash), 0, Math.PI * 2); ctx.stroke();
@@ -183,18 +231,25 @@
       ctx.beginPath(); ctx.arc(x, TY, 3, 0, Math.PI * 2); ctx.fill();
     }
     // Scale bar
-    const target = 170 / pxKm;
+    const target = (NM ? 140 : 170) / pxKm;
     let unit = 1, unitName = "km";
     if (d.km > 0.05 * LY) { unit = LY; unitName = "light-year"; }
     const v = nice(target / unit);
     const len = v * unit * pxKm;
-    const sy = 340;
+    const sy = NM ? TY + 84 : 340;
     ctx.fillStyle = "#7f8ea6";
     ctx.fillRect(EX, sy, len, 2);
     ctx.fillRect(EX, sy - 4, 1, 10); ctx.fillRect(EX + len - 1, sy - 4, 1, 10);
     const txt = unit === 1 ? fmtKm(v) : v + " " + unitName + (v === 1 ? "" : "s");
-    label(ctx, txt + "  ·  light needs " + fmtDur(v * unit / C_KM), EX, sy - 10, "left", "#7f8ea6", 11);
-    label(ctx, "1 second of light = 299,792 km" + (pxKm * C_KM >= 1 ? " = " + (pxKm * C_KM).toFixed(pxKm * C_KM < 10 ? 1 : 0) + " px here" : ", less than a pixel here"), EX, sy + 24, "left", "#56647c", 11);
+    const one = "1 second of light = 299,792 km" + (pxKm * C_KM >= 1 ? " = " + (pxKm * C_KM).toFixed(pxKm * C_KM < 10 ? 1 : 0) + " px here" : ", less than a pixel here");
+    if (NM) {
+      label(ctx, txt + "  ·  light needs " + fmtDur(v * unit / C_KM), 18, sy - 12, "left", "#7f8ea6", 11, MONO, W - 36);
+      ctx.fillStyle = "#7f8ea6";
+      lines(ctx, one, W - 36).slice(0, 2).forEach((l, i) => ctx.fillText(l, 18, sy + 28 + i * 21));
+    } else {
+      label(ctx, txt + "  ·  light needs " + fmtDur(v * unit / C_KM), EX, sy - 10, "left", "#7f8ea6", 11);
+      label(ctx, one, EX, sy + 24, "left", "#56647c", 11);
+    }
     if (state.dest === "mars") drawMarsInset();
   }
   function nice(x) {
@@ -202,9 +257,10 @@
     const m = x / e;
     return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * e;
   }
+  // English names of the playback speeds (the menu itself may be translated on screen).
+  const SPEED_NAMES = { 10: "10× faster", 60: "1 minute per second", 3600: "1 hour per second", 86400: "1 day per second", 2629800: "1 month per second", 31557600: "1 year per second" };
   function speedName() {
-    const o = $("speed").selectedOptions[0];
-    return o ? o.textContent.toLowerCase() : state.speed + "×";
+    return SPEED_NAMES[state.speed] || state.speed + "× faster";
   }
   // Where Earth and Mars sit for the chosen distance (schematic, Sun at centre).
   function marsAngle(kmDist) {
@@ -214,7 +270,7 @@
     return { rE, rM, th: Math.acos(Math.max(-1, Math.min(1, c))) };
   }
   function drawMarsInset() {
-    const cx = 860, cy = 370, k = 30;
+    const cx = NM ? W - 66 : 860, cy = NM ? 248 : 370, k = 30;
     const { rE, rM, th } = marsAngle(DESTS.mars.km);
     ctx.strokeStyle = "#1f2a3f";
     ctx.beginPath(); ctx.arc(cx, cy, rE * k, 0, Math.PI * 2); ctx.stroke();
@@ -229,7 +285,8 @@
     ctx.beginPath(); ctx.arc(ex, ey, 3, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#e07a4a";
     ctx.beginPath(); ctx.arc(mx, my, 3, 0, Math.PI * 2); ctx.fill();
-    label(ctx, "from above", cx - rM * k - 6, cy + rM * k, "right", "#56647c", 10);
+    if (NM) label(ctx, "from above", cx, cy + rM * k + 20, "center", "#7f8ea6", 10);
+    else label(ctx, "from above", cx - rM * k - 6, cy + rM * k, "right", "#56647c", 10);
   }
 
   function advanceMain(dt) {
@@ -261,15 +318,28 @@
   // =====================================================================
   // Rømer: Io's eclipses run late when Jupiter is far
   // =====================================================================
-  const RW = 560, RH = 300;
-  const rctx = Lab.setupCanvas($("romer"), RW, RH);
+  let RW = 560, RH = 300, PLOT, ORB;
+  function layoutRomer() {
+    NR = narrowFor($("romer"), 400);
+    if (NR) {
+      RW = 360; RH = 560;
+      ORB = { cx: 180, cy: 166 };
+      PLOT = { x0: 60, x1: 340, y0: 352, y1: 512, days: 400, max: 18, tx: 12, ty: 330, ax: 24 };
+    } else {
+      RW = 560; RH = 300;
+      ORB = { cx: 150, cy: 156 };
+      PLOT = { x0: 322, x1: 544, y0: 34, y1: 262, days: 400, max: 18, tx: 302, ty: 20, ax: 296 };
+    }
+    $("romer").setAttribute("width", RW); $("romer").setAttribute("height", RH);
+    rctx = Lab.setupCanvas($("romer"), RW, RH);
+  }
+  layoutRomer();
   const IO_PERIOD = 1.769138;     // days
   const J_PERIOD = 4332.59;       // days
   const R_J = 5.203;              // AU
   const LIGHT_AU_MIN = AU / C_KM / 60;  // minutes for light to cross 1 AU (8.32)
   const romer = { day: 40, nextEclipse: 0, dots: [], playing: !Lab.reducedMotion, instant: false, last: null, dist: 0 };
   romer.nextEclipse = Math.ceil(romer.day / IO_PERIOD) * IO_PERIOD;
-  const PLOT = { x0: 322, x1: 544, y0: 34, y1: 262, days: 400, max: 18 };
 
   function positions(day) {
     const te = 2 * Math.PI * day / 365.25, tj = 2 * Math.PI * day / J_PERIOD;
@@ -305,7 +375,7 @@
     const c = rctx;
     c.fillStyle = "#05080e";
     c.fillRect(0, 0, RW, RH);
-    const cx = 150, cy = 156, kE = 46, kJ = 118;
+    const cx = ORB.cx, cy = ORB.cy, kE = 46, kJ = 118;
     const { te, tj } = positions(romer.day);
     c.strokeStyle = "#1f2a3f";
     c.beginPath(); c.arc(cx, cy, kE, 0, Math.PI * 2); c.stroke();
@@ -338,27 +408,32 @@
     c.beginPath(); c.arc(ix, iy, 2.2, 0, Math.PI * 2); c.fill();
     c.fillStyle = "#4f8bff";
     c.beginPath(); c.arc(ex, ey, 4, 0, Math.PI * 2); c.fill();
-    label(c, "Earth", ex, ey + 17, "center", "#c9d4e3", 10);
-    label(c, "Jupiter + Io", jx, jy - 12, "center", "#c9d4e3", 10);
-    label(c, "SEEN FROM ABOVE (SQUEEZED)", 12, 20, "left", "#7f8ea6", 11);
-    if (hidden) label(c, "Jupiter lost in the Sun's glare", 12, RH - 12, "left", "#f08a5d", 11);
+    label(c, "Earth", ex, ey + (NR ? 20 : 17), "center", "#c9d4e3", 10);
+    if (NR) {
+      // Keep Jupiter's label inside the canvas near the edges.
+      c.font = sz(c, 10) + "px " + MONO;
+      const hw = c.measureText(tr("Jupiter + Io")).width / 2;
+      label(c, "Jupiter + Io", Math.min(RW - 6 - hw, Math.max(6 + hw, jx)), jy - 14, "center", "#c9d4e3", 10);
+    } else label(c, "Jupiter + Io", jx, jy - 12, "center", "#c9d4e3", 10);
+    label(c, "SEEN FROM ABOVE (SQUEEZED)", 12, 20, "left", "#7f8ea6", 11, MONO, RW - 24);
+    if (hidden) label(c, "Jupiter lost in the Sun's glare", 12, NR ? 306 : RH - 12, "left", "#f08a5d", 11, MONO, RW - 24);
     // Plot
     const { x0, x1, y0, y1, days, max } = PLOT;
     const X = (d) => x1 - (romer.day - d) / days * (x1 - x0);
     const Y = (m) => y1 - m / max * (y1 - y0);
-    label(c, "HOW LATE EACH ECLIPSE IS SEEN", x0 - 20, 20, "left", "#7f8ea6", 11);
+    label(c, "HOW LATE EACH ECLIPSE IS SEEN", PLOT.tx, PLOT.ty, "left", "#7f8ea6", 11, MONO, RW - PLOT.tx - 12);
     c.strokeStyle = "#26324a";
     c.beginPath(); c.moveTo(x0 + 0.5, y0); c.lineTo(x0 + 0.5, y1 + 0.5); c.lineTo(x1, y1 + 0.5); c.stroke();
-    c.font = "10px " + MONO; c.fillStyle = "#56647c"; c.textAlign = "right";
+    c.font = sz(c, 10) + "px " + MONO; c.fillStyle = NR ? "#7f8ea6" : "#56647c"; c.textAlign = "right";
     for (let m = 0; m <= 15; m += 5) { c.fillRect(x0 - 4, Y(m), 4, 1); c.fillText(m + "", x0 - 7, Y(m) + 4); }
-    c.save(); c.translate(296, (y0 + y1) / 2); c.rotate(-Math.PI / 2); c.textAlign = "center"; c.fillText("minutes late", 0, 0); c.restore();
+    c.save(); c.translate(PLOT.ax, (y0 + y1) / 2); c.rotate(-Math.PI / 2); c.textAlign = "center"; c.fillText("minutes late", 0, 0); c.restore();
     c.textAlign = "center";
-    c.fillText("last 400 days →", (x0 + x1) / 2, y1 + 18);
+    c.fillText("last 400 days →", (x0 + x1) / 2, y1 + (NR ? 22 : 18));
     c.strokeStyle = "rgba(240,179,90,0.5)";
     c.setLineDash([3, 4]);
     c.beginPath(); c.moveTo(x0, Y(2 * LIGHT_AU_MIN)); c.lineTo(x1, Y(2 * LIGHT_AU_MIN)); c.stroke();
     c.setLineDash([]);
-    label(c, "16.6 min: across Earth's orbit", x1, Y(2 * LIGHT_AU_MIN) - 5, "right", "rgba(240,179,90,0.85)", 10);
+    label(c, "16.6 min: across Earth's orbit", x1, Y(2 * LIGHT_AU_MIN) - 5, "right", "rgba(240,179,90,0.85)", 10, MONO, x1 - x0 - 4);
     c.fillStyle = "#8fa6ff";
     for (const p of romer.dots) c.fillRect(X(p.day) - 1.5, Y(p.late) - 1.5, 3, 3);
     const { E, J } = positions(romer.day);
@@ -368,9 +443,15 @@
   // =====================================================================
   // Mars rover: driving with a light-time delay
   // =====================================================================
-  const VW = 560, VH = 300;
-  const vctx = Lab.setupCanvas($("rover"), VW, VH);
-  const TRACK = { x0: 36, x1: 524, m: 60 };
+  let VW = 560, VH = 300, TRACK, LANES;
+  function layoutRover() {
+    NV = narrowFor($("rover"), 400);
+    if (NV) { VW = 360; VH = 372; TRACK = { x0: 34, x1: 330, m: 60 }; LANES = [168, 286]; }
+    else { VW = 560; VH = 300; TRACK = { x0: 36, x1: 524, m: 60 }; LANES = [128, 226]; }
+    $("rover").setAttribute("width", VW); $("rover").setAttribute("height", VH);
+    vctx = Lab.setupCanvas($("rover"), VW, VH);
+  }
+  layoutRover();
   const ROCK = 50;                 // metres
   const SPEED = 0.042 * 60;        // m per game-second (4.2 cm/s, 60× time)
   const rover = {};
@@ -445,7 +526,7 @@
     const ow = oneWay();
     const g = rover.gt;
     // Signal strip
-    const sy = 46, ex = 36, mx = 524;
+    const sy = NV ? 54 : 46, ex = TRACK.x0, mx = TRACK.x1;
     c.strokeStyle = "#1f2a3f";
     c.setLineDash([2, 4]);
     c.beginPath(); c.moveTo(ex, sy); c.lineTo(mx, sy); c.stroke();
@@ -454,9 +535,9 @@
     c.beginPath(); c.arc(ex, sy, 9, 0, Math.PI * 2); c.fill();
     c.fillStyle = "#e07a4a";
     c.beginPath(); c.arc(mx, sy, 7, 0, Math.PI * 2); c.fill();
-    label(c, "Earth", ex, sy + 24, "center", "#c9d4e3", 10);
-    label(c, "Mars", mx, sy + 24, "center", "#c9d4e3", 10);
-    label(c, "light time " + fmtDur(ow * 60) + " each way", VW / 2, 18, "center", "#7f8ea6", 11);
+    label(c, "Earth", NV ? 4 : ex, sy + (NV ? 30 : 24), NV ? "left" : "center", "#c9d4e3", 10);
+    label(c, "Mars", NV ? VW - 4 : mx, sy + (NV ? 30 : 24), NV ? "right" : "center", "#c9d4e3", 10);
+    label(c, "light time " + fmtDur(ow * 60) + " each way", VW / 2, NV ? 22 : 18, "center", "#7f8ea6", 11, MONO, VW - 16);
     // pictures streaming home
     c.fillStyle = "rgba(143,166,255,0.7)";
     const spacing = 1.5;
@@ -474,16 +555,24 @@
       const x = ex + 12 + f * (mx - ex - 24);
       c.fillStyle = p.kind === "stop" ? "#f08a5d" : "#4cc48d";
       c.fillRect(x - 3, sy + 3, 6, 6);
-      label(c, p.kind.toUpperCase(), x, sy + 22, "center", p.kind === "stop" ? "#f08a5d" : "#4cc48d", 10);
+      label(c, p.kind.toUpperCase(), x, sy + (NV ? 28 : 22), "center", p.kind === "stop" ? "#f08a5d" : "#4cc48d", 10);
     }
     // Lanes
-    lane(c, 128, "WHAT MISSION CONTROL SEES (" + fmtDur(ow * 60) + " OLD)", xAt(g - ow), "#c9d4e3");
-    lane(c, 226, "WHERE THE ROVER REALLY IS NOW", rover.x, "#f0b35a");
-    label(c, "60 m of Martian ground · time runs 60× fast", VW / 2, VH - 8, "center", "#56647c", 10);
+    lane(c, LANES[0], "WHAT MISSION CONTROL SEES (" + fmtDur(ow * 60) + " OLD)", xAt(g - ow), "#c9d4e3");
+    lane(c, LANES[1], "WHERE THE ROVER REALLY IS NOW", rover.x, "#f0b35a");
+    label(c, "60 m of Martian ground · time runs 60× fast", VW / 2, VH - 8, "center", NV ? "#7f8ea6" : "#56647c", 10, MONO, VW - 12);
   }
   function lane(c, y, title, x, col) {
     const X = (m) => TRACK.x0 + m / TRACK.m * (TRACK.x1 - TRACK.x0);
-    label(c, title, TRACK.x0, y - 30, "left", "#7f8ea6", 11);
+    if (NV) {
+      // Up to two lines, bottom line where the single line would sit.
+      c.font = sz(c, 11) + "px " + MONO;
+      // Prefer breaking before the bracket, so "(12 min 30 s OLD)" stays whole.
+      const t = tr(title), maxW = VW - 2 * TRACK.x0 + 20, br = Math.max(t.lastIndexOf(" ("), t.lastIndexOf("（"));
+      const L = c.measureText(t).width <= maxW ? [t] : br > 0 ? [t.slice(0, br).trim(), t.slice(br).trim()] : lines(c, t, maxW).slice(0, 2);
+      c.fillStyle = "#7f8ea6"; c.textAlign = "left";
+      L.forEach((l, i) => c.fillText(l, TRACK.x0 - 10, y - 36 - (L.length - 1 - i) * 18, maxW));
+    } else label(c, title, TRACK.x0, y - 30, "left", "#7f8ea6", 11);
     c.fillStyle = "#2a1a14";
     c.fillRect(TRACK.x0, y + 8, TRACK.x1 - TRACK.x0, 4);
     // boulder
@@ -499,7 +588,7 @@
     c.fillRect(rx + 17, y - 18, 8, 3);
     c.fillStyle = "#56647c";
     for (const wx of [rx + 7, rx + 15, rx + 23]) { c.beginPath(); c.arc(wx, y + 5, 3.5, 0, Math.PI * 2); c.fill(); }
-    label(c, x.toFixed(1) + " m", X(x) - 15, y + 28, "center", col, 10);
+    label(c, x.toFixed(1) + " m", Math.max(NV ? 26 : 0, X(x) - 15), y + (NV ? 32 : 28), "center", col, 10);
   }
 
   // =====================================================================
@@ -583,6 +672,18 @@
     setVerdict("Stop sent. Your screen shows the rover at " + xAt(rover.gt - oneWay()).toFixed(1) + " m. Wait and see where it ends up.", "");
   });
   $("roverReset").addEventListener("click", resetRover);
+
+  // Each canvas switches layout when it crosses its phone breakpoint; state is kept.
+  let rzTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => {
+      if (narrowFor($("bench"), 640) !== NM) layoutMain();
+      if (narrowFor($("romer"), 400) !== NR) layoutRomer();
+      if (narrowFor($("rover"), 400) !== NV) layoutRover();
+      drawMain(); drawRomer(); drawRover();
+    }, 120);
+  }).observe(document.querySelector(".wrap") || document.body);
 
   // ---------- Start ----------
   resetRover();

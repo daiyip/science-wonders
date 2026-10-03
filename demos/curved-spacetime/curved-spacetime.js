@@ -1,7 +1,31 @@
 (function () {
-  const W = 960, H = 560;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
+  // Wide: 960 x 560. Narrow (phones): 400 x 400 with larger type, so labels stay readable.
+  let W = 960, H = 560, NARROW = false, CX = 480, CY = 266, ctx;
+  function layout() {
+    NARROW = (canvas.parentElement.clientWidth || 960) < 640;
+    W = NARROW ? 400 : 960; H = NARROW ? 400 : 560;
+    CX = W / 2; CY = NARROW ? 200 : 266;
+    canvas.setAttribute("width", W); canvas.setAttribute("height", H);
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  const MONO = "'IBM Plex Mono', ui-monospace, monospace";
+  const fs = (px) => (NARROW ? Math.max(14, Math.round(px * 1.25)) : px) + "px ";
+  const tr = (t) => (window.I18N ? I18N.t(t) : t);
+  function wrap(text, x, y, maxW, lh) {
+    text = tr(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + (cjk ? "" : " ") + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) ctx.fillText(line, x, y);
+    return y;
+  }
   const $ = (id) => document.getElementById(id);
 
   // ---------- Units ----------
@@ -191,13 +215,12 @@
   }
 
   // ---------- Projection: an oblique view of Flamm's paraboloid ----------
-  const CX = W / 2, CY = 266;
   const viewRadius = () => (state.mode === "orbits" ? 44 * M : 9 * RS);
   const flamm = (r) => 2 * Math.sqrt(RS * Math.max(0, r - RS));
   function view() {
     const R = viewRadius();
     const cosT = state.tilt ? 0.55 : 1, sinT = state.tilt ? Math.sqrt(1 - cosT * cosT) : 0;
-    const s = Math.min(440 / R, (H / 2 - 30) / (R * cosT));
+    const s = Math.min((W / 2 - (NARROW ? 14 : 40)) / R, (H / 2 - 30) / (R * cosT));
     const zR = flamm(R);
     const depthK = 0.55 * R / zR; // scale the funnel so its depth reads the same at any zoom
     return { R, cosT, sinT, s, zR, depthK };
@@ -273,11 +296,18 @@
     ring(RS, "rgba(240,138,93,0.9)", null, 1.5);
 
     // Labels
-    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = fs(11) + MONO;
     ctx.textAlign = "left";
     const lab = (r, text, colour) => {
+      ctx.fillStyle = colour;
+      if (NARROW) {
+        // Centred under the ring's near edge, so it never runs off the right side.
+        const [X, Y] = project(0, -r), Yh = project(0, -RS)[1];
+        ctx.textAlign = "center"; ctx.fillText(text, X, Math.max(Y, Yh) + 22); ctx.textAlign = "left";
+        return;
+      }
       const [X, Y] = project(r * Math.cos(-0.45), r * Math.sin(-0.45));
-      ctx.fillStyle = colour; ctx.fillText(text, X + 6, Y + 4);
+      ctx.fillText(text, X + 6, Y + 4);
     };
     if (state.mode === "orbits") {
       lab(R_ISCO, "last stable orbit 3 rₛ", "rgba(120,214,150,0.9)");
@@ -285,7 +315,8 @@
       lab(R_PHOTON, "photon sphere 1.5 rₛ", "rgba(255,214,120,0.95)");
       const [X, Y] = project(-RS * 0.2, -RS * 1.0);
       ctx.fillStyle = "rgba(240,138,93,0.95)"; ctx.textAlign = "right";
-      ctx.fillText("horizon rₛ", X - 10, Y + 18);
+      if (NARROW) { const [hx, hy] = project(-RS * 1.1, RS * 0.6); ctx.fillText("horizon rₛ", hx - 8, hy - 8); }
+      else ctx.fillText("horizon rₛ", X - 10, Y + 18);
       ctx.textAlign = "left";
     }
   }
@@ -336,9 +367,12 @@
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(X0, Y0, 5, 0, Math.PI * 2); ctx.fill();
     const v = dragVelocity(d);
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = fs(12) + MONO;
     ctx.textAlign = "left";
-    ctx.fillText(`r = ${(Math.hypot(d.x0, d.y0) / RS).toFixed(1)} rₛ   v = ${Math.hypot(v[0], v[1]).toFixed(2)} c`, X1 + 10, Y1 - 8);
+    const txt = `r = ${(Math.hypot(d.x0, d.y0) / RS).toFixed(1)} rₛ   v = ${Math.hypot(v[0], v[1]).toFixed(2)} c`;
+    // Keep the readout on screen: flip it to the left of the arrow near the right edge.
+    if (X1 + 10 + ctx.measureText(txt).width > W - 6) { ctx.textAlign = "right"; ctx.fillText(txt, X1 - 10, Math.max(18, Y1 - 8)); ctx.textAlign = "left"; }
+    else ctx.fillText(txt, X1 + 10, Math.max(18, Y1 - 8));
   }
 
   function drawRays() {
@@ -367,24 +401,25 @@
     // Incoming beam marker on the left edge.
     const [X, Y] = project(-V.R * 0.98, state.b);
     ctx.fillStyle = "#ffe2a0";
-    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = fs(11) + MONO;
     ctx.textAlign = "left";
     ctx.fillText(`b = ${(state.b / RS).toFixed(2)} rₛ`, X, Y - 10);
   }
 
   function drawLegend() {
-    ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = fs(12) + MONO;
     ctx.fillStyle = "#7f8ea6";
     ctx.textAlign = "left";
     ctx.fillText(state.mode === "orbits" ? "TEST PARTICLES" : "LIGHT RAYS", 18, 26);
-    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = fs(11) + MONO;
     let y = H - 16;
+    const lineH = NARROW ? 20 : 18, lx = NARROW ? 54 : 48;
     const item = (text, colour, dash) => {
       ctx.strokeStyle = colour; ctx.lineWidth = 2; ctx.setLineDash(dash || []);
       ctx.beginPath(); ctx.moveTo(18, y - 4); ctx.lineTo(40, y - 4); ctx.stroke();
       ctx.setLineDash([]); ctx.lineWidth = 1;
-      ctx.fillStyle = "#9aa8bd"; ctx.fillText(text, 48, y);
-      y -= 18;
+      ctx.fillStyle = "#9aa8bd"; ctx.fillText(text, lx, y);
+      y -= lineH;
     };
     const solid = state.mode === "light" ? "rgba(255,226,160,0.95)" : "rgb(240,179,90)";
     if (state.law === "both") { item("Newton", "rgba(201,212,227,0.6)", [4, 4]); item("Einstein", solid); }
@@ -393,8 +428,9 @@
     ctx.fillText(state.mode === "orbits" ? "sheet radius 22 rₛ" : "sheet radius 9 rₛ", W - 18, H - 16);
     if (state.mode === "orbits" && !state.drag && state.particles.length === 0) {
       ctx.textAlign = "center"; ctx.fillStyle = "#7f8ea6";
-      ctx.font = "13px 'IBM Plex Sans', system-ui, sans-serif";
-      ctx.fillText("Drag on the sheet to launch a particle, or pick a preset", CX, 60);
+      ctx.font = fs(13) + "'IBM Plex Sans', system-ui, sans-serif";
+      if (NARROW) wrap("Drag on the sheet to launch a particle, or pick a preset", CX, 52, W - 40, 20);
+      else ctx.fillText("Drag on the sheet to launch a particle, or pick a preset", CX, 60);
     }
   }
 
@@ -533,6 +569,15 @@
   }
   canvas.addEventListener("pointerup", endDrag);
   canvas.addEventListener("pointercancel", () => { state.drag = null; state.dragB = false; });
+
+  // Switch layouts at the phone breakpoint; particles and rays live in sheet coordinates, so nothing is lost.
+  let rzTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => {
+      if (((canvas.parentElement.clientWidth || 960) < 640) !== NARROW) { layout(); V = view(); draw(); }
+    }, 120);
+  }).observe(canvas.parentElement);
 
   // ---------- Controls ----------
   function pressed(ids, active) { for (const id of ids) $(id).setAttribute("aria-pressed", String(id === active)); }

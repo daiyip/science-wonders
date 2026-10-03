@@ -138,3 +138,26 @@ I18N.add({
   "−pairs/{0}": "−配对数/{0}",
   "≈ {0}%. You would need {1} other people to reach even odds.": "≈ {0}%。要有{1}个其他人，概率才能达到一半。"
 });
+
+// Deeper explanations and phone layout
+I18N.add({
+  "Each simulated room starts empty and adds people with random birthdays one at a time until two share a day, then records how many people that took. The amber value at n is the share of rooms whose first match came at n people or fewer. With {0} rooms, the random scatter around {1}% is about ±{2} percentage points, so small wiggles around the white curve are expected.": "每个模拟房间都从空开始，一次加入一位生日随机的人，直到有两人同日，然后记下这时房间里有多少人。琥珀色线在 n 处的值，就是第一次同日出现在 n 人或更少时的房间所占的比例。模拟{0}个房间时，在{1}%附近的随机波动约为 ±{2} 个百分点，所以琥珀线在白色曲线周围的小幅抖动是正常的。",
+  "Real birthdays are not spread perfectly evenly: births vary by season and by day of the week. Any unevenness makes a match more likely, because the chance of no match is largest when every day is equally likely. So {0} is an upper bound for real people, though the difference is small.": "真实的生日并不是完全均匀分布的：出生人数随季节和星期几而变化。任何不均匀都会让同日更容易出现，因为当每一天的可能性都相同时，无人同日的概率最大。所以对真实人群来说，{0}人是一个上限，不过差别很小。",
+  "The exact chance. The second person must miss {0} day, the third must miss {1}, and so on; multiply those chances to get the probability of no match at all, then subtract from {2}. The page builds the white curve from this product one factor at a time, which avoids the enormous factorials. P({3}) = {4} and P({5}) = {6}.": "精确概率。第二个人必须避开{0}天，第三个人必须避开{1}天，依此类推；把这些概率相乘得到完全无人同日的概率，再用{2}减去它。页面用这个乘积一项一项地算出白色曲线，避免了巨大的阶乘。P({3}) = {4}，P({5}) = {6}。",
+  "<html>The pairs estimate, drawn as the dashed line. There are n(n − {0})/{1} pairs, each matching with chance {2}/{3}, and treating them as independent gives ({4} − {5}/{6})<sup>pairs</sup> ≈ e<sup>−pairs/{7}</sup> for no match. The pairs are not quite independent, but at {8} people the estimate gives {9}% against the exact {10}%.": "配对估算，即图中的虚线。共有 n(n − {0})/{1} 对，每一对同日的概率是 {2}/{3}，把它们当作相互独立，无人同日的概率就是 ({4} − {5}/{6})<sup>配对数</sup> ≈ e<sup>−配对数/{7}</sup>。各对之间并不完全独立，但在{8}人时，估算值为{9}%，精确值为{10}%。",
+  "Setting the estimate equal to one half gives the room size for even odds when there are N equally likely labels. For N = {0} it gives {1}, so {2} people. Because it grows with √N, a million labels still collide after only about {3} draws. This is the rule behind hash collisions and random IDs.": "令估算值等于一半，就得到当有 N 个等可能标签时达到五五开所需的人数。N = {0} 时结果是{1}，也就是{2}人。由于它随 √N 增长，即使有一百万个标签，也只需大约{3}次抽取就会撞上。这就是哈希碰撞和随机 ID 背后的规律。",
+  "K is the number of people in the room when the first match appears, exactly the number each simulated room records. Its average for N = {0} is about {1}, a little above the median of {2} because a few rooms run long. Pressing \"Add people until a match\" draws one value of K.": "K 是第一次出现同日时房间里的人数，也正是每个模拟房间记录的数字。N = {0} 时它的平均值约为{1}，比中位数{2}略大，因为少数房间要很久才出现同日。按一次“不断加人，直到有人同日”，就抽出了一个 K 值。",
+  "{0} JAN": "1月{0}日",
+  "{0} FEB": "2月{0}日",
+  "{0} MAR": "3月{0}日",
+  "{0} APR": "4月{0}日",
+  "{0} MAY": "5月{0}日",
+  "{0} JUN": "6月{0}日",
+  "{0} JUL": "7月{0}日",
+  "{0} AUG": "8月{0}日",
+  "{0} SEP": "9月{0}日",
+  "{0} OCT": "10月{0}日",
+  "{0} NOV": "11月{0}日",
+  "{0} DEC": "12月{0}日"
+});
+I18N.add({"pairs": "配对数"});

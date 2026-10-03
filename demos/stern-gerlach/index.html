@@ -132,6 +132,7 @@
       <h2>What you're seeing</h2>
       <p>An oven boils off silver atoms. Each has one unpaired electron, and that electron's spin makes the atom a tiny magnet. The magnet's poles are shaped so the field is stronger near one pole, which pushes an atom up or down depending on how its little magnet is tilted along the magnet's axis.</p>
       <p>A classical tilted compass needle could have any tilt, so the atoms should spread into a continuous band. Instead every atom lands in one of two spots. Along any axis you ask about, the spin is only ever up or down.</p>
+      <p data-depth="deep">Silver suits the job because 46 of its 47 electrons sit in closed shells whose magnetic effects cancel, and the last one has no orbital motion. The atom's magnet is essentially one electron spin. In 1922 the field changed by about 10 tesla per centimetre across the beam; over a 3.5 cm magnet, atoms moving at roughly 550 m/s are pushed about 0.1 mm up or down.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -145,7 +146,19 @@
     <section>
       <h2>Why it's strange</h2>
       <p>An atom can't have a definite spin along Z and along X at the same time. Measuring one throws away the other, just as position and momentum trade off. So the atom isn't carrying a hidden arrow that each magnet reads. Each magnet asks a question, and the act of asking sets the answer that the next magnet sees.</p>
+      <p data-depth="deep">"No hidden arrow" can be made precise. Local hidden-variable models can reproduce a single chain like this one, but not the correlations between two entangled spins measured far apart: Bell's theorem (1964) shows those break a limit any such model must obey, and experiments since the 1980s, loophole-free since 2015, find the quantum predictions.</p>
       <p class="muted">Otto Stern and Walther Gerlach saw the split in February 1922, before spin had been proposed. Uhlenbeck and Goudsmit explained it as electron spin in 1925. Stern received the 1943 Nobel Prize.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">F<sub>z</sub> = μ<sub>z</sub> ∂B<sub>z</sub> ÷ ∂z,&nbsp;&nbsp;μ<sub>z</sub> = −g μ<sub>B</sub> m<sub>s</sub> ≈ ∓μ<sub>B</sub></div>
+      <p>A magnet in a uniform field only turns; a field that changes across the beam also pushes. The force is the atom's magnetic moment along the axis times the field gradient. For one electron spin m<sub>s</sub> = ±½ and g ≈ 2, so μ<sub>z</sub> is ±μ<sub>B</sub>, the Bohr magneton (9.27 × 10⁻²⁴ J/T), and only two forces are possible. A classical moment would give μ cos α for any tilt α; with tilts spread evenly over all directions, cos α is spread evenly between −1 and 1, which is the flat band the classical comparison draws. The page does not integrate this force: the beams follow smooth drawn curves, and only which beam each atom joins is computed.</p>
+      <div class="eq" data-depth="deep" translate="no">|↑<sub>θ</sub>⟩ = cos(θ÷2) |↑<sub>z</sub>⟩ + sin(θ÷2) |↓<sub>z</sub>⟩</div>
+      <p>The spin state pointing along an axis tilted by θ from Z towards X, written in terms of up and down along Z. The half-angles are special to spin ½: turning the axis by 180° gives the opposite state, |↓<sub>z</sub>⟩, and a full 360° turn gives back the state times −1.</p>
+      <div class="eq" data-depth="deep" translate="no">P(↑) = |⟨↑<sub>θ</sub>|↑<sub>α</sub>⟩|² = cos²((θ − α) ÷ 2)</div>
+      <p>The Born rule: an atom whose spin points along α, sent into a magnet with axis θ, comes out up with this probability. Same axis: 1. At right angles, as in Z then X: ½. At 60°: ¾. This is exactly the rule the page applies, with a random draw for each atom. Atoms straight from the oven have no preferred direction and go up with probability ½. After each magnet the atom's spin is reset to point along θ if it went up, or along θ + 180° if it went down, which is why magnet 3 in the Z, X, Z chain gives ½ again.</p>
+      <div class="eq" data-depth="deep" translate="no">[S<sub>z</sub>, S<sub>x</sub>] = S<sub>z</sub>S<sub>x</sub> − S<sub>x</sub>S<sub>z</sub> = iħ S<sub>y</sub></div>
+      <p>The spin components along different axes do not commute, so no state has a definite value for both. Each component of an electron spin can only be measured as +ħ÷2 or −ħ÷2, and the uncertainty relation ΔS<sub>z</sub> ΔS<sub>x</sub> ≥ (ħ÷2) |⟨S<sub>y</sub>⟩| sets the trade-off. An atom that has just passed a Z magnet has ⟨S<sub>y</sub>⟩ = 0, so the bound allows a sharp Z value, and its X value is then completely uncertain.</p>
     </section>
   </div>
 

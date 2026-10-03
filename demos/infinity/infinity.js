@@ -6,18 +6,90 @@
   const BUS_COLOURS = ["#f0b35a", "#5fd3c1", "#f08ab0", "#9bd37a", "#c49bff", "#f59e6b", "#6cc4f5"];
   const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+  // Translate a whole sentence first, then wrap it (Chinese wraps per character).
+  function wrapText(ctx, text, x, y, maxW, lh, measureOnly) {
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[　-鿿]/.test(text);
+    const lead = text.match(/^ */)[0];  // keep an indented line indented
+    const words = cjk ? [...text.trim()] : text.trim().split(" ");
+    const sep = cjk ? "" : " ";
+    let line = lead;
+    for (const w of words) {
+      const t = line.trim() ? line + sep + w : line + w;
+      if (ctx.measureText(t).width > maxW && line.trim()) { if (!measureOnly) ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) { if (!measureOnly) ctx.fillText(line, x, y); y += lh; }
+    return y;
+  }
+
+  // Wide screens use a fixed 960-wide drawing. Below 640 CSS px the drawing is
+  // laid out at the displayed width (1:1), with rooms in two rows and the rule
+  // under the arrivals, so the text stays readable on a phone.
+  const NARROW = 640;
+  const cssWidth = (c) => c.clientWidth || c.parentElement.clientWidth || 960;
+
   /* =========================================================
      Part 1: Hilbert's Grand Hotel
      ========================================================= */
-  const HW = 960, HH = 440;
-  const hc = Lab.setupCanvas($("hotel"), HW, HH);
+  const hcv = $("hotel");
+  let HW = 960, HH = 440, hc, HN = false;
   const ROOMS = 16;
-  const RX0 = 28, PITCH = 56, RW = 50, RY0 = 52, RY1 = 132, GY = 104;
-  const roomX = (r) => RX0 + (r - 1) * PITCH + RW / 2;
   const ODD_PRIMES = [3, 5, 7, 11, 13, 17, 19, 23];
-
-  // Grid of arrivals (bottom left)
-  const AX0 = 104, ACOL = 62, AY0 = 200, AROW = 36, ASEATS = 7, ABUSES = 5;
+  // Layout (set by layoutHotel). Rooms: rx, ry = top-left of each room box.
+  let RW, RH, ROOM_TOP = [], PITCH, RX0, ABUSES = 5, ASEATS = 7, AX0, ACOL, AY0, AROW, ARR_Y, RULE_X, RULE_Y, SEP_Y;
+  function layoutHotel() {
+    const cw = cssWidth(hcv);
+    HN = cw < NARROW;
+    if (HN) {
+      HW = Math.max(300, Math.round(cw));
+      RX0 = 12; PITCH = (HW - 2 * RX0 - 14) / 8; RW = PITCH - 4; RH = 64;
+      ROOM_TOP = [58, 130];
+      SEP_Y = 206; ARR_Y = 230;
+      ASEATS = 4; AX0 = 58; AY0 = 256; AROW = 31;
+      RULE_X = 12; RULE_Y = 468;
+      HH = 770;
+    } else {
+      HW = 960; HH = 440;
+      RX0 = 28; PITCH = 56; RW = 50; RH = 80;
+      ROOM_TOP = [52];
+      SEP_Y = 158; ARR_Y = 182;
+      ASEATS = 7; AX0 = 104; ACOL = 62; AY0 = 200; AROW = 36;
+      RULE_X = 610; RULE_Y = 182;
+    }
+    hc = Lab.setupCanvas(hcv, HW, HH);
+    if (HN) {
+      // Make room for the longest row label in the current language.
+      hc.font = "12px " + MONO;
+      AX0 = Math.max(58, Math.ceil(hc.measureText("Bus 5").width) + 14);
+      ASEATS = (HW - AX0 - 12) / 4 >= 56 ? 4 : 3;
+      ACOL = (HW - AX0 - 12) / ASEATS;
+      // Height: enough for the longest wrapped rule plus the two closing lines.
+      const mw = HW - 2 * RULE_X;
+      let need = 0;
+      for (const op of [null, { kind: "guest" }, { kind: "bus" }, { kind: "buses", method: "diag" }, { kind: "buses", method: "prime" }]) {
+        hc.font = "13px " + MONO;
+        let y = 0;
+        for (const line of ruleText(op)) y = wrapText(hc, line, 0, y, mw, 21, true);
+        hc.font = "13px " + SANS;
+        y = wrapText(hc, "Every guest has a room. Nobody shares.", 0, y + 8, mw, 18, true);
+        const m2 = op && op.method === "prime" ? "Many rooms stay empty, and that is allowed." : "No room is left empty either.";
+        y = wrapText(hc, m2, 0, y + 4, mw, 18, true);
+        need = Math.max(need, y);
+      }
+      const h = Math.ceil(RULE_Y + 32 + need);
+      if (h !== HH) { HH = h; hc = Lab.setupCanvas(hcv, HW, HH); }
+    }
+  }
+  const perRow = () => (HN ? 8 : ROOMS);
+  const roomBox = (r) => {
+    const i = r - 1, row = Math.floor(i / perRow()), col = i % perRow();
+    return [RX0 + col * PITCH, ROOM_TOP[row]];
+  };
+  const roomPos = (r) => { const [x, y] = roomBox(r); return [x + RW / 2, y + (HN ? 40 : 52)]; };
+  // Where a guest goes when its new room is past the last visible one.
+  const offscreen = () => [HW + 30, roomPos(ROOMS)[1]];
+  const cellPos = (vrow, seat) => [AX0 + 20 + (seat - 1) * ACOL, AY0 + vrow * AROW];
 
   const hotel = {
     rooms: [],          // rooms[1..16] = guest or null
@@ -42,6 +114,8 @@
   const diagRoom = (b, k) => { const s = b + k - 1; return s * (s + 1) / 2 + b + 1; };
   const primeRoom = (b, k) => Math.pow(b === 0 ? 2 : ODD_PRIMES[b - 1], k);
 
+  // Positions are stored as (room) or (visual row, seat) and turned into
+  // coordinates when drawn, so a resize mid-animation keeps working.
   function buildOp(kind) {
     const moves = [];     // guests already in visible rooms
     const arrivals = [];  // new guests, drawn in the arrivals area
@@ -49,36 +123,37 @@
       : hotel.method === "diag" ? diagRoom(0, n) : primeRoom(0, n);
     for (let r = 1; r <= ROOMS; r++) {
       const g = hotel.rooms[r];
-      if (g) moves.push({ g, from: [roomX(r), GY], to: rule(r) });
+      if (g) moves.push({ g, room: r, to: rule(r) });
     }
     const grid = [];      // rows of cells for drawing the arrivals area
+    const seats = ASEATS;
     if (kind === "guest") {
       const g = { colour: BUS_COLOURS[hotel.nextBusColour++ % BUS_COLOURS.length], label: "new" };
-      const a = { g, from: [AX0 + 20, AY0 + AROW], to: 1, row: 0, seat: 1 };
+      const a = { g, vrow: 1, to: 1, row: 0, seat: 1 };
       arrivals.push(a);
       grid.push({ name: "Guest", cells: [a], more: false });
     } else if (kind === "bus") {
       const colour = BUS_COLOURS[hotel.nextBusColour++ % BUS_COLOURS.length];
       const cells = [];
-      for (let k = 1; k <= ASEATS; k++) {
-        const a = { g: { colour, label: String(k) }, from: [AX0 + 20 + (k - 1) * ACOL, AY0 + AROW], to: 2 * k - 1, row: 0, seat: k };
+      for (let k = 1; k <= seats; k++) {
+        const a = { g: { colour, label: String(k) }, vrow: 1, to: 2 * k - 1, row: 0, seat: k };
         arrivals.push(a); cells.push(a);
       }
       grid.push({ name: "Bus", cells, more: true });
     } else {
       // Row 0 shows the current guests as seats of "bus 0" so the zigzag covers them too.
       const insideCells = [];
-      for (let k = 1; k <= ASEATS; k++) {
+      for (let k = 1; k <= seats; k++) {
         const g = hotel.rooms[k];
-        insideCells.push({ g: g || null, ghost: true, from: [AX0 + 20 + (k - 1) * ACOL, AY0], to: rule(k), row: 0, seat: k });
+        insideCells.push({ g: g || null, ghost: true, vrow: 0, to: rule(k), row: 0, seat: k });
       }
       grid.push({ name: "Hotel", cells: insideCells, more: true });
       for (let b = 1; b <= ABUSES; b++) {
         const colour = BUS_COLOURS[hotel.nextBusColour++ % BUS_COLOURS.length];
         const cells = [];
-        for (let k = 1; k <= ASEATS; k++) {
+        for (let k = 1; k <= seats; k++) {
           const to = hotel.method === "diag" ? diagRoom(b, k) : primeRoom(b, k);
-          const a = { g: { colour, label: String(k) }, from: [AX0 + 20 + (k - 1) * ACOL, AY0 + b * AROW], to, row: b, seat: k };
+          const a = { g: { colour, label: String(k) }, vrow: b, to, row: b, seat: k };
           arrivals.push(a); cells.push(a);
         }
         grid.push({ name: "Bus " + b, cells, more: true });
@@ -90,6 +165,7 @@
     for (const m of moves.concat(arrivals)) if (m.to <= ROOMS) next[m.to] = m.g;
     return { kind, moves, arrivals, grid, next, method: hotel.method, start: performance.now() };
   }
+  const fromOf = (m) => (m.room ? roomPos(m.room) : cellPos(m.vrow, m.seat));
 
   const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
   const sup = (n) => String(n).split("").map((ch) => SUP[+ch]).join("");
@@ -106,6 +182,7 @@
     if (op.method === "diag") return ["walk the grid along its", "diagonals, in order:", "bus b, seat k → room", "  s(s+1)/2 + b + 1, s = b + k − 1", "(hotel guests are bus 0)"];
     return ["guest in room n → room 2ⁿ", "bus 1, seat k → room 3ᵏ", "bus 2, seat k → room 5ᵏ", "bus b → (b-th odd prime)ᵏ", "unique primes: no clashes"];
   };
+  layoutHotel();
   const ruleShort = (op) => {
     if (!op) return "–";
     if (op.kind === "guest") return "n → n + 1";
@@ -143,7 +220,9 @@
     if (t.guest) parts.push(t.guest + (t.guest === 1 ? " guest" : " guests"));
     if (t.bus) parts.push(t.bus + (t.bus === 1 ? " bus" : " buses"));
     if (t.buses) parts.push(t.buses + (t.buses === 1 ? " fleet of ∞ buses" : " fleets of ∞ buses"));
-    $("checkins").textContent = parts.length ? parts.join(", ") : "0";
+    // Translate each part on its own so any combination reads correctly.
+    const tr = (x) => (window.I18N ? I18N.t(x) : x);
+    $("checkins").textContent = parts.length ? parts.map(tr).join(", ") : "0";
   }
 
   function drawGuest(x, y, g, alpha, r) {
@@ -152,7 +231,7 @@
     hc.fillStyle = g.colour;
     hc.beginPath(); hc.arc(x, y, r, 0, Math.PI * 2); hc.fill();
     hc.fillStyle = "#05080e";
-    hc.font = (g.label.length > 2 ? "600 9px " : "600 11px ") + MONO;
+    hc.font = (HN ? "600 11px " : g.label.length > 2 ? "600 9px " : "600 11px ") + MONO;
     hc.textAlign = "center";
     hc.textBaseline = "middle";
     hc.fillText(g.label, x, y + 0.5);
@@ -166,23 +245,25 @@
     hc.font = "12px " + MONO;
     hc.fillStyle = DIM;
     hc.textAlign = "left";
-    hc.fillText("ROOMS 1, 2, 3, …  (EVERY ROOM EXISTS; ONLY THE FIRST 16 FIT HERE)", RX0, 28);
+    const title = "ROOMS 1, 2, 3, …  (EVERY ROOM EXISTS; ONLY THE FIRST 16 FIT HERE)";
+    if (HN) { hc.font = "11px " + MONO; wrapText(hc, title, RX0, 16, HW - 2 * RX0, 14); }
+    else hc.fillText(title, RX0, 28);
 
     // Building
     for (let r = 1; r <= ROOMS; r++) {
-      const x = RX0 + (r - 1) * PITCH;
+      const [x, y] = roomBox(r);
       hc.fillStyle = "#0e1626";
-      hc.fillRect(x, RY0, RW, RY1 - RY0);
+      hc.fillRect(x, y, RW, RH);
       hc.strokeStyle = "#26324a";
-      hc.strokeRect(x + 0.5, RY0 + 0.5, RW - 1, RY1 - RY0 - 1);
+      hc.strokeRect(x + 0.5, y + 0.5, RW - 1, RH - 1);
       hc.fillStyle = FAINT;
       hc.font = "11px " + MONO;
       hc.textAlign = "center";
-      hc.fillText(String(r), x + RW / 2, RY0 + 16);
+      hc.fillText(String(r), x + RW / 2, y + 16);
     }
     hc.fillStyle = DIM;
     hc.font = "18px " + MONO;
-    hc.fillText("…", RX0 + ROOMS * PITCH + 8, GY + 6);
+    { const [x] = roomBox(ROOMS), y = roomPos(ROOMS)[1]; hc.fillText("…", x + PITCH + (HN ? 2 : 8), y + 6); }
 
     const op = hotel.op;
     const t = op && !op.done ? (now - op.start) : Infinity;
@@ -193,37 +274,48 @@
     if (!op || op.done) {
       for (let r = 1; r <= ROOMS; r++) {
         const g = hotel.rooms[r];
-        if (g) drawGuest(roomX(r), GY, g, 1);
+        const [x, y] = roomPos(r);
+        if (g) drawGuest(x, y, g, 1);
         else {
-          hc.fillStyle = "#3a4760";
-          hc.font = "10px " + MONO;
+          hc.fillStyle = HN ? "#56647c" : "#3a4760";
+          hc.font = (HN ? "11px " : "10px ") + MONO;
           hc.textAlign = "center";
-          hc.fillText("empty", roomX(r), GY + 4);
+          if (HN) {
+            // Too narrow for the word: a dashed empty seat instead.
+            hc.strokeStyle = "#3a4760"; hc.setLineDash([3, 3]);
+            hc.beginPath(); hc.arc(x, y, 12, 0, Math.PI * 2); hc.stroke(); hc.setLineDash([]);
+          } else hc.fillText("empty", x, y + 4);
         }
       }
     }
 
     // Arrivals area
     hc.strokeStyle = "#1a2436";
-    hc.beginPath(); hc.moveTo(20, 158.5); hc.lineTo(HW - 20, 158.5); hc.stroke();
+    hc.beginPath(); hc.moveTo(HN ? 8 : 20, SEP_Y + 0.5); hc.lineTo(HW - (HN ? 8 : 20), SEP_Y + 0.5); hc.stroke();
     hc.font = "12px " + MONO;
     hc.fillStyle = DIM;
     hc.textAlign = "left";
-    hc.fillText("ARRIVALS", RX0, 182);
-    hc.fillText("THE RULE", 610, 182);
+    hc.fillText("ARRIVALS", RX0, ARR_Y);
+    if (HN) {
+      hc.beginPath(); hc.moveTo(8, RULE_Y - 24.5); hc.lineTo(HW - 8, RULE_Y - 24.5); hc.stroke();
+    }
+    hc.fillText("THE RULE", RULE_X, RULE_Y);
 
+    const cellFont = (HN ? "11px " : "10px ") + MONO;
     if (op) {
       const isGrid = op.kind === "buses";
       // Zigzag / row labels
       for (const row of op.grid) {
-        const y = row.cells[0].from[1];
+        const cells = row.cells.filter((c) => c.seat <= ASEATS);
+        const y = cellPos(row.cells[0].vrow, 1)[1];
         hc.fillStyle = DIM;
-        hc.font = "11px " + MONO;
+        hc.font = (HN ? "12px " : "11px ") + MONO;
         hc.textAlign = "right";
         hc.fillText(row.name, AX0 - 6, y + 4);
-        if (row.more) {
+        if (row.more && cells.length) {
           hc.textAlign = "left";
-          hc.fillText("…", row.cells[row.cells.length - 1].from[0] + 46, y + 4);
+          const lx = cellPos(0, cells[cells.length - 1].seat)[0] + 46;
+          if (lx + 10 < HW) hc.fillText("…", lx, y + 4);
         }
       }
       if (isGrid) {
@@ -232,9 +324,10 @@
         hc.fillText("⋮", AX0 - 6, AY0 + (ABUSES + 1) * AROW - 6);
         if (op.method === "diag") {
           // The zigzag path through the grid, in room order
+          const maxS = Math.min(5, ASEATS - 1);
           const pts = [];
           for (let b = 0; b <= ABUSES; b++) for (let k = 1; k <= ASEATS; k++) {
-            if (b + k - 1 <= 5) pts.push([diagRoom(b, k), AX0 + 20 + (k - 1) * ACOL, AY0 + b * AROW]);
+            if (b + k - 1 <= maxS) pts.push([diagRoom(b, k), ...cellPos(b, k)]);
           }
           pts.sort((a, b) => a[0] - b[0]);
           // Solid along each diagonal, faint dashes for the jump back to the top row.
@@ -251,63 +344,73 @@
         }
       }
       // Cells: dot plus the room it is assigned
-      const cells = op.grid.flatMap((r) => r.cells);
+      const cells = op.grid.flatMap((r) => r.cells).filter((c) => c.seat <= ASEATS);
       for (const c of cells) {
-        const [x, y] = c.from;
+        const [x, y] = cellPos(c.vrow, c.seat);
         if (c.ghost) {
           hc.strokeStyle = c.g ? c.g.colour : "#3a4760";
           hc.globalAlpha = 0.6;
-          hc.beginPath(); hc.arc(x, y, 9, 0, Math.PI * 2); hc.stroke();
+          hc.beginPath(); hc.arc(x, y, HN ? 10 : 9, 0, Math.PI * 2); hc.stroke();
           hc.globalAlpha = 1;
-          hc.fillStyle = FAINT;
-          hc.font = "9px " + MONO;
+          hc.fillStyle = HN ? DIM : FAINT;
+          hc.font = (HN ? "11px " : "9px ") + MONO;
           hc.textAlign = "center";
           hc.fillText(String(c.seat), x, y + 3);
         } else if (op.done || u === 0) {
-          drawGuest(x, y, c.g, op.done ? 0.25 : 1, 10);
+          drawGuest(x, y, c.g, op.done ? 0.25 : 1, HN ? 11 : 10);
         } else {
           hc.strokeStyle = c.g.colour;
           hc.globalAlpha = 0.35;
           hc.beginPath(); hc.arc(x, y, 10, 0, Math.PI * 2); hc.stroke();
           hc.globalAlpha = 1;
         }
-        hc.fillStyle = c.to <= ROOMS ? INK : FAINT;
-        hc.font = "10px " + MONO;
+        hc.fillStyle = c.to <= ROOMS ? INK : (HN ? DIM : FAINT);
+        hc.font = cellFont;
         hc.textAlign = "left";
         const showTo = t > 250 || op.done;
-        if (showTo) hc.fillText("→" + toLabel(c, op), x + 13, y + 4);
+        if (showTo) hc.fillText("→" + toLabel(c, op), x + (HN ? 14 : 13), y + 4);
       }
 
       // Rule text
       hc.fillStyle = INK;
-      hc.font = "14px " + MONO;
+      hc.font = (HN ? "13px " : "14px ") + MONO;
       hc.textAlign = "left";
-      ruleText(op).forEach((line, i) => hc.fillText(line, 610, 214 + i * 24));
+      const lh = HN ? 21 : 24;
+      let ry = RULE_Y + 32;
+      if (HN) for (const line of ruleText(op)) ry = wrapText(hc, line, RULE_X, ry, HW - 2 * RULE_X, lh);
+      else ruleText(op).forEach((line, i) => hc.fillText(line, RULE_X, RULE_Y + 32 + i * lh));
       if (op.done) {
         hc.fillStyle = GOOD;
         hc.font = "13px " + SANS;
-        hc.fillText("Every guest has a room. Nobody shares.", 610, 214 + 5 * 24 + 16);
-        hc.fillStyle = DIM;
-        hc.fillText(op.kind === "buses" && op.method === "prime" ? "Many rooms stay empty, and that is allowed." : "No room is left empty either.", 610, 214 + 5 * 24 + 38);
+        const msg2 = op.kind === "buses" && op.method === "prime" ? "Many rooms stay empty, and that is allowed." : "No room is left empty either.";
+        if (HN) {
+          let y = wrapText(hc, "Every guest has a room. Nobody shares.", RULE_X, ry + 8, HW - 2 * RULE_X, 18);
+          hc.fillStyle = DIM;
+          wrapText(hc, msg2, RULE_X, y + 4, HW - 2 * RULE_X, 18);
+        } else {
+          hc.fillText("Every guest has a room. Nobody shares.", 610, 214 + 5 * 24 + 16);
+          hc.fillStyle = DIM;
+          hc.fillText(msg2, 610, 214 + 5 * 24 + 38);
+        }
       }
     } else {
       hc.fillStyle = INK;
-      hc.font = "14px " + MONO;
+      hc.font = (HN ? "13px " : "14px ") + MONO;
       hc.textAlign = "left";
-      ruleText(null).forEach((line, i) => hc.fillText(line, 610, 214 + i * 24));
+      if (HN) { let ry = RULE_Y + 32; for (const line of ruleText(null)) ry = wrapText(hc, line, RULE_X, ry, HW - 2 * RULE_X, 21); }
+      else ruleText(null).forEach((line, i) => hc.fillText(line, RULE_X, RULE_Y + 32 + i * 24));
     }
 
     // Moving guests
     if (op && !op.done) {
-      const all = op.moves.concat(op.arrivals);
+      const all = op.moves.concat(op.arrivals).filter((m) => m.room || m.seat <= ASEATS);
       for (const m of all) {
-        const [x0, y0] = m.from;
+        const [x0, y0] = fromOf(m);
         const visible = m.to <= ROOMS;
-        const x1 = visible ? roomX(m.to) : HW + 30;
-        const y1 = GY;
+        const [x1, y1] = visible ? roomPos(m.to) : offscreen();
         const e = ease(u);
         const x = x0 + (x1 - x0) * e;
-        const lift = m.from[1] === GY ? Math.min(60, 12 + Math.abs(x1 - x0) * 0.25) : 30;
+        const lift = m.room ? Math.min(60, 12 + Math.abs(x1 - x0) * 0.25) : 30;
         const y = y0 + (y1 - y0) * e - Math.sin(Math.PI * e) * lift;
         const alpha = visible ? 1 : 1 - Math.max(0, (e - 0.55) / 0.45);
         drawGuest(x, y, m.g, alpha);
@@ -331,11 +434,27 @@
   /* =========================================================
      Part 2: Cantor's diagonal argument
      ========================================================= */
-  const CW = 960, CHt = 440;
   const cv = $("cantor");
-  const cc = Lab.setupCanvas(cv, CW, CHt);
-  const GX = 128, COLW = 32, VC = 21, GTOP = 58, ROWH = 28, VR = 10;
-  const NEWY = GTOP + VR * ROWH + 46;
+  let CW = 960, CHt = 440, cc, CN = false;
+  let GX = 128, COLW = 32, VC = 21, GTOP = 58, ROWH = 28, VR = 10, NEWY, FOLLOW = 6, FADE = 60;
+  function layoutCantor() {
+    const cw = cssWidth(cv);
+    CN = cw < NARROW;
+    if (CN) {
+      CW = Math.max(300, Math.round(cw));
+      COLW = 30; ROWH = 30; VR = 8; GTOP = 92;
+      GX = cantor.base === 10 ? 76 : 60;
+      VC = Math.floor((CW - GX - 22) / COLW);
+      FOLLOW = Math.max(3, VC - 2); FADE = 36;
+      NEWY = GTOP + VR * ROWH + 44;
+      CHt = NEWY + 110;
+    } else {
+      CW = 960; CHt = 440;
+      GX = 128; COLW = 32; VC = 21; GTOP = 58; ROWH = 28; VR = 10; FOLLOW = 6; FADE = 60;
+      NEWY = GTOP + VR * ROWH + 46;
+    }
+    cc = Lab.setupCanvas(cv, CW, CHt);
+  }
 
   const cantor = {
     base: 2,
@@ -347,6 +466,8 @@
     flash: -1, flashAt: 0,
     inserted: 0,
   };
+
+  layoutCantor();
 
   const hash = (seed, i, j) => {
     let h = (seed ^ Math.imul(i + 1, 0x9e3779b1) ^ Math.imul(j + 1, 0x85ebca6b)) >>> 0;
@@ -390,7 +511,7 @@
 
   function drawCantor(now) {
     const k = cantor.k;
-    const target = Math.max(0, k - 6);
+    const target = Math.max(0, k - FOLLOW);
     cantor.view += (target - cantor.view) * (Lab.reducedMotion ? 1 : 0.12);
     if (Math.abs(target - cantor.view) < 0.002) cantor.view = target;
     const v = cantor.view;
@@ -402,9 +523,17 @@
     cc.font = "12px " + MONO;
     cc.fillStyle = DIM;
     cc.textAlign = "left";
-    cc.fillText(dec ? "A LIST OF REAL NUMBERS BETWEEN 0 AND 1" : "A LIST OF INFINITE STRINGS OF 0s AND 1s", 20, 26);
-    cc.textAlign = "right";
-    cc.fillText("DIGIT POSITION →", GX - 8, GTOP - 14);
+    const title = dec ? "A LIST OF REAL NUMBERS BETWEEN 0 AND 1" : "A LIST OF INFINITE STRINGS OF 0s AND 1s";
+    if (CN) {
+      cc.font = "11px " + MONO;
+      wrapText(cc, title, 12, 20, CW - 24, 15);
+      cc.font = "12px " + MONO;
+      cc.fillText("DIGIT POSITION →", GX, GTOP - 36);
+    } else {
+      cc.fillText(title, 20, 26);
+      cc.textAlign = "right";
+      cc.fillText("DIGIT POSITION →", GX - 8, GTOP - 14);
+    }
 
     const first = Math.floor(v), last = first + VR;
     const cy = (i) => GTOP + (i - v) * ROWH + ROWH / 2;
@@ -414,10 +543,10 @@
     // Column headers
     cc.save();
     cc.beginPath(); cc.rect(GX, 0, VC * COLW, CHt); cc.clip();
-    cc.font = "10px " + MONO;
+    cc.font = (CN ? "11px " : "10px ") + MONO;
     cc.textAlign = "center";
     for (let j = first; j <= first + VC; j++) {
-      cc.fillStyle = j === k ? AMBER : FAINT;
+      cc.fillStyle = j === k ? AMBER : CN ? DIM : FAINT;
       cc.fillText(String(j + 1), cx(j), GTOP - 14);
     }
     cc.restore();
@@ -431,12 +560,13 @@
       cc.font = "12px " + MONO;
       cc.textAlign = "right";
       cc.fillStyle = i < k ? FAINT : DIM;
-      cc.fillText("row " + (i + 1), dec ? 92 : GX - 14, y + 4);
+      cc.fillText(CN ? String(i + 1) : "row " + (i + 1), dec ? (CN ? GX - 26 : 92) : GX - (CN ? 10 : 14), y + 4);
       if (dec) { cc.fillStyle = "#c9d4e3"; cc.fillText("0.", GX - 6, y + 4); }
       if (i < k) {
         cc.fillStyle = AMBER;
         cc.textAlign = "left";
-        cc.fillText("≠ at digit " + (i + 1), gridRight + 18, y + 4);
+        if (CN) cc.fillText("≠", gridRight + 6, y + 4);
+        else cc.fillText("≠ at digit " + (i + 1), gridRight + 18, y + 4);
       }
       cc.save();
       cc.beginPath(); cc.rect(GX, GTOP, VC * COLW, VR * ROWH); cc.clip();
@@ -464,26 +594,26 @@
     cc.restore();
 
     // Fade at the right edge of the grid
-    const fade = cc.createLinearGradient(gridRight - 60, 0, gridRight, 0);
+    const fade = cc.createLinearGradient(gridRight - FADE, 0, gridRight, 0);
     fade.addColorStop(0, "rgba(5,8,14,0)");
     fade.addColorStop(1, "rgba(5,8,14,1)");
     cc.fillStyle = fade;
-    cc.fillRect(gridRight - 60, GTOP, 60, VR * ROWH);
+    cc.fillRect(gridRight - FADE, GTOP, FADE, VR * ROWH);
     cc.fillStyle = DIM;
     cc.font = "16px " + MONO;
     cc.textAlign = "left";
-    cc.fillText("…", gridRight - 8, GTOP + ROWH * 0.6);
+    if (!CN) cc.fillText("…", gridRight - 8, GTOP + ROWH * 0.6);
     cc.textAlign = "center";
-    cc.fillText("⋮", 70, GTOP + VR * ROWH + 18);
+    cc.fillText("⋮", CN ? GX / 2 : 70, GTOP + VR * ROWH + 18);
 
     // New string row
     const ny = NEWY;
     cc.strokeStyle = "#26324a";
-    cc.beginPath(); cc.moveTo(20, ny - 26.5); cc.lineTo(CW - 20, ny - 26.5); cc.stroke();
+    cc.beginPath(); cc.moveTo(CN ? 8 : 20, ny - 26.5); cc.lineTo(CW - (CN ? 8 : 20), ny - 26.5); cc.stroke();
     cc.font = "500 12px " + MONO;
     cc.fillStyle = AMBER;
     cc.textAlign = "right";
-    cc.fillText("new", dec ? 92 : GX - 14, ny + 4);
+    cc.fillText("new", dec ? (CN ? GX - 26 : 92) : GX - (CN ? 10 : 14), ny + 4);
     if (dec) { cc.fillStyle = AMBER; cc.fillText("0.", GX - 6, ny + 4); }
     cc.save();
     cc.beginPath(); cc.rect(GX, ny - 22, VC * COLW, 44); cc.clip();
@@ -505,7 +635,7 @@
     }
     cc.restore();
     cc.fillStyle = fade;
-    cc.fillRect(gridRight - 60, ny - 22, 60, 44);
+    cc.fillRect(gridRight - FADE, ny - 22, FADE, 44);
 
     // Flash: arrow from the diagonal cell down to the new digit
     if (cantor.flash >= 0) {
@@ -537,11 +667,19 @@
       const d0 = digitOf(L, k - 1, k - 1), d1 = newDigit(k - 1);
       cap = "Row " + k + " has " + d0 + " in position " + k + ", so the new string gets " + d1 + " there. It cannot be row " + k + ".";
     }
-    cc.fillText(cap, 20, CHt - 16);
-    if (!cantor.playing && k >= 20) {
-      cc.fillStyle = AMBER;
-      cc.textAlign = "right";
-      cc.fillText("…and so on for every row, forever.", CW - 20, CHt - 16);
+    if (CN) {
+      const y = wrapText(cc, cap, 12, NEWY + 46, CW - 24, 18);
+      if (!cantor.playing && k >= 20) {
+        cc.fillStyle = AMBER;
+        wrapText(cc, "…and so on for every row, forever.", 12, y + 4, CW - 24, 18);
+      }
+    } else {
+      cc.fillText(cap, 20, CHt - 16);
+      if (!cantor.playing && k >= 20) {
+        cc.fillStyle = AMBER;
+        cc.textAlign = "right";
+        cc.fillText("…and so on for every row, forever.", CW - 20, CHt - 16);
+      }
     }
   }
 
@@ -549,7 +687,7 @@
     const rect = cv.getBoundingClientRect();
     const x = (evt.clientX - rect.left) / rect.width * CW;
     const y = (evt.clientY - rect.top) / rect.height * CHt;
-    if (x < GX || x > GX + VC * COLW - 30 || y < GTOP || y > GTOP + VR * ROWH) return null;
+    if (x < GX || x > GX + VC * COLW - FADE / 2 || y < GTOP || y > GTOP + VR * ROWH) return null;
     const i = Math.floor(cantor.view + (y - GTOP) / ROWH);
     const j = Math.floor(cantor.view + (x - GX) / COLW);
     return i >= 0 && j >= 0 ? [i, j] : null;
@@ -570,6 +708,7 @@
     $("modeDecimal").setAttribute("aria-pressed", String(base === 10));
     cantor.list = newList();
     cantor.inserted = 0;
+    if (CN) layoutCantor();
     restartDiag(true);
   }
   $("modeBinary").addEventListener("click", () => setMode(2));
@@ -625,6 +764,18 @@
     drawHotel(now);
     drawCantor(now);
     requestAnimationFrame(frame);
+  }
+
+  // Re-run the layouts when the displayed width changes; the state is kept.
+  const lastW = new Map();
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      for (const [c, fn] of [[hcv, layoutHotel], [cv, layoutCantor]]) {
+        const w = cssWidth(c);
+        if (w !== lastW.get(c)) { lastW.set(c, w); fn(); }
+      }
+    });
+    ro.observe(hcv.parentElement); ro.observe(cv.parentElement);
   }
 
   fullHotel();

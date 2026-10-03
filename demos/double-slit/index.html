@@ -33,6 +33,12 @@
     font-size: var(--step--1);
     max-width: 80ch;
   }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+  }
 </style>
 </head>
 <body>
@@ -107,6 +113,7 @@
       <h2>What you're seeing</h2>
       <p>A source sends single photons toward a barrier with two narrow slits, one metre in front of a screen. Each photon arrives at one random spot. The odds of each spot follow the wave formula: two waves, one from each slit, add up where their crests meet and cancel where a crest meets a trough.</p>
       <p>With the detector on, every photon is tagged with the slit it went through. The stripes disappear and you get two overlapping blobs, exactly what tiny bullets would make.</p>
+      <p data-depth="deep">The screen shown is 30 mm tall. Each landing spot is drawn at random from the formula in the math section by rejection sampling: pick a spot anywhere on the screen, keep it with a probability equal to the predicted brightness there, otherwise try again. No photon knows about any other, yet the pile of spots follows the curve.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -115,11 +122,24 @@
         <li>Close one slit. Some spots that were dark with two slits are now bright. Opening a second path made light <em>stop</em> arriving there.</li>
         <li>Shorten the wavelength or widen the slit separation and the stripes squeeze together: spacing = wavelength × distance ÷ separation.</li>
       </ul>
+      <p data-depth="deep">The slit width sets the envelope. Its first dark edges sit at ±λL/a, about ±10.4 mm with the default 520 nm light and 0.05 mm slits. With the default 0.25 mm separation, bright stripes fall every λL/d = 2.08 mm, so the fifth one out would land exactly on the envelope's dark edge and is missing: nine stripes fit in the central lobe.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>No photon is ever split; detectors always click whole. But whenever the universe holds no record of which slit was used, the photon behaves as if it explored both. Gaining that record, even without disturbing the photon's direction, destroys the interference. This is wave-particle duality, and Feynman called it "the only mystery" of quantum mechanics.</p>
       <p class="muted">Done for real with single electrons by Tonomura's team at Hitachi in 1989.</p>
+      <p data-depth="deep">The detector here is ideal: it always records the slit and never nudges the photon, so the simulation simply drops the interference term. Real detectors can be partial. If D measures how well the path could be told apart (0 = not at all, 1 = perfectly) and V measures how strong the fringes are, then V² + D² ≤ 1, a relation proved by Englert in 1996. Half-knowing the path gives half-washed-out stripes.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">P(x) = |ψ₁(x) + ψ₂(x)|²<br>&nbsp;&nbsp;= |ψ₁|² + |ψ₂|² + 2 Re(ψ₁<sup>*</sup>ψ₂)</div>
+      <p>ψ₁ and ψ₂ are the amplitudes for reaching spot x through the top and bottom slit. Probability is the squared size of their sum, and the last term, the interference term, can be positive or negative: that is how opening a second slit can make a spot darker. With the which-path detector on, the two routes can be told apart, the cross term vanishes, and P(x) = |ψ₁|² + |ψ₂|². The page does exactly that: with the detector on it adds the two single-slit patterns, each with weight ½.</p>
+      <div class="eq" data-depth="deep" translate="no">I(x) ∝ cos²(πdx ÷ λL)<br>&nbsp;&nbsp;× (sin β ÷ β)²<br>β = πax ÷ λL</div>
+      <p>The far-field pattern of two slits of width a whose centres are d apart, on a screen a distance L away, with x measured from the centre. The cos² factor comes from the path difference d·x/L between the two slits; the (sin β / β)² envelope is the diffraction pattern of one slit. It assumes small angles and a distant screen, which hold well here (L = 1 m, slits a fraction of a millimetre). This is the formula the page uses, with the slider values for λ, d and a.</p>
+      <div class="eq" data-depth="deep" translate="no">Δx = λL ÷ d<br>x₀ = ±λL ÷ a</div>
+      <p>Δx is the distance between bright stripes and x₀ the first zero of the envelope. With 520 nm, L = 1 m and d = 0.25 mm, Δx = 2.08 mm, the value in the Fringe spacing readout. Since x₀ ÷ Δx = d ÷ a = 5, the fifth-order stripe coincides with a dark edge of the envelope.</p>
+      <div class="eq" data-depth="deep" translate="no">N<sub>b</sub> ≈ N·p<sub>b</sub> ± √(N·p<sub>b</sub>)</div>
+      <p>The screen is cut into 95 bands, 0.32 mm each. p<sub>b</sub> is the chance a photon lands in band b; the page gets it by averaging I(x) at six points across each band and normalising. After N photons the white curve shows the expected count N·p<sub>b</sub>, and your bars scatter around it by roughly its square root, so a band expecting 100 hits is typically off by about 10. That is why the stripes only look clean after a few thousand photons.</p>
     </section>
   </div>
 

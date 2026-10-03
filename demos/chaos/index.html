@@ -101,6 +101,7 @@
       <h2>What you're seeing</h2>
       <p>Each pendulum is two equal one-metre arms hinged together, swinging under real gravity with no friction. Their motion is computed with the same exact equations and the same fourth-order Runge-Kutta steps. The only difference is the starting angle of the upper arm, which differs by the amount on the slider, spread evenly across the pendulums.</p>
       <p>The right panel tracks how far apart the first and last pendulum are, counting both angles and both spin rates. The vertical scale is logarithmic, so steady exponential growth shows up as a straight climb.</p>
+      <p data-depth="deep">Each frame advances the pendulums in fixed fourth-order Runge-Kutta steps of 1/480 s. The error of one step shrinks with the fifth power of the step size, and over the first ten seconds the total energy drifts by less than one part in a million. The computer's rounding errors are around 1e-16, far below even the smallest starting difference of 1e-9, so the gap you see really comes from the starting angles.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -109,11 +110,24 @@
         <li>Set both arms to small angles like 20° and 0°. The motion is regular, the gap grows slowly and the plot no longer climbs in a straight line. Chaos needs enough energy.</li>
         <li>Pick 100 fan. The pendulums leave as a single line, smear into a ribbon, then scatter over every reachable position.</li>
       </ul>
+      <p data-depth="deep">With the default 150° and 0°, the gap grows about tenfold every 1.5 s. Going from 1e-2 to 1e-9 rad shrinks the start by a factor of ten million, which is seven factors of ten, so it buys only about 7 × 1.5 ≈ 10 extra seconds: the split moves from about 3 s to about 13 s.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Nothing here is random. Give a computer the same numbers and it repeats the run exactly. But any error in the starting state, however small, is multiplied by about the same factor every second. Predicting further ahead needs exponentially better measurements, so in practice the future is closed even though the laws are known.</p>
       <p class="muted">Poincaré saw this in the three-body problem around 1890. Edward Lorenz rediscovered it in a weather model in 1961 and asked in 1972 whether a butterfly in Brazil could set off a tornado in Texas.</p>
+      <p data-depth="deep">The growth rate shown is a finite-time estimate from one pair of runs. The true Lyapunov exponent is a long-time average and depends on the energy: it is zero for the regular, low-angle swings, where nearby runs drift apart only in proportion to time, and positive once large swings and flips are possible. A positive exponent together with motion that stays bounded is the usual working definition of chaos.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">θ₁″ = [ −3g sin θ₁<br>&nbsp;&nbsp;− g sin(θ₁ − 2θ₂)<br>&nbsp;&nbsp;− 2L sin Δ (ω₂²<br>&nbsp;&nbsp;&nbsp;&nbsp;+ ω₁² cos Δ) ]<br>&nbsp;&nbsp;÷ [ L (3 − cos 2Δ) ]<br>θ₂″ = 2 sin Δ [ 2Lω₁²<br>&nbsp;&nbsp;+ 2g cos θ₁ + Lω₂² cos Δ ]<br>&nbsp;&nbsp;÷ [ L (3 − cos 2Δ) ]<br>Δ = θ₁ − θ₂</div>
+      <p>The equations of motion of a double pendulum with equal masses and equal arms, derived from the Lagrangian. θ₁ and θ₂ are the arm angles from straight down, ω = θ′ their spin rates, g = 9.81 m/s² and L = 1 m. The masses cancel. The page integrates exactly these four first-order equations for (θ₁, θ₂, ω₁, ω₂) with classic RK4 at h = 1/480 s, the same steps for every pendulum.</p>
+      <div class="eq" data-depth="deep" translate="no">E = mL² [ ω₁² + ½ω₂²<br>&nbsp;&nbsp;+ ω₁ω₂ cos Δ ]<br>&nbsp;&nbsp;− mgL (2 cos θ₁ + cos θ₂)</div>
+      <p>The total energy: kinetic energy plus the potential energy set by the height of both bobs. With no friction it stays constant, which makes it a good check on the integrator. It also decides what is possible: with too little energy the lower arm cannot flip over the top and the motion stays regular.</p>
+      <div class="eq" data-depth="deep" translate="no">d = √( δθ₁² + δθ₂²<br>&nbsp;&nbsp;+ (δω₁² + δω₂²) ÷ ω₀² )<br>ω₀ = √(g/L)</div>
+      <p>The separation plotted on the right, between the first and last pendulum. The angle differences δθ are wrapped into the range −π to π, and the spin-rate differences are divided by ω₀ ≈ 3.13 rad/s so that every term has no units.</p>
+      <div class="eq" data-depth="deep" translate="no">d(t) ≈ d₀ e<sup>λt</sup><br>t* ≈ (1/λ) ln(D/d₀)</div>
+      <p>In chaotic motion a small separation d₀ grows on average exponentially, at a rate λ called the largest Lyapunov exponent. The time t* to reach a visible size D therefore grows only with the logarithm of the starting precision: each tenfold improvement adds just ln 10 / λ. The page fits a straight line to ln d against time up to the moment the lower bobs are 20 cm apart; its slope is the growth rate shown, reported as the factor e<sup>λ</sup> per second and the time ln 10 / λ for a tenfold increase.</p>
     </section>
   </div>
 

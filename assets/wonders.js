@@ -37,6 +37,24 @@
   if (!slug) return;
   update((p) => { (p.visited = p.visited || {})[slug] = Date.now(); });
 
+  const query = new URLSearchParams(location.search);
+  const root = document.documentElement;
+
+  // ---------- Embed mode (?embed=1): only the apparatus, for other sites ----------
+  const embedded = query.get("embed") === "1";
+  if (embedded) root.classList.add("embed");
+
+  // ---------- Explanation depth: Simple (default) or Deeper ----------
+  // Page content marks extra material with data-depth="deep" (and, optionally,
+  // simpler alternatives with data-depth="simple"); CSS shows one or the other.
+  const DEPTH_KEY = "science-wonders-depth";
+  let depth = query.get("depth");
+  if (depth !== "deep" && depth !== "simple") {
+    try { depth = localStorage.getItem(DEPTH_KEY); } catch (e) {}
+  }
+  depth = depth === "deep" ? "deep" : "simple";
+  root.classList.toggle("depth-deep", depth === "deep");
+
   const head = document.querySelector(".demo-head");
   const bench = document.querySelector(".bench");
 
@@ -61,6 +79,7 @@
     if (pressed.length) params.set("p", pressed.join(","));
     const tour = currentTour();
     if (tour) params.set("tour", tour.id);
+    if (depth === "deep") params.set("depth", "deep");
     return location.origin + location.pathname + "?" + params.toString();
   }
   function applySetup() {
@@ -102,8 +121,96 @@
   } });
   const presentBtn = el("button", { id: "wPresent", type: "button", text: "Presenter mode", onclick: () => togglePresenter() });
   const quizLink = content ? el("a", { class: "tool-link", href: "#quiz", text: "Quiz" }) : null;
-  const toolbar = el("div", { class: "toolbar" }, shareBtn, presentBtn, quizLink, shareStatus);
+
+  // Embed code for other sites: the same setup, shown without the article.
+  const embedBtn = el("button", { id: "wEmbed", type: "button", text: "Embed", onclick: () => {
+    const url = new URL(setupURL());
+    url.searchParams.delete("tour");
+    url.searchParams.set("embed", "1");
+    // Height for a ~940px-wide frame: the bench keeps its aspect ratio; the rest is measured as-is.
+    const rest = [document.querySelector(".stats"), controls].filter(Boolean).reduce((a, n) => a + n.offsetHeight, 0);
+    const benchH = bench ? bench.offsetHeight * 940 / Math.max(1, bench.offsetWidth) : 500;
+    const h = Math.min(1200, Math.round(benchH + rest + 130));
+    const title = (document.querySelector("h1") || {}).textContent || "Science Wonders";
+    const code = `<iframe src="${url.href}" title="${title.replace(/"/g, "&quot;")}" width="100%" height="${h}" style="border:0;max-width:960px" loading="lazy" allow="fullscreen"></iframe>`;
+    const box = el("textarea", { class: "share-box embed-box", readonly: "", rows: "3", "aria-label": "Embed code" });
+    box.value = code;
+    const copy = el("button", { type: "button", text: "Copy embed code", onclick: async () => {
+      try { await navigator.clipboard.writeText(code); copy.textContent = "Copied"; } catch (e) { box.select(); }
+    } });
+    shareStatus.replaceChildren(el("span", { text: "Paste this into any web page to show the experiment with your current settings." }), box, copy);
+    box.select();
+  } });
+
+  // Record a short video clip of the main canvas.
+  const recordBtn = canRecord() ? el("button", { id: "wRecord", type: "button", text: "Record a clip", onclick: () => toggleRecording() }) : null;
+
+  // Simple / Deeper explanations.
+  const depthSeg = el("div", { class: "seg depth-seg", role: "group", "aria-label": "Explanations" },
+    ...[["simple", "Simple"], ["deep", "Deeper"]].map(([v, label]) =>
+      el("button", { type: "button", "data-depth-set": v, "aria-pressed": String(depth === v), text: label, onclick: () => setDepth(v) })));
+  const depthCtl = document.querySelector(".explain") ? el("div", { class: "depth-ctl" }, el("span", { class: "eyebrow", text: "Explanations" }), depthSeg) : null;
+  function setDepth(v) {
+    depth = v;
+    root.classList.toggle("depth-deep", v === "deep");
+    try { localStorage.setItem(DEPTH_KEY, v); } catch (e) {}
+    for (const b of depthSeg.children) b.setAttribute("aria-pressed", String(b.dataset.depthSet === v));
+  }
+
+  const toolbar = el("div", { class: "toolbar" }, shareBtn, embedBtn, recordBtn, presentBtn, quizLink, depthCtl, shareStatus);
   if (head) head.after(toolbar);
+
+  // ---------- Clip recording ----------
+  function mainCanvas() {
+    const all = bench ? [...bench.querySelectorAll("canvas")] : [];
+    return all.sort((a, b) => b.width * b.height - a.width * a.height)[0] || null;
+  }
+  function clipType() {
+    if (!window.MediaRecorder) return null;
+    for (const t of ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"]) {
+      try { if (MediaRecorder.isTypeSupported(t)) return t; } catch (e) {}
+    }
+    return null;
+  }
+  function canRecord() {
+    return !!(bench && bench.querySelector("canvas") && HTMLCanvasElement.prototype.captureStream && clipType());
+  }
+  const MAX_CLIP = 20;
+  let rec = null;
+  function toggleRecording() {
+    if (rec) { rec.stop(); return; }
+    const canvas = mainCanvas();
+    const type = clipType();
+    let recorder;
+    try { recorder = new MediaRecorder(canvas.captureStream(30), { mimeType: type, videoBitsPerSecond: 5e6 }); }
+    catch (e) { shareStatus.textContent = "This browser can't record the experiment."; return; }
+    const chunks = [];
+    const started = Date.now();
+    const label = () => {
+      const t = Math.floor((Date.now() - started) / 1000);
+      recordBtn.textContent = `Stop recording (0:${String(t).padStart(2, "0")})`;
+      if (t >= MAX_CLIP && rec) rec.stop();
+    };
+    const timer = setInterval(label, 250);
+    recorder.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      clearInterval(timer);
+      rec = null;
+      recordBtn.classList.remove("recording");
+      recordBtn.textContent = "Record a clip";
+      const blob = new Blob(chunks, { type: type.split(";")[0] });
+      const href = URL.createObjectURL(blob);
+      const name = `science-wonders-${slug}.${type.startsWith("video/mp4") ? "mp4" : "webm"}`;
+      const a = el("a", { href, download: name, class: "tool-link", text: "Save the clip" });
+      shareStatus.replaceChildren(el("span", { text: "Clip ready." }), " ", a);
+      a.click();
+    };
+    rec = recorder;
+    recorder.start(1000);
+    recordBtn.classList.add("recording");
+    label();
+    shareStatus.textContent = `Recording the experiment. Play with the controls, then press stop (up to ${MAX_CLIP} seconds).`;
+  }
 
   // ---------- Presenter mode ----------
   const exitBtn = el("button", { class: "present-exit", type: "button", text: "Exit presenter mode (Esc)", onclick: () => togglePresenter(false) });
@@ -160,7 +267,15 @@
     (head || document.body).before(bar);
   }
 
-  if (content) {
+  if (embedded) {
+    // Credit line linking back to the full page.
+    const full = new URL(location.href);
+    full.searchParams.delete("embed");
+    document.body.append(el("a", { class: "embed-credit", href: full.href, target: "_blank", rel: "noopener" },
+      el("span", { text: "Science Wonders" }), " ↗"));
+  }
+
+  if (content && !embedded) {
     // ---------- Predict first ----------
     const pr = content.predict;
     const done = (load().predicted || {})[slug];

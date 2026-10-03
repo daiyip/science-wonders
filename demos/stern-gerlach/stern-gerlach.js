@@ -1,12 +1,27 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const W = 960, H = 420;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
+  const canvas = $("bench");
   const DEG = Math.PI / 180;
-
-  const CY = 215, MH = 42;           // beam axis, magnet half-length
-  const OVEN_X = 42, SCR_X = 868, SCR_W = 22;
-  const SPEED = 380;                  // px per second for animated atoms
+  // Logical canvas size: 960 wide on desktop; a squarer 480-wide layout when the bench is narrow (phones),
+  // so canvas text stays readable. Counts and dots survive a layout switch.
+  let W = 960, H = 420, narrow = false, ctx;
+  let CY, MH, OVEN_X, SCR_X, SCR_W, SPEED, CHAIN_X, CHAIN_W, BLOCK_GAP, SLITS, SCR_TOP, SCR_BOT, DIAL_Y;
+  function setGeometry() {
+    if (!narrow) {
+      W = 960; H = 420;
+      CY = 215; MH = 42;               // beam axis, magnet half-length
+      OVEN_X = 42; SCR_X = 868; SCR_W = 22;
+      CHAIN_X = 160; CHAIN_W = 630; BLOCK_GAP = 30; SLITS = [92, 108];
+      SCR_TOP = 70; SCR_BOT = 370; DIAL_Y = 50;
+    } else {
+      W = 480; H = 500;
+      CY = 250; MH = 28;
+      OVEN_X = 30; SCR_X = 394; SCR_W = 16;
+      CHAIN_X = 86; CHAIN_W = 300; BLOCK_GAP = 24; SLITS = [62, 72];
+      SCR_TOP = 110; SCR_BOT = 392; DIAL_Y = 54;
+    }
+    SPEED = 380 * W / 960;             // px per second for animated atoms
+  }
 
   const COL = {
     bg: "#05080e", label: "#7f8ea6", dim: "#56647c", rule: "#1f2a3f", metal: "#3a4760",
@@ -24,18 +39,18 @@
   let layout;
   function computeLayout() {
     const n = state.n;
-    const S = n === 1 ? 80 : n === 2 ? 60 : 44;
+    const S = n === 1 ? 80 : n === 2 ? 60 : narrow ? 50 : 44;
     const stages = [];
     let y = CY;
     for (let i = 0; i < n; i++) {
-      const xm = 160 + (i + 0.5) * (630 / n);
+      const xm = CHAIN_X + (i + 0.5) * (CHAIN_W / n);
       stages.push({ xm, yIn: y, xs: xm - MH });
       if (i < n - 1) y += state.keepUp[i] ? -S : S;
     }
     for (let i = 0; i < n; i++) {
       const st = stages[i];
       st.next = i < n - 1 ? stages[i + 1].xs : SCR_X;
-      st.xBlock = st.xm + MH + 30;
+      st.xBlock = st.xm + MH + BLOCK_GAP;
     }
     // Centre the whole zig-zag on the bench.
     let lo = Infinity, hi = -Infinity;
@@ -101,7 +116,8 @@
       if (up) state.finalUp++; else state.finalDown++;
       state.flashScreen[up ? 0 : 1] = 1;
       if (state.dots.length < 4000) {
-        state.dots.push({ x: xHit, y: finalY(up) + gauss() * 3.2, up });
+        // Stored relative to the detector, so the spots survive a layout switch.
+        state.dots.push({ fx: (xHit - SCR_X) / SCR_W, j: gauss() * 3.2, up });
       }
     }
   }
@@ -129,11 +145,37 @@
   }
 
   // ---------- Drawing ----------
-  const mono = (px) => { ctx.font = `${px}px 'IBM Plex Mono', ui-monospace, monospace`; };
+  // Narrow layout: every font is 6 px larger (the canvas is drawn at about 0.64 scale on a phone).
+  const mono = (px) => { ctx.font = `${narrow ? px + 6 : px}px 'IBM Plex Mono', ui-monospace, monospace`; };
   function label(text, x, y, align, colour) {
     ctx.fillStyle = colour || COL.label;
     ctx.textAlign = align || "center";
+    if (ctx.textAlign === "center") {
+      // Keep centred labels (which may be translated and longer) inside the canvas.
+      const half = ctx.measureText(text).width / 2;
+      x = Math.max(half + 4, Math.min(W - half - 4, x));
+    }
     ctx.fillText(text, x, y);
+  }
+  // Wrap a sentence to maxW; translate it whole first (Chinese wraps per character).
+  function wrapLines(text, maxW) {
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    const lines = [];
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; }
+      else line = t;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+  function wrapText(text, x, y, maxW, lh) {
+    for (const l of wrapLines(text, maxW)) { ctx.fillText(l, x, y); y += lh; }
+    return y;
   }
   function axisName(a) {
     a = ((a % 360) + 360) % 360;
@@ -163,7 +205,13 @@
           ctx.fillStyle = state.flashBlock[i] > 0 ? `rgba(240,120,100,${0.5 + 0.5 * state.flashBlock[i]})` : COL.block;
           ctx.fillRect(st[i].xBlock, yb - 9, 5, 18);
           mono(10);
-          label(`blocked ${state.blocked[i].toLocaleString()}`, st[i].xBlock + 10, yb + (s === -1 ? -8 : 14), "left", COL.dim);
+          if (narrow) {
+            // Two short lines, so the label stays clear of the next magnet and the detector.
+            label("blocked", st[i].xBlock + 9, yb + (s === -1 ? -28 : 16), "left", COL.dim);
+            label(state.blocked[i].toLocaleString(), st[i].xBlock + 9, yb + (s === -1 ? -10 : 34), "left", COL.dim);
+          } else {
+            label(`blocked ${state.blocked[i].toLocaleString()}`, st[i].xBlock + 10, yb + (s === -1 ? -8 : 14), "left", COL.dim);
+          }
         }
       }
     }
@@ -184,13 +232,20 @@
     ctx.lineTo(st.xm + 12, y + 16); ctx.lineTo(st.xm - 12, y + 16); ctx.lineTo(st.xm - 12, y + 10); ctx.lineTo(x0, y + 10);
     ctx.closePath(); ctx.fill();
     mono(10);
-    label("N", st.xm, y - 22, "center", "#a9b6cc");
-    label("S", st.xm, y + 29, "center", "#a9b6cc");
+    label("N", st.xm, y - (narrow ? 20 : 22), "center", "#a9b6cc");
+    label("S", st.xm, y + (narrow ? 31 : 29), "center", "#a9b6cc");
 
     // Header row: name, axis and an axis dial (looking along the beam: Z up, X right)
     mono(12);
-    label(`MAGNET ${i + 1} · ${axisName(state.angles[i])}`, st.xm, 22);
-    const dx = st.xm, dy = 50, r = 14;
+    if (narrow) {
+      // Name on top, axis under the dial: three headers have to share 480 px.
+      label(`MAGNET ${i + 1}`, st.xm, 24);
+      mono(11);
+      label(axisName(state.angles[i]), st.xm, DIAL_Y + 38, "center", COL.up);
+    } else {
+      label(`MAGNET ${i + 1} · ${axisName(state.angles[i])}`, st.xm, 22);
+    }
+    const dx = st.xm, dy = DIAL_Y, r = 14;
     ctx.strokeStyle = COL.metal; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(dx, dy, r, 0, Math.PI * 2); ctx.stroke();
     const a = state.angles[i] * DEG;
@@ -208,14 +263,16 @@
     // Odds for the beam entering this magnet
     const p = pUpAt(i);
     mono(10);
-    label(`up ${Math.round(p * 100)}%`, st.xm, y + 52, "center", COL.up);
-    label(`down ${Math.round((1 - p) * 100)}%`, st.xm, y + 65, "center", COL.down);
+    label(`up ${Math.round(p * 100)}%`, st.xm, y + (narrow ? 58 : 52), "center", COL.up);
+    label(`down ${Math.round((1 - p) * 100)}%`, st.xm, y + (narrow ? 78 : 65), "center", COL.down);
   }
 
   function drawScreen() {
-    const top = 70, bot = 370;
+    const top = SCR_TOP, bot = SCR_BOT;
     mono(12);
-    label("DETECTOR", SCR_X + SCR_W / 2, 22);
+    // Narrow: the header row belongs to the magnets, so the detector is named just above its bar.
+    if (narrow) label("DETECTOR", W - 4, SCR_TOP - 12, "right");
+    else label("DETECTOR", SCR_X + SCR_W / 2, 22);
     ctx.fillStyle = "#0a0f19";
     ctx.fillRect(SCR_X, top, SCR_W, bot - top);
     ctx.strokeStyle = COL.rule;
@@ -230,19 +287,20 @@
       ctx.setLineDash([]);
       mono(10);
       const ym = (y0 + y1) / 2;
-      label("classical:", SCR_X - 6, ym - 4, "right", "#aab6c8");
-      label("a smear", SCR_X - 6, ym + 9, "right", "#aab6c8");
+      label("classical:", SCR_X - 6, ym - (narrow ? 6 : 4), "right", "#aab6c8");
+      label("a smear", SCR_X - 6, ym + (narrow ? 14 : 9), "right", "#aab6c8");
     }
     for (const d of state.dots) {
       ctx.fillStyle = d.up ? "rgba(143,166,255,0.85)" : "rgba(240,179,90,0.85)";
-      ctx.fillRect(d.x - 0.8, d.y - 0.8, 1.6, 1.6);
+      ctx.fillRect(SCR_X + d.fx * SCR_W - 0.8, finalY(d.up) + d.j - 0.8, 1.6, 1.6);
     }
     mono(11);
     const yu = finalY(true), yd = finalY(false);
-    label(`up`, SCR_X + SCR_W + 6, yu - 3, "left", COL.up);
-    label(state.finalUp.toLocaleString(), SCR_X + SCR_W + 6, yu + 11, "left", COL.white);
-    label(`down`, SCR_X + SCR_W + 6, yd - 3, "left", COL.down);
-    label(state.finalDown.toLocaleString(), SCR_X + SCR_W + 6, yd + 11, "left", COL.white);
+    const l1 = narrow ? -5 : -3, l2 = narrow ? 15 : 11;
+    label(`up`, SCR_X + SCR_W + 6, yu + l1, "left", COL.up);
+    label(state.finalUp.toLocaleString(), SCR_X + SCR_W + 6, yu + l2, "left", COL.white);
+    label(`down`, SCR_X + SCR_W + 6, yd + l1, "left", COL.down);
+    label(state.finalDown.toLocaleString(), SCR_X + SCR_W + 6, yd + l2, "left", COL.white);
     for (const [k, y] of [[0, yu], [1, yd]]) {
       if (state.flashScreen[k] > 0) {
         ctx.fillStyle = `rgba(255,255,255,${0.7 * state.flashScreen[k]})`;
@@ -262,12 +320,17 @@
     ctx.fillStyle = "#ff9a5a";
     ctx.fillRect(OVEN_X + 18, CY - 3, 4, 6);
     mono(12);
-    label("OVEN", OVEN_X, 22);
+    label("OVEN", OVEN_X, narrow ? 24 : 22);
     mono(10);
-    label("silver atoms", OVEN_X, CY + 36, "center", COL.dim);
+    if (narrow) {
+      ctx.fillStyle = COL.dim; ctx.textAlign = "left";
+      wrapText("silver atoms", 4, CY + 44, 80, 20);
+    } else {
+      label("silver atoms", OVEN_X, CY + 36, "center", COL.dim);
+    }
     // Collimating slits
     ctx.fillStyle = COL.metal;
-    for (const x of [92, 108]) {
+    for (const x of SLITS) {
       ctx.fillRect(x, CY - 40, 3, 37);
       ctx.fillRect(x, CY + 3, 3, 37);
     }
@@ -293,7 +356,18 @@
 
   function drawLegend() {
     mono(10);
-    label("Dials show each magnet's axis looking along the beam: Z up, X right. Up and down beams are drawn up and down on the page.", 20, H - 12, "left", COL.dim);
+    const text = "Dials show each magnet's axis looking along the beam: Z up, X right. Up and down beams are drawn up and down on the page.";
+    if (narrow) {
+      // Bottom-aligned, however many lines the translation needs.
+      ctx.fillStyle = COL.dim; ctx.textAlign = "left";
+      const lines = wrapLines(text, W - 24);
+      lines.forEach((l, k) => ctx.fillText(l, 12, H - 12 - (lines.length - 1 - k) * 20));
+    } else {
+      // One line in English; a longer translation wraps upwards instead of running off the canvas.
+      ctx.fillStyle = COL.dim; ctx.textAlign = "left";
+      const lines = wrapLines(text, W - 40);
+      lines.forEach((l, k) => ctx.fillText(l, 20, H - 12 - (lines.length - 1 - k) * 16));
+    }
   }
 
   function draw(dt) {
@@ -357,6 +431,11 @@
     $("classicalNote").textContent = state.n === 1 ? "A tilted compass needle could land anywhere in the band." : "Shown for a single magnet.";
   }
 
+  function wantNarrow() {
+    const w = canvas.getBoundingClientRect().width;
+    return w > 0 && w < (narrow ? 656 : 640);
+  }
+
   function settingsChanged() {
     computeLayout();
     syncControls();
@@ -396,6 +475,22 @@
   // Start on the famous Z, X, Z chain with results already on the detector.
   state.rate = Math.max(1, Math.round(Math.pow(200, $("rate").value / 100)));
   $("rateOut").textContent = state.rate;
+  setGeometry();
+  narrow = wantNarrow();
+  setGeometry();
+  ctx = Lab.setupCanvas(canvas, W, H);
+  new ResizeObserver(() => {
+    const n = wantNarrow();
+    if (n === narrow) return;
+    narrow = n;
+    setGeometry();
+    ctx = Lab.setupCanvas(canvas, W, H);
+    computeLayout();
+    // Atoms in flight land straight away in the new layout.
+    for (const f of state.flights) commit(f.fate, endX(f.fate));
+    state.flights = [];
+    updateStats();
+  }).observe(canvas.parentElement);
   computeLayout();
   syncControls();
   for (let i = 0; i < 1600; i++) fire(false);

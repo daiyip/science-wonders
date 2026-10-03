@@ -48,7 +48,7 @@
     if (collecting) { I.seen.add(/\d/.test(k) ? template(k).key : k); return null; }
     if (k in dict) return dict[k];
     const t = template(k);
-    if (!(t.key in dict)) { if (I.missed.size < 500) I.missed.add(t.key); return null; }
+    if (!(t.key in dict)) { if (I.missed.size < 3000) I.missed.add(t.key); return null; }
     return dict[t.key].replace(/\{(\d+)\}/g, (m, i) => (t.nums[i] !== undefined ? t.nums[i] : m));
   }
   function template(k) {
@@ -121,7 +121,11 @@
     }
   }
   function visit(node) {
-    if (node.nodeType === 3) { if (node.parentNode && !SKIP.has(node.parentNode.nodeName.toUpperCase())) visitText(node); return; }
+    if (node.nodeType === 3) {
+      const par = node.parentElement;
+      if (par && !SKIP.has(par.nodeName.toUpperCase()) && !par.closest("[translate=no]")) visitText(node);
+      return;
+    }
     if (node.nodeType !== 1 || SKIP.has(node.nodeName.toUpperCase()) || node.getAttribute("translate") === "no") return;
     visitAttrs(node);
     if (isBlock(node)) {

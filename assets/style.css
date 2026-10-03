@@ -318,3 +318,40 @@ a.btn { display: inline-block; text-decoration: none; }
 .topbar nav { align-items: center; }
 :lang(zh-CN) { --font-display: "Spectral", "Noto Serif SC", "Songti SC", "SimSun", serif; --font-body: "IBM Plex Sans", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
 :lang(zh-CN) .eyebrow { letter-spacing: 0.04em; }
+
+/* Explanation depth (Simple / Deeper toggle in the toolbar) */
+.depth-ctl { display: flex; align-items: center; gap: 8px; }
+[data-depth="deep"] { display: none !important; }
+.depth-deep [data-depth="deep"] { display: revert !important; }
+.depth-deep [data-depth="simple"] { display: none !important; }
+.depth-deep .deep-math, .deep-math { border-top: 1px solid var(--rule); }
+.eq {
+  font-family: var(--font-mono); font-size: 0.95rem; line-height: 1.6;
+  padding: 10px 14px; margin: 6px 0; background: var(--panel); border: 1px solid var(--rule);
+  border-radius: 6px; overflow-x: auto; white-space: nowrap; max-width: 100%;
+}
+.depth-deep .explain [data-depth="deep"].eq { display: block !important; }
+
+/* Clip recording */
+#wRecord.recording { border-color: var(--warn); color: var(--warn); }
+#wRecord.recording::before { content: "●"; margin-right: 6px; }
+.embed-box { white-space: pre-wrap; word-break: break-all; resize: vertical; }
+
+/* Embed mode (?embed=1): just the apparatus, stats and controls */
+.embed .topbar, .embed .toolbar, .embed .predict, .embed .callout, .embed .explain, .embed .apps,
+.embed .quiz, .embed .related, .embed .footer, .embed .tour-bar, .embed .demo-head .lede,
+.embed .demo-head .eyebrow { display: none !important; }
+.embed .wrap { padding-block: 10px 16px; }
+.embed .demo-head { margin-bottom: 10px; }
+.embed .demo-head h1 { font-size: var(--step-1); }
+.embed-credit {
+  display: block; width: fit-content; margin: 0 auto 14px; font-size: var(--step--1);
+  padding: 4px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--rule);
+  color: var(--ink-soft); text-decoration: none;
+}
+.embed-credit span { font-family: var(--font-display); font-weight: 600; color: var(--ink); }
+.depth-seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+.depth-seg button { border: 0; border-radius: 0; white-space: nowrap; padding: 6px 14px; }
+.depth-seg button + button { border-left: 1px solid var(--rule); }
+.explain .deep-math { grid-column: 1 / -1; }
+@media (pointer: coarse) { input[type="range"] { height: 32px; } }

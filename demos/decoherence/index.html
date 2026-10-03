@@ -144,6 +144,7 @@
       <h2>What you're seeing</h2>
       <p>A beam splitter puts the object into a superposition of the upper and lower path. While it waits in the chamber, gas particles bounce off it. Each bounce happens in one branch and not the other, so the particle's new direction is a partial record of where the object was.</p>
       <p>The 2×2 grid is the density matrix. The diagonal squares are the 50/50 odds of each path and never change. The off-diagonal squares measure how much the two branches can still interfere. The fringe panel shows what the output detectors would record if you recombined the paths now.</p>
+      <p data-depth="deep">The coherence on screen is the overlap between the two states the gas ends up in, one for each branch. If a collision leaves the gas in nearly the same state either way, the overlap stays near 1 and little is lost. If the two outcomes can be told apart perfectly, the overlap is 0. The readout "Which-path info in the gas" is √(1 − C²), where C is that overlap.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -158,7 +159,19 @@
       <h2>Why it's strange</h2>
       <p>Nothing pushed the object or forced it to choose. Each branch is still there. But the two branches are now entangled with different states of the gas, and to see interference you would have to bring every scattered particle back together too. That is hopeless, so the object behaves like an ordinary thing that is simply in one place or the other.</p>
       <p>This is why we never see cats in superposition. A cat in air is hit by about 10²⁷ air molecules every second, so its superposition would vanish far faster than light can cross a single atom.</p>
+      <p data-depth="deep">Decoherence explains why the interference disappears, but not which branch you will find when you look. After it, the object plus gas is still one big superposition; the off-diagonal terms are only gone from the part you can measure. Why a single outcome appears is the measurement problem, and interpretations of quantum mechanics still disagree about it.</p>
       <p class="muted">Watched step by step by Serge Haroche's team in Paris in 1996, using a few photons trapped between mirrors. Haroche shared the 2012 Nobel Prize.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">|Ψ⟩ = (|0⟩|E₀⟩ + |1⟩|E₁⟩) ÷ √2<br>ρ₀₀ = ρ₁₁ = ½,&nbsp;&nbsp;ρ₀₁ = ½ ⟨E₁|E₀⟩</div>
+      <p>|0⟩ and |1⟩ are the object in the upper and lower path; |E₀⟩ and |E₁⟩ are the states of the whole gas that go with each. Tracing out the gas gives the object's 2×2 density matrix ρ. The diagonal stays at ½ and ½, the odds of each path. The off-diagonal ρ₀₁ is half the overlap of the two gas states; the page calls its size C, so the readout |ρ₀₁| shows C ÷ 2.</p>
+      <div class="eq" data-depth="deep" translate="no">C = r<sup>n</sup>,&nbsp;&nbsp;⟨r<sup>n</sup>⟩ = e<sup>−Γ(1−r)t</sup> = e<sup>−t÷τ</sup></div>
+      <p>Each collision happens in one branch only, and multiplies the overlap by r, which is 1 minus the coupling you set. After n collisions C = r<sup>n</sup>; that is the step-shaped solid curve. Collisions arrive at random at an average rate Γ, so n follows a Poisson distribution, and its average gives the smooth exponential, the dashed curve. τ = 1 ÷ Γ(1−r) is the average decoherence time in the readout. In the 2D chamber the page uses Γ = 2 × (N ÷ A) × w × v: two branches, gas density N ÷ A, a collision width w equal to twice the object's radius plus twice a particle's radius, and particle speed v, which grows as √T. With the default settings that is about 3 collisions per second and τ ≈ 2.2 s.</p>
+      <div class="eq" data-depth="deep" translate="no">P(D0) = ½ (1 + C cos φ)<br>V = C,&nbsp;&nbsp;D = √(1 − V²)</div>
+      <p>Recombining the paths with a phase difference φ gives this chance of the D0 detector clicking, the curve in the fringe panel. The visibility V of the fringes equals C, and the distinguishability D says how well the gas could reveal the path. For pure states like these, D² + V² = 1: any which-path information stored in the gas comes straight out of the fringes.</p>
+      <div class="eq" data-depth="deep" translate="no">Γ = n σ v,&nbsp;&nbsp;n = p ÷ k<sub>B</sub>T,&nbsp;&nbsp;σ = π(R + R<sub>N₂</sub>)²</div>
+      <p>The Scale it up estimate is the textbook collision rate: gas number density n from the ideal gas law, a geometric cross-section σ for an object of radius R and a nitrogen molecule of radius 0.18 nm, and a mean speed v = 470 m/s at 293 K. In room air n ≈ 2.5 × 10²⁵ per cubic metre, so a 10 µm dust grain is hit about 10¹⁸ times per second. It assumes every hit records the path fully (r = 0), which holds once the two places are farther apart than the thermal wavelength of the gas molecules, about 0.02 nm.</p>
     </section>
   </div>
 

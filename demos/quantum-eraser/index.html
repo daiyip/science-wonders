@@ -106,6 +106,7 @@
       <h2>What you're seeing</h2>
       <p>A crystal splits each laser photon into two twins. One goes through a double slit to the screen. In this version each slit marks its photon so that the twin ends up horizontally polarized (H) for the top slit and vertically polarized (V) for the bottom one. The twin now holds a which-path record, so the screen shows a plain blob.</p>
       <p>The twin then meets a polarizer that sends it to detector D1 or D2. At 0° it reads the record: D1 means top slit, D2 means bottom. At 45° each outcome is equally likely from either slit, so the record is erased. A sorter matches every screen hit with its twin's detector.</p>
+      <p data-depth="deep">The numbers behind the panels: 702 nm photons, slits 0.04 mm wide with centres 0.2 mm apart, and a screen 1 m away. Without tags, bright stripes would fall every 3.5 mm, so about seven fit across the ±12 mm shown. The single-slit envelope does not reach its first dark edge until ±17.6 mm, which is why the blob looks so flat.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -120,7 +121,19 @@
       <h2>Why it's strange</h2>
       <p>It looks as if a choice made later reaches back and decides whether earlier photons acted as waves. It doesn't. The top panel never changes: no setting, early or late, puts stripes on the bare screen. Stripes only appear after you sort the hits using the twin's result, and that list has to be carried over by ordinary means, no faster than light.</p>
       <p>What is truly strange is the bookkeeping. The stripes and the anti-stripes were hiding inside the blob all along, and which way you are able to split it depends on how you question the twin.</p>
+      <p data-depth="deep">The no-signalling rule is one line of algebra: add the D1 and D2 patterns and the polarizer angle cancels out, leaving the same blob for every setting. The order of the two measurements does not matter either, because they act on different photons. That is why the delayed version gives exactly the same sorted patterns as the normal one.</p>
       <p class="muted">Proposed by Scully and Drühl in 1982. Done with a delayed choice by Kim, Yu, Kulik, Shih and Scully (published 2000), and with polarization tags by Walborn and colleagues in 2002.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">|Ψ⟩ = (|1⟩|H⟩ + |2⟩|V⟩) ÷ √2</div>
+      <p>The pair state when tags are on. |1⟩ and |2⟩ are the screen photon passing the top and bottom slit; |H⟩ and |V⟩ are the twin's horizontal and vertical polarization. The two terms are entangled: knowing the twin's polarization tells you the slit. This is the state named in the page footer, and every probability below follows from it.</p>
+      <div class="eq" data-depth="deep" translate="no">P(x) = ½ (|ψ₁(x)|² + |ψ₂(x)|²)<br>ψ₁,₂(x) = A(x) e<sup>±iφ</sup>,&nbsp;&nbsp;φ = πdx ÷ λL</div>
+      <p>ψ₁ and ψ₂ are the amplitudes for reaching spot x through each slit, A(x)² is the single-slit envelope (sin β ÷ β)² with β = πax ÷ λL, and 2φ is the phase difference between the two routes. Because ⟨H|V⟩ = 0 the cross term ψ₁<sup>*</sup>ψ₂ drops out, so the bare screen shows just A(x)², the blob in the top panel. With tags off the page uses |ψ₁ + ψ₂|² ∝ A(x)² cos²φ instead, with bright stripes every λL ÷ d = 3.5 mm.</p>
+      <div class="eq" data-depth="deep" translate="no">P(x, D1) = ½ A(x)² (1 + sin 2θ cos 2φ)<br>P(x, D2) = ½ A(x)² (1 − sin 2θ cos 2φ)</div>
+      <p>The polarizer at angle θ sends the twin to D1 if it is found along cos θ |H⟩ + sin θ |V⟩, and to D2 if found along the perpendicular direction. Projecting the pair state onto those gives the two sorted patterns. At θ = 45° they are stripes and exact anti-stripes; at 0° the cos 2φ term vanishes and both are blobs. Their sum is A(x)² for every θ, which is the no-signalling result. The page draws each hit's x from P(x) by rejection sampling, then sends its twin to D1 with probability (1 + sin 2θ cos 2φ) ÷ 2. With the delay on, that second draw simply waits until you press Measure stored twins.</p>
+      <div class="eq" data-depth="deep" translate="no">V = (I<sub>max</sub> − I<sub>min</sub>) ÷ (I<sub>max</sub> + I<sub>min</sub>) = |sin 2θ|</div>
+      <p>Fringe visibility in each sorted group, the value in the readout above the controls: 100% at 45°, zero at 0° and 90°, and in between at other angles, where the twin's result reveals the path only partly. The white curves are the expected counts from these formulas, averaged over each of the 96 bins (0.25 mm each); the bars scatter around them by roughly the square root of the count.</p>
     </section>
   </div>
 

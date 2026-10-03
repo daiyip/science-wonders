@@ -30,6 +30,12 @@
     font-size: var(--step--1);
     max-width: 80ch;
   }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+  }
 </style>
 </head>
 <body>
@@ -102,6 +108,7 @@
       <h2>What you're seeing</h2>
       <p>The blue hump is |ψ|², the probability of finding the electron at each spot. It starts as one lump moving right at a definite average energy. The amber block is a region where the electron would need more energy than it has.</p>
       <p>This is a live solution of the Schrödinger equation on 2,048 grid points, stepped forward every 0.02 femtoseconds. When the packet hits the barrier, it splits. The bar underneath tallies how much probability ended up on each side, and the white tick shows what the textbook formula predicts.</p>
+      <p data-depth="deep">The grid covers 96 nm in steps of 0.047 nm, of which the plot shows the middle 60 nm. The outer 15 nm on each side is an absorbing layer that soaks up the wave instead of letting it wrap around, and whatever it absorbs is counted on the side it left from. The packet starts as a Gaussian 3 nm wide, centred 14 nm left of the barrier. Because it is a mix of slightly different energies, the white tick averages the single-energy formula over that spread, and the classical ball's mark is the share of the mix with energy above the barrier.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -110,11 +117,24 @@
         <li>Raise the energy above the barrier. The classical ball sails over every time, yet part of the wave still reflects.</li>
         <li>Turn on the ×20 magnifier with a thick barrier. The transmitted packet is tiny, but it is there.</li>
       </ul>
+      <p data-depth="deep">With the defaults (1.00 eV barrier, 0.60 eV electron), the wave inside the barrier shrinks by a factor of e every 0.31 nm, and the probability |ψ|² by a factor of e every 0.15 nm. Going from 0.5 to 1.0 nm adds about 3.2 of those 0.15 nm lengths, which multiplies the transmission by roughly e<sup>−3.2</sup> ≈ 0.04.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Inside the barrier the electron's kinetic energy would be negative, which is impossible for a ball. For a wave it just means the wave stops oscillating and fades instead. If the wall is thin enough, the wave hasn't faded to nothing by the far side, and there it carries on as a normal travelling wave.</p>
       <p>Each electron is detected whole, on one side or the other. Nobody ever catches one halfway through. The percentages are odds for single electrons.</p>
+      <p data-depth="deep">Above the barrier, the reflection comes from the sudden steps in the potential at its two edges. Waves reflected from the front and back edges interfere, and when a whole number of half-wavelengths fits across the barrier they cancel and transmission is exactly 100% for that energy. A packet has a spread of energies, so on this page these peaks are smoothed out.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">iħ ∂ψ/∂t =<br>&nbsp;&nbsp;−(ħ² ÷ 2m) ∂²ψ/∂x²<br>&nbsp;&nbsp;+ V(x) ψ</div>
+      <p>The time-dependent Schrödinger equation in one dimension. ψ(x, t) is the electron's wave, m its mass, ħ the reduced Planck constant and V(x) the barrier: V₀ over a width a, zero elsewhere. Kinetic energy acts by bending the wave, potential energy by turning its phase. The page works in nanometres, femtoseconds and electron-volts, where ħ ≈ 0.658 eV·fs and ħ² ÷ 2m ≈ 0.0381 eV·nm² for an electron.</p>
+      <div class="eq" data-depth="deep" translate="no">ψ(t + Δt) ≈<br>&nbsp;&nbsp;e<sup>−iVΔt/2ħ</sup> 𝓕⁻¹[ e<sup>−iħk²Δt/2m</sup><br>&nbsp;&nbsp;𝓕[ e<sup>−iVΔt/2ħ</sup> ψ(t) ] ]</div>
+      <p>The split-step Fourier method the page uses. Half a step of the potential is applied as a phase in position space, a full step of kinetic energy as a phase in wavenumber space (𝓕 is the fast Fourier transform, k the wavenumber), then the second half step of potential. Every factor has size 1, so total probability is kept apart from what the edges absorb; the error per step grows as Δt³. Here Δt = 0.02 fs on 2,048 points.</p>
+      <div class="eq" data-depth="deep" translate="no">T = [ 1 + V₀² sinh²(κa)<br>&nbsp;&nbsp;÷ (4E(V₀ − E)) ]⁻¹<br>κ = √(2m(V₀ − E)) ÷ ħ</div>
+      <p>The exact transmission probability for a single-energy wave meeting a rectangular barrier with E &lt; V₀. Inside, the wave decays as e<sup>−κx</sup>, with 1/κ the decay length in the hint below the controls. For E &gt; V₀ the same formula holds with sinh replaced by sin, κ by k₂ = √(2m(E − V₀)) ÷ ħ and V₀ − E by E − V₀, which gives T = 1 whenever k₂a is a multiple of π. With the defaults, κ ≈ 3.24 per nm and T ≈ 14%, matching the packet in the simulation.</p>
+      <div class="eq" data-depth="deep" translate="no">T ≈ 16 (E ÷ V₀)(1 − E ÷ V₀)<br>&nbsp;&nbsp;× e<sup>−2κa</sup></div>
+      <p>The thick-barrier limit (κa well above 1). The exponential is what makes tunneling so sensitive to width: each extra 1/(2κ) of thickness divides T by e. Scanning tunneling microscopes rely on this: the current drops roughly tenfold for every 0.1 nm of extra gap, so the tip can feel single atoms.</p>
     </section>
   </div>
 

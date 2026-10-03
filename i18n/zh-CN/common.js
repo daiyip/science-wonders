@@ -228,3 +228,20 @@ I18N.add({
   "{0} s": "{0} s"
 });
 I18N.add({"<html>Science <span>Wonders</span>": "科学<span>奇观</span>"});
+I18N.add({
+ "Embed": "嵌入",
+ "Embed code": "嵌入代码",
+ "Copy embed code": "复制嵌入代码",
+ "Copied": "已复制",
+ "Paste this into any web page to show the experiment with your current settings.": "把这段代码粘贴到任意网页中，即可按你当前的设置展示这个实验。",
+ "Record a clip": "录制短片",
+ "Stop recording ({0}:{1})": "停止录制（{0}:{1}）",
+ "This browser can't record the experiment.": "此浏览器无法录制实验。",
+ "Clip ready.": "短片已就绪。",
+ "Save the clip": "保存短片",
+ "Recording the experiment. Play with the controls, then press stop (up to {0} seconds).": "正在录制实验。调整控件后点击停止（最长 {0} 秒）。",
+ "Explanations": "讲解",
+ "Simple": "简明",
+ "Deeper": "深入",
+ "The math": "数学原理"
+});

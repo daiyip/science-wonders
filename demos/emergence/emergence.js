@@ -1,14 +1,47 @@
 (function () {
-  const W = 960, H = 520;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
+  const pad = document.getElementById("paintPad");
   const $ = (id) => document.getElementById(id);
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 
-  // World on the left, rules panel on the right.
+  // World on the left, rules panel on the right. The world always lives in a
+  // 700 x 490 rectangle at (WX, WY). On a narrow bench (phones) the logical width
+  // matches the displayed CSS width, the world is drawn scaled by WS at (WOX, WOY)
+  // and the rules panel goes underneath it; the canvas height then follows the
+  // panel's text so nothing is clipped in any language.
+  let W = 960, H = 520, narrow = false, ctx;
   const WX = 14, WY = 15, WW = 700, WH = 490;
-  const PX = 736, PW = 210;
+  let WS = 1, WOX = WX, WOY = WY;
+  let PX = 736, PW = 210, PY = WY;
+  const fpx = (n) => (narrow ? Math.max(11, n) : n) + "px ";
+  function layout() {
+    const cw = Math.round(canvas.clientWidth || canvas.parentElement.clientWidth || 960);
+    const wasNarrow = narrow, oldW = W;
+    narrow = cw < 640;
+    if (!narrow) {
+      W = 960; H = 520; WS = 1; WOX = WX; WOY = WY;
+      PX = 736; PW = 210; PY = WY;
+    } else {
+      W = Math.max(280, cw);
+      WOX = 8; WOY = 8; WS = (W - 16) / WW;
+      PX = 10; PW = W - 20; PY = Math.round(WOY + WH * WS + 22);
+      if (!wasNarrow || oldW !== W) H = PY + 420;   // first guess; drawPanel corrects it
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+    placePad();
+  }
+  // A transparent layer over the Life grid takes the drawing gestures, so only
+  // the grid blocks touch scrolling, not the whole (tall, on phones) canvas.
+  function placePad() {
+    if (!pad) return;
+    const k = canvas.clientWidth / W;
+    pad.style.left = (canvas.offsetLeft + WOX * k) + "px";
+    pad.style.top = (canvas.offsetTop + WOY * k) + "px";
+    pad.style.width = (WW * WS * k) + "px";
+    pad.style.height = (WH * WS * k) + "px";
+  }
+  layout();
 
   const state = { mode: "life", running: true };
 
@@ -95,8 +128,8 @@
     ctx.fillRect(WX, WY, WW, WH);
     ctx.strokeStyle = "#0e1522";
     ctx.beginPath();
-    for (let x = 0; x <= VW; x++) { ctx.moveTo(WX + x * CELL + 0.5, WY); ctx.lineTo(WX + x * CELL + 0.5, WY + WH); }
-    for (let y = 0; y <= VH; y++) { ctx.moveTo(WX, WY + y * CELL + 0.5); ctx.lineTo(WX + WW, WY + y * CELL + 0.5); }
+    if (!narrow) for (let x = 0; x <= VW; x++) { ctx.moveTo(WX + x * CELL + 0.5, WY); ctx.lineTo(WX + x * CELL + 0.5, WY + WH); }
+    if (!narrow) for (let y = 0; y <= VH; y++) { ctx.moveTo(WX, WY + y * CELL + 0.5); ctx.lineTo(WX + WW, WY + y * CELL + 0.5); }
     ctx.stroke();
     for (let y = 0; y < VH; y++) {
       for (let x = 0; x < VW; x++) {
@@ -111,10 +144,8 @@
 
   // Drawing cells with a mouse or finger. Map through the CSS scale.
   function cellAt(e) {
-    const r = canvas.getBoundingClientRect();
-    const X = (e.clientX - r.left) * (W / r.width);
-    const Y = (e.clientY - r.top) * (H / r.height);
-    const cx = Math.floor((X - WX) / CELL), cy = Math.floor((Y - WY) / CELL);
+    const r = pad.getBoundingClientRect();
+    const cx = Math.floor((e.clientX - r.left) / r.width * VW), cy = Math.floor((e.clientY - r.top) / r.height * VH);
     return (cx >= 0 && cy >= 0 && cx < VW && cy < VH) ? [cx, cy] : null;
   }
   function paintLine(a, b, v) {
@@ -124,7 +155,7 @@
       const i = idx(x, y); cur[i] = v; age[i] = v ? 1 : 0;
     }
   }
-  canvas.addEventListener("pointerdown", (e) => {
+  pad.addEventListener("pointerdown", (e) => {
     if (state.mode !== "life") return;
     const c = cellAt(e);
     if (!c) return;
@@ -132,10 +163,10 @@
     life.painting = cur[idx(c[0], c[1])] ? 0 : 1;
     life.last = c;
     paintLine(c, c, life.painting);
-    canvas.setPointerCapture(e.pointerId);
+    pad.setPointerCapture(e.pointerId);
     draw(); updateReadouts();
   });
-  canvas.addEventListener("pointermove", (e) => {
+  pad.addEventListener("pointermove", (e) => {
     if (state.mode !== "life" || life.painting === null) return;
     const c = cellAt(e);
     if (!c) return;
@@ -144,8 +175,8 @@
     draw();
   });
   const endPaint = () => { if (life.painting !== null) { life.painting = null; life.pop.push(countVisible()); updateReadouts(); } };
-  canvas.addEventListener("pointerup", endPaint);
-  canvas.addEventListener("pointercancel", endPaint);
+  pad.addEventListener("pointerup", endPaint);
+  pad.addEventListener("pointercancel", endPaint);
 
   // =====================================================================
   // Boids
@@ -267,6 +298,7 @@
       ctx.fillStyle = `hsl(${hue}, 70%, 68%)`;
       ctx.save();
       ctx.translate(WX + b.x, WY + b.y); ctx.rotate(a);
+      if (narrow) ctx.scale(1.5, 1.5);
       ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-4, -3.2); ctx.lineTo(-2, 0); ctx.lineTo(-4, 3.2); ctx.closePath();
       ctx.fill();
       ctx.restore();
@@ -279,6 +311,7 @@
       ctx.setLineDash([]);
       ctx.save();
       ctx.translate(WX + h.x, WY + h.y); ctx.rotate(Math.atan2(h.vy, h.vx));
+      if (narrow) ctx.scale(1.5, 1.5);
       ctx.fillStyle = "#ff6b5a";
       ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, -7); ctx.lineTo(-4, 0); ctx.lineTo(-8, 7); ctx.closePath(); ctx.fill();
       ctx.restore();
@@ -308,8 +341,8 @@
     ctx.textAlign = "left";
     ctx.font = "11px " + MONO;
     ctx.fillStyle = "#7f8ea6";
-    ctx.fillText("THE COMPLETE RULES", PX, WY + 12);
-    let y = WY + 34;
+    ctx.fillText("THE COMPLETE RULES", PX, PY + 12);
+    let y = PY + 34;
     ctx.font = "12px " + SANS;
     ctx.fillStyle = "#97a6b9";
     const isLife = state.mode === "life";
@@ -333,7 +366,7 @@
     });
 
     // What comes out
-    y = Math.max(y + 6, 300);
+    y = narrow ? y + 10 : Math.max(y + 6, 300);
     ctx.font = "11px " + MONO;
     ctx.fillStyle = "#7f8ea6";
     ctx.fillText("WHAT COMES OUT", PX, y);
@@ -349,7 +382,7 @@
     }
     // Sparkline
     const series = isLife ? life.pop : boids.order;
-    const top = y + 6, h = WY + WH - 18 - top;
+    const top = y + 6, h = narrow ? 64 : WY + WH - 18 - top;
     ctx.strokeStyle = "#1a2436";
     ctx.strokeRect(PX + 0.5, top + 0.5, PW - 1, h);
     if (series.length > 1) {
@@ -365,16 +398,24 @@
       ctx.lineWidth = 1;
     }
     ctx.fillStyle = "#56647c";
-    ctx.font = "10px " + MONO;
-    ctx.fillText(isLife ? "live cells over time" : "alignment over time (0 to 1)", PX, WY + WH - 4);
+    ctx.font = fpx(10) + MONO;
+    ctx.fillText(isLife ? "live cells over time" : "alignment over time (0 to 1)", PX, narrow ? top + h + 18 : WY + WH - 4);
+    // Narrow benches: fit the canvas height to the panel; the change shows next frame.
+    if (narrow) {
+      const need = Math.round(top + h + 30);
+      if (Math.abs(need - H) > 2) { H = need; ctx = Lab.setupCanvas(canvas, W, H); placePad(); }
+    }
   }
 
   function draw() {
     ctx.fillStyle = "#05080e";
     ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    if (narrow) { ctx.translate(WOX - WX * WS, WOY - WY * WS); ctx.scale(WS, WS); }
     if (state.mode === "life") drawLife(); else drawBoids();
+    ctx.restore();
     ctx.strokeStyle = "#26324a";
-    ctx.strokeRect(WX + 0.5, WY + 0.5, WW - 1, WH - 1);
+    ctx.strokeRect(WOX + 0.5, WOY + 0.5, WW * WS - 1, WH * WS - 1);
     drawPanel();
   }
 
@@ -415,8 +456,7 @@
     $("modeLife").setAttribute("aria-pressed", String(m === "life"));
     $("modeBoids").setAttribute("aria-pressed", String(m === "boids"));
     document.querySelectorAll("[data-mode]").forEach((el) => { el.hidden = el.dataset.mode !== m; });
-    canvas.style.touchAction = m === "life" ? "none" : "";
-    canvas.style.cursor = m === "life" ? "crosshair" : "";
+    pad.hidden = m !== "life";
     $("modeNote").textContent = m === "life"
       ? "Cells on a grid, updated all at once, one generation at a time."
       : "Each bird steers by three rules about its nearest neighbours. There is no leader.";
@@ -457,6 +497,18 @@
     if (!state.running) draw();
     updateReadouts();
   });
+
+  // Re-layout when the bench changes width; the simulation state is kept.
+  let lastCW = 0;
+  function onResize() {
+    const cw = Math.round(canvas.parentElement.clientWidth);
+    if (cw === lastCW) { placePad(); return; }
+    lastCW = cw;
+    layout();
+    draw();
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(canvas.parentElement);
+  else window.addEventListener("resize", onResize);
 
   // ---------- Start ----------
   setBoidCount(boids.n);

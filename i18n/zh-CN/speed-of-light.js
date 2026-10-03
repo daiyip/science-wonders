@@ -213,3 +213,30 @@ I18N.add({
   "· real time": "· 实时",
   "× faster": "倍速"
 });
+
+I18N.add({
+  "The scales are hard to hold in your head. The gap to the Moon would fit {0} Earths in a row. The Sun is {1} times farther than the Moon, and Proxima Centauri about {2} times farther than the Sun. On the Proxima track, the whole Solar System out to Voyager {3} is squeezed into the first pixel.": "这些尺度很难想象。地月之间可以并排放下{0}个地球。太阳比月球远{1}倍，而比邻星又比太阳远约{2}倍。在飞往比邻星的轨道图上，直到旅行者{3}号的整个太阳系都挤在第一个像素里。",
+  "Lunar ranging stations time the echo to about {0} picoseconds, the time light takes to cross {1} mm; since the light goes there and back, that is a {2} mm step in distance. The precision comes from averaging many returns, since only a tiny fraction of the photons sent ever make it back from the reflectors left on the Moon.": "月球激光测距站对回波的计时精度约为{0}皮秒，即光走过{1} mm所需的时间；由于光要往返，这对应距离上{2} mm的步长。这种精度靠对大量回波取平均得到，因为发出的光子中只有极小一部分能从留在月面的反射器返回。",
+  "<html>The <i>c</i> of relativity is the speed in a vacuum. In water light travels at about <i>c</i>/{0} and in glass at about <i>c</i>/{1}; nothing that carries energy or information goes faster than <i>c</i>.": "相对论中的<i>c</i>是真空中的光速。光在水中的速度约为<i>c</i>/{0}，在玻璃中约为<i>c</i>/{1}；任何携带能量或信息的东西都不能快过<i>c</i>。",
+  "<html>Light time is distance divided by the speed of light. For the Moon, {0} km / {1} km/s ≈ {2} s; for the Sun, {3} AU / <i>c</i> ≈ {4} s, which is {5} min {6} s. The page moves the pulse a fraction (elapsed time ÷ light time) of the way along the track, with elapsed time running at real time multiplied by the playback speed. The ruler at the top places each trip at log₁₀ <i>t</i>.": "光行时间等于距离除以光速。对月球，{0} km / {1} km/s ≈ {2} s；对太阳，{3} AU / <i>c</i> ≈ {4} s，即{5}分{6}秒。页面让光脉冲沿轨道走过（已用时间 ÷ 光行时间）这一比例的路程，已用时间按真实时间乘以播放倍速增长。顶部的标尺把每次旅程放在log₁₀ <i>t</i>处。",
+  "A light-year is a distance: how far light goes in one Julian year of {0} days. Proxima Centauri at {1} light-years is about {2} km away, so its light time is simply {3} years.": "光年是距离单位：光在一个{0}天的儒略年里走过的路程。比邻星距离{1}光年，约为{2} km，所以它的光行时间就是{3}年。",
+  "<html>How late an eclipse of Io is seen, compared with when Earth and Jupiter are closest. <i>r</i><sub>J</sub> and <i>r</i><sub>E</sub> are the planets' positions, and <i>R</i><sub>J</sub> = {0} AU and <i>R</i><sub>E</sub> = {1} AU the radii of their orbits. The simulation puts both planets on circular orbits in one plane, fires an eclipse every {2} days of Io's orbit, applies this delay, and skips eclipses when Jupiter is within {3}° of the Sun, where it could not be observed.": "这是木卫一的一次食被看到时，相对于地球与木星距离最近时推迟了多少。<i>r</i><sub>J</sub>和<i>r</i><sub>E</sub>是两颗行星的位置，<i>R</i><sub>J</sub> = {0} AU和<i>R</i><sub>E</sub> = {1} AU是它们的轨道半径。模拟让两颗行星在同一平面内沿圆轨道运行，每隔木卫一公转周期{2}天发生一次食，加上这个延迟，并在木星与太阳的角距小于{3}°、无法观测时跳过这次食。",
+  "<html>How far a rover moving at speed <i>v</i> drives between the moment your picture shows it and the moment your stop command arrives: the picture is <i>d</i>/<i>c</i> old and the command needs another <i>d</i>/<i>c</i>. At the page's {0} cm/s with {1} minutes each way, that is {2} m, more than the {3} m to the boulder; at the closest approach ({4} minutes) it is about {5} m.": "这是以速度<i>v</i>行驶的火星车，从你的画面显示它的那一刻到你的停止指令到达之间多开出的距离：画面已经过时<i>d</i>/<i>c</i>，指令还需要另一个<i>d</i>/<i>c</i>。按页面设定的{0} cm/s、单程{1}分钟计算，多开{2} m，超过到巨石的{3} m；在最近距离时（{4}分钟）约为{5} m。",
+  "of {0} s one way": "/ 单程{0}秒",
+  "of {0} s there and back": "/ 往返{0}秒",
+  "of {0} min {1} s one way": "/ 单程{0}分{1}秒",
+  "of {0} min {1} s there and back": "/ 往返{0}分{1}秒",
+  "of {0} h {1} min one way": "/ 单程{0}小时{1}分",
+  "of {0} h {1} min there and back": "/ 往返{0}小时{1}分",
+  "of {0} days one way": "/ 单程{0}天",
+  "of {0} days there and back": "/ 往返{0}天",
+  "of {0} years one way": "/ 单程{0}年",
+  "of {0} years there and back": "/ 往返{0}年",
+  "playing {0} minute per second": "每秒播放{0}分钟",
+  "playing {0} hour per second": "每秒播放{0}小时",
+  "playing {0} day per second": "每秒播放{0}天",
+  "playing {0} month per second": "每秒播放{0}个月",
+  "playing {0} year per second": "每秒播放{0}年",
+  "playing {0}× faster": "{0}倍速播放",
+  "{0} days, {1} billion km": "{0}天，{1}十亿km"
+});

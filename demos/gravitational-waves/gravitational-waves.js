@@ -1,7 +1,8 @@
 (function () {
-  const W = 960, H = 520;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
+  // Wide: 960 x 520, orbit and ring side by side over the waveform.
+  // Narrow (phones): 480 wide, the three panels stacked, with larger type.
+  let W = 960, H = 520, NARROW = false, ctx;
   const $ = (id) => document.getElementById(id);
 
   // ---------- Constants (SI) ----------
@@ -14,8 +15,24 @@
 
   // Panels (logical px)
   const ORB = { x: 0, y: 0, w: 480, h: 300, cx: 240, cy: 152 };
-  const RING = { x: 480, y: 0, w: 480, h: 300, cx: 720, cy: 152, r: 92 };
-  const WAVE = { x0: 100, x1: 940, y0: 318, y1: 508, cy: 418, amp: 70 };
+  let RING, WAVE;
+  function layout() {
+    NARROW = (canvas.parentElement.clientWidth || 960) < 640;
+    if (NARROW) {
+      W = 480; H = 900;
+      RING = { x: 0, y: 300, w: 480, h: 336, cx: 240, cy: 475, r: 92 };
+      WAVE = { y: 636, x0: 122, x1: 458, cy: 792, amp: 70 };
+    } else {
+      W = 960; H = 520;
+      RING = { x: 480, y: 0, w: 480, h: 300, cx: 720, cy: 152, r: 92 };
+      WAVE = { y: 300, x0: 100, x1: 940, cy: 418, amp: 70 };
+    }
+    canvas.setAttribute("width", W); canvas.setAttribute("height", H);
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  const fs = (px) => (NARROW ? Math.max(17, Math.round(px * 1.42)) : px) + "px ";
+  const tr = (t) => (window.I18N ? I18N.t(t) : t);
 
   const state = {
     m1: 36, m2: 29, distMly: 1300, pol: "plus",
@@ -124,16 +141,23 @@
     // Panel dividers
     ctx.strokeStyle = "#1a2436";
     ctx.beginPath();
-    ctx.moveTo(480.5, 14); ctx.lineTo(480.5, 290);
-    ctx.moveTo(14, 304.5); ctx.lineTo(946, 304.5);
+    if (NARROW) {
+      ctx.moveTo(14, RING.y + 0.5); ctx.lineTo(W - 14, RING.y + 0.5);
+      ctx.moveTo(14, WAVE.y + 0.5); ctx.lineTo(W - 14, WAVE.y + 0.5);
+    } else {
+      ctx.moveTo(480.5, 14); ctx.lineTo(480.5, 290);
+      ctx.moveTo(14, 304.5); ctx.lineTo(946, 304.5);
+    }
     ctx.stroke();
   }
 
-  function label(text, x, y, align, color) {
-    ctx.font = "12px " + MONO;
+  // maxW: squeeze horizontally only if a translation would run past it.
+  function label(text, x, y, align, color, maxW) {
+    ctx.font = fs(12) + MONO;
     ctx.fillStyle = color || "#7f8ea6";
     ctx.textAlign = align || "left";
-    ctx.fillText(text, x, y);
+    const t = tr(text);
+    if (maxW && ctx.measureText(t).width > maxW) ctx.fillText(t, x, y, maxW); else ctx.fillText(t, x, y);
   }
 
   function drawOrbit(cur) {
@@ -170,7 +194,7 @@
       ctx.setLineDash([]);
       blackHole(p1[0], p1[1], Math.max(3, rs(state.m1) * px), 1);
       blackHole(p2[0], p2[1], Math.max(3, rs(state.m2) * px), 1);
-      label("separation " + Math.round(a / 1000).toLocaleString() + " km", 18, 288);
+      label("separation " + Math.round(a / 1000).toLocaleString() + " km", 18, 288, "left", null, NARROW ? 230 : 0);
     } else {
       // One black hole, ringing: its horizon wobbles at the ringdown frequency.
       const wob = 0.22 * cur.A / P.hPeak;
@@ -181,10 +205,11 @@
       ctx.scale(1 + wob * Math.cos(cur.phi), 1 - wob * Math.cos(cur.phi));
       blackHole(0, 0, r, 1);
       ctx.restore();
-      label("merged: " + P.Mf.toFixed(0) + " M☉, spin " + P.af.toFixed(2), 18, 288);
+      label("merged: " + P.Mf.toFixed(0) + " M☉, spin " + P.af.toFixed(2), 18, 288, "left", null, NARROW ? 270 : 0);
     }
-    label("ORBIT, SEEN FROM ABOVE", 18, 24);
-    label("horizons to scale", 462, 288, "right", "#56647c");
+    label("ORBIT, SEEN FROM ABOVE", 18, 24, "left", null, 444);
+    if (NARROW) label("horizons to scale", 462, 24 + 24, "right", "#56647c", 300);
+    else label("horizons to scale", 462, 288, "right", "#56647c");
     ctx.restore();
   }
 
@@ -245,24 +270,33 @@
     }
     ctx.fillStyle = "#56647c";
     ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
-    label("RING OF FREE PARTICLES, FACE-ON", 500, 24);
+    const X0 = RING.x + 20, X1 = RING.x + RING.w - 18, Yb = RING.y + (NARROW ? 326 : 288);
+    label("RING OF FREE PARTICLES, FACE-ON", X0, RING.y + 24 + (NARROW ? 6 : 0), "left", null, X1 - X0);
     const lx = (ex[0] - wx[0]) / (2 * r) - 1, ly = (sy[1] - ny[1]) / (2 * r) - 1;
-    label("arm x " + (lx >= 0 ? "+" : "−") + Math.abs(lx * 100).toFixed(0).padStart(2, " ") + "%", 500, 270, "left", "rgba(240,179,90,0.9)");
-    label("arm y " + (ly >= 0 ? "+" : "−") + Math.abs(ly * 100).toFixed(0).padStart(2, " ") + "%", 500, 288, "left", "rgba(120,200,255,0.9)");
+    label("arm x " + (lx >= 0 ? "+" : "−") + Math.abs(lx * 100).toFixed(0).padStart(2, " ") + "%", X0, Yb - (NARROW ? 24 : 18), "left", "rgba(240,179,90,0.9)");
+    label("arm y " + (ly >= 0 ? "+" : "−") + Math.abs(ly * 100).toFixed(0).padStart(2, " ") + "%", X0, Yb, "left", "rgba(120,200,255,0.9)");
     const e = Math.floor(Math.log10(E));
-    label("stretch exaggerated ~" + Math.round(E / Math.pow(10, e)) + "×10" + supers(e) + " times", 942, 288, "right", "#56647c");
+    const exTxt = "stretch exaggerated ~" + Math.round(E / Math.pow(10, e)) + "×10" + supers(e) + " times";
+    if (NARROW) label(exTxt, X0, RING.y + 54, "left", "#56647c", X1 - X0);
+    else label(exTxt, 942, 288, "right", "#56647c");
   }
 
   function drawWave() {
     const { x0, x1, cy, amp } = WAVE;
     const tx = (t) => x0 + (t - P.tStart) / (P.tEnd - P.tStart) * (x1 - x0);
     const scale = amp / P.hPeak;
-    label("STRAIN AT EARTH, h(t)", 18, 334);
-    label((state.pol === "both" ? "h+ and h×" : state.pol === "cross" ? "h×" : "h+") + " against seconds from merger", 942, 334, "right", "#56647c");
+    const sub = (state.pol === "both" ? "h+ and h×" : state.pol === "cross" ? "h×" : "h+") + " against seconds from merger";
+    if (NARROW) {
+      label("STRAIN AT EARTH, h(t)", 18, WAVE.y + 34, "left", null, W - 36);
+      label(sub, 18, WAVE.y + 58, "left", "#56647c", W - 36);
+    } else {
+      label("STRAIN AT EARTH, h(t)", 18, 334);
+      label(sub, 942, 334, "right", "#56647c");
+    }
     // Axes
     ctx.strokeStyle = "#1a2436";
     ctx.beginPath(); ctx.moveTo(x0, cy + 0.5); ctx.lineTo(x1, cy + 0.5); ctx.stroke();
-    ctx.font = "10px " + MONO;
+    ctx.font = fs(10) + MONO;
     ctx.fillStyle = "#56647c";
     ctx.textAlign = "right";
     ctx.fillText("+" + sci(P.hPeak), x0 - 6, cy - amp + 4);
@@ -271,7 +305,7 @@
     for (const y of [cy - amp, cy + amp]) { ctx.fillRect(x0 - 3, y, 3, 1); }
     // Time ticks relative to merger
     const span = P.tEnd - P.tStart;
-    const step = niceStep(span / 6);
+    const step = niceStep(span / (NARROW ? 3.2 : 6));
     ctx.textAlign = "center";
     for (let k = Math.ceil((P.tStart - P.tMerge) / step); k * step <= P.tEnd - P.tMerge; k++) {
       const t = P.tMerge + k * step;
@@ -279,7 +313,7 @@
       ctx.fillRect(x, cy + amp + 8, 1, 4);
       const v = k * step;
       const dec = Math.max(0, -Math.floor(Math.log10(step) + 1e-9));
-      ctx.fillText((Math.abs(v) < 1e-9 ? "0" : (v > 0 ? "+" : "−") + Math.abs(v).toFixed(dec)), x, cy + amp + 23);
+      ctx.fillText((Math.abs(v) < 1e-9 ? "0" : (v > 0 ? "+" : "−") + Math.abs(v).toFixed(dec)), x, cy + amp + (NARROW ? 30 : 23));
     }
     // Merger marker
     const xm = tx(P.tMerge);
@@ -289,7 +323,7 @@
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(240,179,90,0.8)";
     ctx.textAlign = "right";
-    ctx.fillText("merger", xm - 4, cy - amp - 4);
+    ctx.fillText("merger", xm - 4, cy - amp - (NARROW ? 6 : 4));
     // Full waveform dim, played part bright
     const keys = state.pol === "both" ? ["hc", "hp"] : ["hp"];
     for (const key of keys) {
@@ -458,6 +492,15 @@
   });
   $("replay").addEventListener("click", () => { restart(); setPlaying(true); });
   $("chirp").addEventListener("click", playChirp);
+
+  // Switch layouts at the phone breakpoint; the playback state carries over.
+  let rzTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => {
+      if (((canvas.parentElement.clientWidth || 960) < 640) !== NARROW) { layout(); draw(sample(state.t)); }
+    }, 120);
+  }).observe(canvas.parentElement);
 
   // ---------- Start ----------
   derive();

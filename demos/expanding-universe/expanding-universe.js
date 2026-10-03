@@ -1,14 +1,46 @@
 (function () {
-  const W = 960, H = 540;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
+  let W = 960, H = 540, NARROW = false, ctx;
   const $ = (id) => document.getElementById(id);
 
   // ---------- Layout (logical px) ----------
-  const FIELD = { w: 560, h: 540, cx: 280, cy: 270 };
+  // Wide: field on the left, plot and spectrum stacked on the right.
+  // Narrow (phones): 480 wide, field, plot and spectrum stacked, with larger type.
+  let FIELD, PLOT, SPEC;
   const PX = 0.9;                       // px per megaparsec of physical distance
-  const PLOT = { x0: 640, x1: 940, y0: 44, y1: 270, dMax: 450, vMax: 60000 };
-  const SPEC = { x0: 650, x1: 930 };
+  function layout() {
+    NARROW = (canvas.parentElement.clientWidth || 960) < 640;
+    if (NARROW) {
+      W = 480; H = 1010;
+      FIELD = { w: 480, h: 420, cx: 240, cy: 210 };
+      PLOT = { tx: 18, ty: 452, ax: 26, x0: 96, x1: 456, y0: 480, y1: 676, dMax: 360, vMax: 60000 };
+      SPEC = { x0: 112, x1: 448, dy: 422, tx: 18 };
+    } else {
+      W = 960; H = 540;
+      FIELD = { w: 560, h: 540, cx: 280, cy: 270 };
+      PLOT = { tx: 580, ty: 24, ax: 586, x0: 640, x1: 940, y0: 44, y1: 270, dMax: 450, vMax: 60000 };
+      SPEC = { x0: 650, x1: 930, dy: 0, tx: 580 };
+    }
+    canvas.setAttribute("width", W); canvas.setAttribute("height", H);
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  const fs = (px) => (NARROW ? Math.max(17, Math.round(px * 1.42)) : px) + "px ";
+  const tr = (t) => (window.I18N ? I18N.t(t) : t);
+  // Split a sentence into lines (translated whole first; Chinese breaks per character).
+  function lines(text, maxW) {
+    text = tr(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const out = [];
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + (cjk ? "" : " ") + w : w;
+      if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+    }
+    if (line) out.push(line);
+    return out;
+  }
 
   // ---------- Universe ----------
   const BOX = 1400;                     // comoving size of the repeating patch (Mpc)
@@ -83,11 +115,13 @@
   // ---------- Drawing ----------
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   const SANS = "'IBM Plex Sans', system-ui, sans-serif";
-  function label(text, x, y, align, color, size) {
-    ctx.font = (size || 12) + "px " + MONO;
+  // maxW: squeeze horizontally only if a translation would run past it.
+  function label(text, x, y, align, color, size, maxW) {
+    ctx.font = fs(size || 12) + MONO;
     ctx.fillStyle = color || "#7f8ea6";
     ctx.textAlign = align || "left";
-    ctx.fillText(text, x, y);
+    const t = tr(text);
+    if (maxW && ctx.measureText(t).width > maxW) ctx.fillText(t, x, y, maxW); else ctx.fillText(t, x, y);
   }
 
   function draw() {
@@ -97,8 +131,13 @@
     drawField(a, Hkm);
     ctx.strokeStyle = "#1a2436";
     ctx.beginPath();
-    ctx.moveTo(FIELD.w + 0.5, 14); ctx.lineTo(FIELD.w + 0.5, H - 14);
-    ctx.moveTo(FIELD.w + 16, 300.5); ctx.lineTo(W - 14, 300.5);
+    if (NARROW) {
+      ctx.moveTo(14, FIELD.h + 0.5); ctx.lineTo(W - 14, FIELD.h + 0.5);
+      ctx.moveTo(14, 300.5 + SPEC.dy); ctx.lineTo(W - 14, 300.5 + SPEC.dy);
+    } else {
+      ctx.moveTo(FIELD.w + 0.5, 14); ctx.lineTo(FIELD.w + 0.5, H - 14);
+      ctx.moveTo(FIELD.w + 16, 300.5); ctx.lineTo(W - 14, 300.5);
+    }
     ctx.stroke();
     drawPlot(Hkm);
     drawSpectrum();
@@ -164,32 +203,60 @@
     ctx.lineWidth = 1;
     label("HOME", hx + 13, hy - 9, "left", "#8fa6ff");
     ctx.fillStyle = "rgba(5,8,14,0.75)";
-    ctx.fillRect(8, 8, 250, 42);
-    ctx.fillRect(8, FIELD.h - 46, 190, 36);
-    label("GALAXIES AROUND HOME", 16, 24);
-    label("click any galaxy to live there", 16, 42, "left", "#56647c");
+    if (NARROW) {
+      ctx.font = fs(12) + MONO;
+      const bw = Math.min(W - 16, 16 + Math.max(ctx.measureText(tr("GALAXIES AROUND HOME")).width, ctx.measureText(tr("tap any galaxy to live there")).width));
+      ctx.fillRect(8, 8, bw, 58);
+      ctx.fillRect(8, FIELD.h - 56, 270, 46);
+      label("GALAXIES AROUND HOME", 16, 30, "left", null, 12, W - 32);
+      label("tap any galaxy to live there", 16, 54, "left", "#7f8ea6", 12, W - 32);
+    } else {
+      ctx.fillRect(8, 8, 250, 42);
+      ctx.fillRect(8, FIELD.h - 46, 190, 36);
+      label("GALAXIES AROUND HOME", 16, 24);
+      label("click any galaxy to live there", 16, 42, "left", "#56647c");
+    }
     // Scale bar: 100 Mpc today
     const bar = 100 * PX;
     ctx.fillStyle = "#7f8ea6";
     ctx.fillRect(16, FIELD.h - 22, bar, 2);
     ctx.fillRect(16, FIELD.h - 26, 1, 10); ctx.fillRect(16 + bar - 1, FIELD.h - 26, 1, 10);
-    label("100 Mpc ≈ 326 million ly", 16, FIELD.h - 30, "left", "#7f8ea6", 11);
+    label("100 Mpc ≈ 326 million ly", 16, FIELD.h - (NARROW ? 34 : 30), "left", "#7f8ea6", 11, 254);
 
     if (state.mode === "bang" || (state.t <= T_MIN_FRAC * tNow() * 1.02)) {
       const msg1 = "Back " + tNow().toFixed(1) + " billion years (1 / H₀):";
       const msg2 = "every galaxy crowds onto every other one.";
       const msg3 = "Not at one point. Everywhere.";
-      ctx.fillStyle = "rgba(5,8,14,0.82)";
-      ctx.fillRect(FIELD.cx - 200, 70, 400, 84);
-      ctx.strokeStyle = "#26324a";
-      ctx.strokeRect(FIELD.cx - 199.5, 70.5, 399, 83);
-      ctx.font = "15px " + SANS;
-      ctx.fillStyle = "#e9eef7";
-      ctx.textAlign = "center";
-      ctx.fillText(msg1, FIELD.cx, 96);
-      ctx.fillText(msg2, FIELD.cx, 117);
-      ctx.fillStyle = "#f0b35a";
-      ctx.fillText(msg3, FIELD.cx, 140);
+      if (NARROW) {
+        // Wrap each sentence to the box, then size the box to fit.
+        ctx.font = fs(15) + SANS;
+        const bw = W - 40, lh = 26;
+        const L1 = lines(msg1, bw - 24), L2 = lines(msg2, bw - 24), L3 = lines(msg3, bw - 24);
+        const n = L1.length + L2.length + L3.length;
+        const top = 84, bh = n * lh + 22;
+        ctx.fillStyle = "rgba(5,8,14,0.85)";
+        ctx.fillRect(FIELD.cx - bw / 2, top, bw, bh);
+        ctx.strokeStyle = "#26324a";
+        ctx.strokeRect(FIELD.cx - bw / 2 + 0.5, top + 0.5, bw - 1, bh - 1);
+        ctx.textAlign = "center";
+        let y = top + 30;
+        for (const [arr, col] of [[L1, "#e9eef7"], [L2, "#e9eef7"], [L3, "#f0b35a"]]) {
+          ctx.fillStyle = col;
+          for (const l of arr) { ctx.fillText(l, FIELD.cx, y); y += lh; }
+        }
+      } else {
+        ctx.fillStyle = "rgba(5,8,14,0.82)";
+        ctx.fillRect(FIELD.cx - 200, 70, 400, 84);
+        ctx.strokeStyle = "#26324a";
+        ctx.strokeRect(FIELD.cx - 199.5, 70.5, 399, 83);
+        ctx.font = "15px " + SANS;
+        ctx.fillStyle = "#e9eef7";
+        ctx.textAlign = "center";
+        ctx.fillText(msg1, FIELD.cx, 96);
+        ctx.fillText(msg2, FIELD.cx, 117);
+        ctx.fillStyle = "#f0b35a";
+        ctx.fillText(msg3, FIELD.cx, 140);
+      }
     }
     ctx.restore();
   }
@@ -198,19 +265,19 @@
     const { x0, x1, y0, y1, dMax, vMax } = PLOT;
     const X = (d) => x0 + d / dMax * (x1 - x0);
     const Y = (v) => y1 - v / vMax * (y1 - y0);
-    label("SPEED AWAY FROM HOME vs DISTANCE", 580, 24);
+    label("SPEED AWAY FROM HOME vs DISTANCE", PLOT.tx, PLOT.ty, "left", null, 12, NARROW ? W - 36 : 360);
     // axes and ticks
     ctx.strokeStyle = "#26324a";
     ctx.beginPath(); ctx.moveTo(x0 + 0.5, y0); ctx.lineTo(x0 + 0.5, y1 + 0.5); ctx.lineTo(x1, y1 + 0.5); ctx.stroke();
-    ctx.font = "10px " + MONO;
-    ctx.fillStyle = "#56647c";
+    ctx.font = fs(10) + MONO;
+    ctx.fillStyle = NARROW ? "#7f8ea6" : "#56647c";
     ctx.textAlign = "center";
-    for (let d = 0; d <= 400; d += 100) { ctx.fillRect(X(d), y1, 1, 4); ctx.fillText(String(d), X(d), y1 + 15); }
-    ctx.fillText("distance (Mpc)", (x0 + x1) / 2, y1 + 28);
+    for (let d = 0; d <= dMax - 50; d += 100) { ctx.fillRect(X(d), y1, 1, 4); ctx.fillText(String(d), X(d), y1 + (NARROW ? 21 : 15)); }
+    ctx.fillText("distance (Mpc)", (x0 + x1) / 2, y1 + (NARROW ? 42 : 28));
     ctx.textAlign = "right";
     for (let v = 0; v <= vMax; v += 20000) { ctx.fillRect(x0 - 4, Y(v), 4, 1); ctx.fillText(v ? (v / 1000) + "k" : "0", x0 - 7, Y(v) + 4); }
     ctx.save();
-    ctx.translate(586, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
+    ctx.translate(PLOT.ax, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
     ctx.textAlign = "center"; ctx.fillText("speed (km/s)", 0, 0);
     ctx.restore();
     ctx.save();
@@ -237,24 +304,26 @@
     ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(dMax), Y(state.fit * dMax)); ctx.stroke();
     ctx.lineWidth = 1;
     ctx.restore();
-    label("slope H = " + state.fit.toFixed(1) + " km/s/Mpc", x0 + 10, y0 + 6, "left", "#f0b35a");
-    if (!tn) label("dashed: today's H₀ = " + state.H0, x0 + 10, y0 + 22, "left", "#7f8ea6", 11);
-    else label("this is H₀, today's value", x0 + 10, y0 + 22, "left", "#7f8ea6", 11);
+    label("slope H = " + state.fit.toFixed(1) + " km/s/Mpc", x0 + 10, y0 + 6, "left", "#f0b35a", 12, x1 - x0 - 10);
+    const y2 = y0 + (NARROW ? 30 : 22);
+    if (!tn) label("dashed: today's H₀ = " + state.H0, x0 + 10, y2, "left", "#7f8ea6", 11, x1 - x0 - 10);
+    else label("this is H₀, today's value", x0 + 10, y2, "left", "#7f8ea6", 11, x1 - x0 - 10);
   }
 
   function drawSpectrum() {
     const aE = state.aEmit;
     const stretch = 1 / aE;
-    label("LIGHT ON ITS WAY TO US", 580, 326);
-    label("z = " + (stretch - 1).toFixed(2), 944, 326, "right", "#f0b35a");
+    const dy = SPEC.dy;
+    label("LIGHT ON ITS WAY TO US", SPEC.tx, 326 + dy, "left", null, 12, NARROW ? 330 : 280);
+    label("z = " + (stretch - 1).toFixed(2), W - 16, 326 + dy, "right", "#f0b35a");
     // Source and observer
-    const wy = 372, xa = SPEC.x0 + 14, xb = SPEC.x1 - 14;
+    const wy = 372 + dy, xa = SPEC.x0 + 14, xb = SPEC.x1 - 14;
     ctx.fillStyle = "rgba(170,200,255,0.9)";
     ctx.beginPath(); ctx.ellipse(SPEC.x0, wy, 7, 3.5, -0.4, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#8fa6ff";
     ctx.beginPath(); ctx.arc(SPEC.x1 + 2, wy, 4, 0, Math.PI * 2); ctx.fill();
-    label("then", SPEC.x0 - 8, wy + 26, "left", "#56647c", 10);
-    label("now, at home", SPEC.x1 + 8, wy + 26, "right", "#56647c", 10);
+    label("then", SPEC.x0 - 8, wy + (NARROW ? 32 : 26), "left", NARROW ? "#7f8ea6" : "#56647c", 10);
+    label("now, at home", SPEC.x1 + 8, wy + (NARROW ? 32 : 26), "right", NARROW ? "#7f8ea6" : "#56647c", 10);
     // Wave whose wavelength grows with the scale factor as it travels
     let phase = -state.wavePhase;
     let prev = null;
@@ -275,7 +344,8 @@
     // Spectrum bars: emitted and observed hydrogen lines
     const L0 = 350, L1 = 1250;
     const sx = (l) => SPEC.x0 + (l - L0) / (L1 - L0) * (SPEC.x1 - SPEC.x0);
-    const bars = [{ y: 426, k: 1, name: "emitted" }, { y: 470, k: stretch, name: "observed" }];
+    const bars = NARROW ? [{ y: 430 + dy, k: 1, name: "emitted" }, { y: 486 + dy, k: stretch, name: "observed" }]
+      : [{ y: 426, k: 1, name: "emitted" }, { y: 470, k: stretch, name: "observed" }];
     for (const b of bars) {
       for (let x = SPEC.x0; x < SPEC.x1; x++) {
         const l = L0 + (x - SPEC.x0) / (SPEC.x1 - SPEC.x0) * (L1 - L0);
@@ -290,20 +360,22 @@
         ctx.fillStyle = l > 700 ? "#e9eef7" : lamColour(l, 1);
         ctx.fillRect(sx(l) - 1, b.y - 2, 2, 22);
       }
-      label(b.name, SPEC.x0 - 22, b.y + 13, "right", "#56647c", 10);
+      label(b.name, SPEC.x0 - (NARROW ? 8 : 22), b.y + 14, "right", NARROW ? "#7f8ea6" : "#56647c", 10, SPEC.x0 - (NARROW ? 14 : 30));
     }
     // Connect the line we drew as a wave
     ctx.strokeStyle = "rgba(201,212,227,0.35)";
     ctx.setLineDash([2, 3]);
-    ctx.beginPath(); ctx.moveTo(sx(H_BETA), 446); ctx.lineTo(sx(H_BETA * stretch), 468); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx(H_BETA), bars[0].y + 20); ctx.lineTo(sx(H_BETA * stretch), bars[1].y - 2); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = "10px " + MONO;
-    ctx.fillStyle = "#56647c";
+    ctx.font = fs(10) + MONO;
+    ctx.fillStyle = NARROW ? "#7f8ea6" : "#56647c";
     ctx.textAlign = "center";
-    for (const l of [400, 600, 800, 1000, 1200]) ctx.fillText(String(l), sx(l), 504);
-    ctx.fillText("wavelength (nm)", sx(800), 520);
-    label("infrared →", SPEC.x1 - 4, 441, "right", "#56647c", 10);
-    label("wavelength × " + stretch.toFixed(2) + ": " + Math.round(H_BETA) + " → " + Math.round(H_BETA * stretch) + " nm", SPEC.x0, 534, "left", "#c9d4e3", 11);
+    const yt = NARROW ? bars[1].y + 42 : 504;
+    for (const l of [400, 600, 800, 1000, 1200]) ctx.fillText(String(l), sx(l), yt);
+    ctx.fillText("wavelength (nm)", sx(800), yt + (NARROW ? 22 : 16));
+    if (NARROW) label("infrared →", SPEC.x1 - 4, bars[0].y + 44, "right", "#7f8ea6", 10);
+    else label("infrared →", SPEC.x1 - 4, 441, "right", "#56647c", 10);
+    label("wavelength × " + stretch.toFixed(2) + ": " + Math.round(H_BETA) + " → " + Math.round(H_BETA * stretch) + " nm", NARROW ? 18 : SPEC.x0, NARROW ? yt + 50 : 534, "left", "#c9d4e3", 11, NARROW ? W - 36 : 290);
   }
 
   function lamColour(l, alpha) {
@@ -422,14 +494,23 @@
   canvas.addEventListener("click", (e) => {
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
-    if (x > FIELD.w) return;
-    let bestP = null, bestD = 18;
+    if (x > FIELD.w || y > FIELD.h) return;
+    let bestP = null, bestD = NARROW ? 30 : 18;
     for (const p of state.visible) {
       const d = Math.hypot(p.sx - x, p.sy - y);
       if (d < bestD) { bestD = d; bestP = p; }
     }
     if (bestP) setHome(galaxies.indexOf(bestP.g), bestP.sx, bestP.sy);
   });
+
+  // Switch layouts at the phone breakpoint; the universe's state carries over.
+  let rzTimer = 0;
+  new ResizeObserver(() => {
+    clearTimeout(rzTimer);
+    rzTimer = setTimeout(() => {
+      if (((canvas.parentElement.clientWidth || 960) < 640) !== NARROW) { layout(); draw(); }
+    }, 120);
+  }).observe(canvas.parentElement);
 
   // ---------- Start ----------
   $("time").max = tNow().toFixed(2);

@@ -202,9 +202,30 @@
   }
 
   // ---------- Chart ----------
-  const W = 960, H = 300;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
-  const C = { l: 62, r: 170, t: 30, b: 40 };
+  // Desktop: a 960-wide chart with labels at the line ends. Narrow screens: the
+  // logical width matches the displayed width (1:1), and the labels move into a
+  // legend above the plot so the text stays readable.
+  const canvas = $("bench");
+  let W = 960, H = 300, narrow = false, ctx;
+  let C = { l: 62, r: 170, t: 30, b: 40 };
+  function layout() {
+    const cw = canvas.parentElement.clientWidth || 960;
+    narrow = cw < 640;
+    if (narrow) {
+      W = Math.max(280, Math.round(cw)); H = 300;
+      C = { l: 46, r: 14, t: 84, b: 32 };
+    } else {
+      W = 960; H = 300;
+      C = { l: 62, r: 170, t: 30, b: 40 };
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  let lastCW = canvas.parentElement.clientWidth;
+  if (window.ResizeObserver) new ResizeObserver(() => {
+    const cw = canvas.parentElement.clientWidth;
+    if (cw !== lastCW) { lastCW = cw; layout(); }
+  }).observe(canvas.parentElement);
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   const STAY = "#f08a5d", SWAP = "#8fa6ff";
   const xOf = (g) => C.l + (g / 1000) * (W - C.l - C.r);
@@ -219,12 +240,15 @@
       ctx.strokeStyle = p === 0 ? "#3a4760" : "#1a2436";
       ctx.beginPath(); ctx.moveTo(C.l, yOf(p) + 0.5); ctx.lineTo(W - C.r, yOf(p) + 0.5); ctx.stroke();
       ctx.fillStyle = "#7f8ea6"; ctx.textAlign = "right";
-      ctx.fillText(Math.round(p * 100) + "%", C.l - 10, yOf(p) + 4);
+      ctx.fillText(Math.round(p * 100) + "%", C.l - (narrow ? 6 : 10), yOf(p) + 4);
     }
     ctx.textAlign = "center";
-    for (const g of [0, 250, 500, 750, 1000]) ctx.fillText(g.toLocaleString("en-US"), xOf(g), H - C.b + 20);
+    for (const g of [0, 250, 500, 750, 1000]) {
+      if (narrow && g === 1000) ctx.textAlign = "right";
+      ctx.fillText(g.toLocaleString("en-US"), narrow && g === 1000 ? W - C.r + 4 : xOf(g), H - C.b + 20);
+    }
     ctx.textAlign = "left";
-    ctx.fillText("WIN RATE AS GAMES ACCUMULATE", C.l, 18);
+    ctx.fillText("WIN RATE AS GAMES ACCUMULATE", narrow ? 8 : C.l, 18);
 
     // Theory
     const tStay = state.random ? 0.5 : 1 / state.n, tSwap = state.random ? 0.5 : (state.n - 1) / state.n;
@@ -257,23 +281,38 @@
     let ys = last(sim.stay), yw = last(sim.swap);
     const haveData = !isNaN(ys);
     if (!haveData) { ys = tStay; yw = tSwap; }
-    let pyS = yOf(ys), pyW = yOf(yw);
-    if (Math.abs(pyS - pyW) < 34) {
-      const mid = (pyS + pyW) / 2, up = ys >= yw ? -1 : 1;
-      pyS = mid + up * 17; pyW = mid - up * 17;
-    }
-    const lx = W - C.r + 14;
-    ctx.textAlign = "left";
-    ctx.font = "600 15px " + MONO;
-    ctx.fillStyle = SWAP;
-    ctx.fillText("Switch " + (haveData ? (yw * 100).toFixed(1) + "%" : ""), lx, pyW - 2);
-    ctx.fillStyle = STAY;
-    ctx.fillText("Stay " + (haveData ? (ys * 100).toFixed(1) + "%" : ""), lx, pyS - 2);
-    ctx.font = "12px " + MONO;
-    ctx.fillStyle = "#7f8ea6";
     const fr = state.random ? ["1/2", "1/2"] : [(state.n - 1) + "/" + state.n, "1/" + state.n];
-    ctx.fillText("theory " + fr[0], lx, pyW + 14);
-    ctx.fillText("theory " + fr[1], lx, pyS + 14);
+    const swapTxt = "Switch " + (haveData ? (yw * 100).toFixed(1) + "%" : "");
+    const stayTxt = "Stay " + (haveData ? (ys * 100).toFixed(1) + "%" : "");
+    ctx.textAlign = "left";
+    if (narrow) {
+      // Legend above the plot: a colour swatch, the live rate, the theory value.
+      const colX = [8, Math.round(W / 2) + 4];
+      [[SWAP, swapTxt, fr[0]], [STAY, stayTxt, fr[1]]].forEach(([col, txt, th], k) => {
+        const x = colX[k];
+        ctx.fillStyle = col; ctx.fillRect(x, 37, 12, 3);
+        ctx.font = "600 14px " + MONO;
+        ctx.fillText(txt, x + 18, 44);
+        ctx.font = "12px " + MONO; ctx.fillStyle = "#7f8ea6";
+        ctx.fillText("theory " + th, x + 18, 63);
+      });
+    } else {
+      let pyS = yOf(ys), pyW = yOf(yw);
+      if (Math.abs(pyS - pyW) < 34) {
+        const mid = (pyS + pyW) / 2, up = ys >= yw ? -1 : 1;
+        pyS = mid + up * 17; pyW = mid - up * 17;
+      }
+      const lx = W - C.r + 14;
+      ctx.font = "600 15px " + MONO;
+      ctx.fillStyle = SWAP;
+      ctx.fillText(swapTxt, lx, pyW - 2);
+      ctx.fillStyle = STAY;
+      ctx.fillText(stayTxt, lx, pyS - 2);
+      ctx.font = "12px " + MONO;
+      ctx.fillStyle = "#7f8ea6";
+      ctx.fillText("theory " + fr[0], lx, pyW + 14);
+      ctx.fillText("theory " + fr[1], lx, pyS + 14);
+    }
 
     if (!sim.played) {
       ctx.fillStyle = "#56647c"; ctx.textAlign = "center"; ctx.font = "15px 'IBM Plex Sans', system-ui, sans-serif";

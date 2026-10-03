@@ -42,6 +42,12 @@
     color: var(--ink);
   }
   .button-row button.preset { padding: 6px 11px; font-family: var(--font-mono); }
+  @media (max-width: 640px) {
+    .controls button { min-height: 40px; }
+    .button-row button.preset { padding: 8px 12px; }
+    .controls input[type="range"] { height: 32px; }
+    .control select { min-height: 40px; }
+  }
 </style>
 </head>
 <body>
@@ -112,6 +118,7 @@
     <section>
       <h2>What you're seeing</h2>
       <p>A light clock ticks each time a pulse of light goes up to a mirror and back. On the moving ship, Earth sees the light travel a longer, slanted path. Light moves at the same speed for everyone, so each tick takes longer. That stretch factor is γ = 1 / √(1 − v²/c²).</p>
+      <p data-depth="deep">The factor comes from the triangle in the moving clock. With mirrors a distance <i>L</i> apart, light at rest needs 2<i>L</i>/<i>c</i> per tick. Seen from Earth, the clock slides sideways by <i>v</i>Δ<i>t</i>/2 while the light climbs <i>L</i>, and the slanted path must still be covered at speed <i>c</i>. Pythagoras then gives Δ<i>t</i> = γ × 2<i>L</i>/<i>c</i>.</p>
       <p>Below, both twins start aged 30. The dials and bars show how much time each one lives through. On the spacetime diagram, each dot marks the same amount of a twin's own time, and the traveller's dots are spaced further apart.</p>
     </section>
     <section>
@@ -121,11 +128,24 @@
         <li>Go to the galactic centre at 0.999c. Earth waits over 53,000 years; the traveller is back in under 2,400.</li>
         <li>Drop to 0.5c. The effect is real but small: γ is only 1.155. At airliner speeds it is a few tens of nanoseconds per day.</li>
       </ul>
+      <p data-depth="deep">Check the numbers at 0.866c to Proxima Centauri. Earth waits 2 × 4.24 / 0.866 ≈ 9.79 years and the traveller lives 9.79 / 2 ≈ 4.90 years. On board, the star is only 2.12 light-years away, and 2 × 2.12 / 0.866 ≈ 4.90 years: the same answer, worked out in the ship's frame.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Motion is relative, so from the ship it's Earth's clocks that run slow. Then why is the traveller the younger one? Because only the traveller turns around. To get home they switch from one moving frame to another, and the two twins take different paths through spacetime. The straight path, staying home, is the one with the most time on it.</p>
+      <p data-depth="deep">The asymmetry has a precise location. On each coasting leg, each twin calculates that the other's clock runs slow by γ. At the turnaround the traveller's idea of "now, back on Earth" swings forward: with an instant turnaround, Earth's clock jumps ahead by 2<i>vD</i>/<i>c</i>² in the traveller's reckoning, about 7.3 years at 0.866c to Proxima Centauri. Add that jump to the two slow legs and both twins agree on the final ages.</p>
       <p class="muted">The traveller also sees the distance shrink by γ, which is how, fast enough, they cover 4.24 light-years in under 4.24 years of their own time without ever outrunning light.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">γ = 1 / √(1 − <i>v</i>²/<i>c</i>²) &nbsp;&nbsp; Δ<i>t</i> = γ Δτ</div>
+      <p>Δτ is the time between two ticks of the moving clock as measured on board, Δ<i>t</i> the time Earth measures between the same two ticks, <i>v</i> the ship's speed and <i>c</i> the speed of light. γ is about 1.155 at 0.5c, 2 at 0.866c and 22.4 at 0.999c. On this page the moving clock's photon climbs at <i>c</i>/γ while the clock drifts sideways at <i>v</i>, so the light's total speed along its slanted path is exactly <i>c</i>.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>T</i> = 2<i>D</i> / <i>v</i> &nbsp;&nbsp; τ = <i>T</i> / γ</div>
+      <p><i>D</i> is the distance to the star in Earth's frame, <i>T</i> the round trip on Earth's clock and τ the time the traveller lives through. With <i>D</i> in light-years and <i>v</i> as a fraction of <i>c</i>, <i>T</i> comes out in years. The simulation uses exactly these two formulas: the ship coasts at constant speed both ways and turns around instantly, with no time spent speeding up or slowing down.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>D</i>′ = <i>D</i> / γ = <i>D</i> √(1 − <i>v</i>²/<i>c</i>²)</div>
+      <p>Length contraction: <i>D</i>′ is the Earth to star distance measured on board, drawn as the orange bar under the map. The traveller covers <i>D</i>′ each way at speed <i>v</i>, and 2<i>D</i>′/<i>v</i> equals τ, so both frames agree on the traveller's age.</p>
+      <div class="eq" data-depth="deep" translate="no">τ = ∫ √(1 − <i>v</i>(<i>t</i>)²/<i>c</i>²) d<i>t</i></div>
+      <p>Proper time: what a clock carried along a path actually records, added up along the path. For the Earth twin <i>v</i> = 0, so τ = <i>T</i>. For the traveller the square root is 1/γ on both legs, giving <i>T</i>/γ. Any path that leaves and comes back has <i>v</i> ≠ 0 somewhere, so it always records less time than staying put. The dots on the spacetime diagram are placed at equal steps of each twin's τ.</p>
     </section>
   </div>
 

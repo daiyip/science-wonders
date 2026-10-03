@@ -1,13 +1,37 @@
 (function () {
-  const W = 960, H = 460;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
   const $ = (id) => document.getElementById(id);
+  let W = 960, H = 460, narrow = false, ctx;
 
-  // Layout (logical pixels)
-  const HX = 14, HY = 14, HW = 600, HH = 432;          // habitat
-  const PX = 640, PW = 306;                             // chart column
-  const C1 = { y: 34, h: 92 }, C2 = { y: 176, h: 72 }, C3 = { y: 300, h: 140 };
+  // Layout (logical pixels). The world always lives in a 600 x 432 habitat at
+  // (HX, HY). On a wide bench it is drawn 1:1 with the charts beside it. On a
+  // narrow bench (phones) the logical width matches the displayed CSS width, the
+  // habitat is drawn scaled by HS at (HOX, HOY) and the charts stack underneath.
+  const HX = 14, HY = 14, HW = 600, HH = 432;          // habitat (world coordinates)
+  let HS = 1, HOX = HX, HOY = HY;                       // how the habitat is drawn
+  let PX = 640, PW = 306;                               // chart column
+  let C1 = { y: 34, h: 92 }, C2 = { y: 176, h: 72 }, C3 = { y: 300, h: 140 };
+  const fpx = (n) => (narrow ? Math.max(11, n) : n) + "px ";
+  function layout() {
+    const cw = Math.round(canvas.clientWidth || canvas.parentElement.clientWidth || 960);
+    narrow = cw < 640;
+    if (!narrow) {
+      W = 960; H = 460; HS = 1; HOX = HX; HOY = HY;
+      PX = 640; PW = 306;
+      C1 = { y: 34, h: 92 }; C2 = { y: 176, h: 72 }; C3 = { y: 300, h: 140 };
+    } else {
+      W = Math.max(280, cw);
+      HOX = 8; HOY = 8; HS = (W - 16) / HW;
+      PX = 10; PW = W - 20;
+      const hb = Math.round(HOY + HH * HS);
+      C1 = { y: hb + 36, h: 70 };
+      C2 = { y: C1.y + C1.h + 66, h: 56 };
+      C3 = { y: C2.y + C2.h + 48, h: 110 };
+      H = C3.y + C3.h + 38;
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
   const BINS = 20;
 
   // Rules of the world. Selection comes only from these.
@@ -201,6 +225,8 @@
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   function drawHabitat() {
     ctx.save();
+    if (narrow) { ctx.translate(HOX - HX * HS, HOY - HY * HS); ctx.scale(HS, HS); }
+    const big = narrow ? 1.4 : 1;   // creatures drawn a little larger when the habitat is shrunk
     ctx.beginPath(); ctx.rect(HX, HY, HW, HH); ctx.clip();
     ctx.drawImage(ground, HX, HY, HW, HH);
     // Creatures
@@ -208,6 +234,7 @@
       if (!c.alive) continue;
       ctx.save();
       ctx.translate(c.x, c.y); ctx.rotate(c.a);
+      if (big !== 1) ctx.scale(big, big);
       ctx.fillStyle = shadeCSS(c.shade);
       ctx.beginPath(); ctx.ellipse(0, 0, 5.2, 3.6, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = shadeCSS(c.shade * 0.85);
@@ -234,6 +261,7 @@
       ctx.setLineDash([]);
       ctx.save();
       ctx.translate(h.x, h.y); ctx.rotate(h.a);
+      if (big !== 1) ctx.scale(big, big);
       ctx.fillStyle = h.mode === "eat" ? "#c76a3a" : "#e0573f";
       ctx.strokeStyle = "#0d1420"; ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -244,22 +272,23 @@
       ctx.lineWidth = 1;
     }
     ctx.restore();
-    // Frame and label
+    // Frame and label, in screen coordinates
+    const hw = HW * HS, hh = HH * HS;
     ctx.strokeStyle = "#26324a";
-    ctx.strokeRect(HX + 0.5, HY + 0.5, HW - 1, HH - 1);
+    ctx.strokeRect(HOX + 0.5, HOY + 0.5, hw - 1, hh - 1);
     const label = ENVS[state.env].name.toUpperCase() + " · GEN " + state.gen;
     ctx.font = "11px " + MONO;
     const tw = ctx.measureText(label).width;
     ctx.fillStyle = "rgba(5,8,14,0.72)";
-    ctx.fillRect(HX + 8, HY + 8, tw + 14, 20);
+    ctx.fillRect(HOX + (narrow ? 6 : 8), HOY + (narrow ? 6 : 8), tw + 14, 20);
     ctx.fillStyle = "#c9d4e3";
     ctx.textAlign = "left";
-    ctx.fillText(label, HX + 15, HY + 22);
+    ctx.fillText(label, HOX + (narrow ? 13 : 15), HOY + (narrow ? 20 : 22));
     // Generation progress bar
     ctx.fillStyle = "rgba(5,8,14,0.6)";
-    ctx.fillRect(HX, HY + HH - 4, HW, 4);
+    ctx.fillRect(HOX, HOY + hh - 4, hw, 4);
     ctx.fillStyle = "#8fa6ff";
-    ctx.fillRect(HX, HY + HH - 4, HW * state.tick / GEN_TICKS, 4);
+    ctx.fillRect(HOX, HOY + hh - 4, hw * state.tick / GEN_TICKS, 4);
   }
 
   function histogram(cy, ch, bins, start, colourFor, title, leftLab, rightLab, marker) {
@@ -290,16 +319,19 @@
     ctx.strokeStyle = "#26324a";
     ctx.beginPath(); ctx.moveTo(PX, base + 0.5); ctx.lineTo(PX + PW, base + 0.5); ctx.stroke();
     ctx.fillStyle = "#56647c";
-    ctx.font = "10px " + MONO;
+    ctx.font = fpx(10) + MONO;
     ctx.fillText(leftLab, PX, base + 13);
     ctx.textAlign = "right";
     ctx.fillText(rightLab, PX + PW, base + 13);
     if (marker != null) {
       const mx = PX + marker * PW;
       ctx.fillStyle = "#f0b35a";
-      ctx.beginPath(); ctx.moveTo(mx, base + 2); ctx.lineTo(mx - 5, base + 9); ctx.lineTo(mx + 5, base + 9); ctx.closePath(); ctx.fill();
+      // Narrow benches put the marker on its own row, below the end labels.
+      const my = narrow ? base + 17 : base + 2;
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx - 5, my + 7); ctx.lineTo(mx + 5, my + 7); ctx.closePath(); ctx.fill();
       ctx.textAlign = "center";
-      ctx.fillText("ground", Math.max(PX + 22, Math.min(PX + PW - 22, mx)), base + 21);
+      const gw = narrow ? ctx.measureText("ground").width / 2 + 2 : 22;
+      ctx.fillText("ground", Math.max(PX + gw, Math.min(PX + PW - gw, mx)), my + 19);
     }
   }
 
@@ -341,7 +373,7 @@
     };
     line("speed", "#7fb2ff", 1.5);
     line("shade", "#e9eef7", 2);
-    ctx.font = "10px " + MONO;
+    ctx.font = fpx(10) + MONO;
     ctx.fillStyle = "#56647c";
     ctx.textAlign = "left";
     ctx.fillText("gen " + from, PX, y + h + 13);
@@ -349,13 +381,14 @@
     ctx.fillText("gen " + (from + span), PX + PW, y + h + 13);
     // Legend
     ctx.textAlign = "left";
-    const ly = y + h + 13;
+    // On a narrow bench the legend gets its own line under the axis labels.
+    const ly = narrow ? y + h + 31 : y + h + 13;
     const items = [["colour", "#e9eef7"], ["speed", "#7fb2ff"], ["ground", "#f0b35a"]];
-    let lx = PX + 70;
+    let lx = narrow ? PX : PX + 70;
     for (const [t, col] of items) {
       ctx.fillStyle = col; ctx.fillRect(lx, ly - 4, 10, 2);
       ctx.fillStyle = "#7f8ea6"; ctx.fillText(t, lx + 14, ly);
-      lx += 62;
+      lx += narrow ? Math.max(62, ctx.measureText(t).width + 30) : 62;
     }
   }
 
@@ -442,6 +475,18 @@
     newPopulation(); draw(); updateReadouts();
     hint("A fresh, varied population. Every run differs, because the hawks and the mutations are random, but the outcome on each background is the same.");
   });
+
+  // Re-layout when the bench changes width; the simulation state is kept.
+  let lastCW = 0;
+  function onResize() {
+    const cw = Math.round(canvas.parentElement.clientWidth);
+    if (cw === lastCW) return;
+    lastCW = cw;
+    layout();
+    draw();
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(canvas.parentElement);
+  else window.addEventListener("resize", onResize);
 
   // ---------- Start ----------
   paintGround();

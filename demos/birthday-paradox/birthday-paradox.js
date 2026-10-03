@@ -1,12 +1,54 @@
 (function () {
-  const W = 960, H = 440;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
   const $ = (id) => document.getElementById(id);
 
-  // Geometry (logical pixels)
-  const CX = 235, CY = 228, R = 150;
-  const CH = { x0: 548, x1: 930, y0: 52, y1: 380 };
+  // Geometry (logical pixels). Wide screens: a fixed 960 x 440 drawing with the
+  // ring and the chart side by side. Below 640 CSS px the drawing is laid out at
+  // its displayed width (1:1) with the chart under the ring, so text stays legible.
+  let W = 960, H = 440, ctx, N = false;
+  let CX = 235, CY = 228, R = 150;
+  let CH = { x0: 548, x1: 930, y0: 52, y1: 380 };
+  let TITLE2_Y = 26, DATES_Y = 0;
+  function layout() {
+    const cw = canvas.clientWidth || 960;
+    N = cw < 640;
+    if (N) {
+      W = Math.max(300, Math.round(cw));
+      R = Math.min(110, Math.floor(W / 2 - 44));
+      CX = W / 2; CY = 40 + R + 42;
+      DATES_Y = CY + R + 58;
+      TITLE2_Y = DATES_Y + 30;
+      CH = { x0: 44, x1: W - 16, y0: TITLE2_Y + 38, y1: TITLE2_Y + 38 + 190 };
+      H = CH.y1 + 50 + 4 * 18 + 8;
+    } else {
+      W = 960; H = 440;
+      CX = 235; CY = 228; R = 150;
+      CH = { x0: 548, x1: 930, y0: 52, y1: 380 };
+      TITLE2_Y = 26;
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
+  let lastCW = canvas.clientWidth;
+  if (window.ResizeObserver) new ResizeObserver(() => {
+    const cw = canvas.clientWidth;
+    if (cw && cw !== lastCW) { lastCW = cw; layout(); }
+  }).observe(canvas.parentElement);
+  function wrapText(text, x, y, maxW, lh) {
+    // Translate the whole sentence before wrapping; Chinese wraps per character.
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+    return y;
+  }
   const MAXN = 100;
   const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
   const MONTH_START = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
@@ -100,14 +142,14 @@
       ctx.lineTo(CX + Math.cos(a) * R, CY + Math.sin(a) * R);
       ctx.stroke();
     }
-    ctx.font = "10px " + MONO;
-    ctx.fillStyle = FAINT;
+    ctx.font = (N ? "11px " : "10px ") + MONO;
+    ctx.fillStyle = N ? DIM : FAINT;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (let m = 0; m < 12; m++) {
       const mid = MONTH_START[m] + ((m < 11 ? MONTH_START[m + 1] : 365) - MONTH_START[m]) / 2;
       const a = mid / 365 * Math.PI * 2 - Math.PI / 2;
-      ctx.fillText(MONTHS[m], CX + Math.cos(a) * (R - 26), CY + Math.sin(a) * (R - 26));
+      ctx.fillText(MONTHS[m], CX + Math.cos(a) * (R - (N ? 24 : 26)), CY + Math.sin(a) * (R - (N ? 24 : 26)));
     }
 
     // Pairs: one chord per pair of people
@@ -155,7 +197,22 @@
       ctx.fillStyle = info.counts[p.day] >= 2 ? AMBER : BLUE;
       ctx.beginPath(); ctx.arc(x, y, 4.2, 0, Math.PI * 2); ctx.fill();
     }
-    if (labelled) {
+    if (labelled && N) {
+      // No room beside the ring on a phone: list the shared days under it.
+      ctx.font = "12px " + MONO;
+      ctx.fillStyle = AMBER;
+      const labels = [];
+      for (let d = 0; d < 365; d++) if (info.counts[d] >= 2 && shown[d] >= 2) labels.push(dateLabel(d));
+      const widths = labels.map((l) => ctx.measureText(l).width);
+      const gap = 16, total = widths.reduce((a, b) => a + b, 0) + gap * Math.max(0, labels.length - 1);
+      let x = Math.max(12, (W - total) / 2), y = DATES_Y;
+      ctx.textAlign = "left";
+      labels.forEach((l, i) => {
+        if (x + widths[i] > W - 12) { x = 12; y += 18; }
+        ctx.fillText(l, x, y);
+        x += widths[i] + gap;
+      });
+    } else if (labelled) {
       ctx.font = "11px " + MONO;
       ctx.fillStyle = AMBER;
       for (let d = 0; d < 365; d++) {
@@ -191,11 +248,12 @@
     ctx.font = "12px " + MONO;
     ctx.fillStyle = DIM;
     ctx.textAlign = "left";
-    ctx.fillText("CHANCE OF AT LEAST ONE SHARED BIRTHDAY", CH.x0 - 40, 26);
-    ctx.fillText("A YEAR OF BIRTHDAYS", 20, 26);
+    if (N) wrapText("CHANCE OF AT LEAST ONE SHARED BIRTHDAY", 12, TITLE2_Y, W - 24, 16);
+    else ctx.fillText("CHANCE OF AT LEAST ONE SHARED BIRTHDAY", CH.x0 - 40, 26);
+    ctx.fillText("A YEAR OF BIRTHDAYS", N ? 12 : 20, N ? 22 : 26);
 
     // Grid
-    ctx.font = "10px " + MONO;
+    ctx.font = (N ? "11px " : "10px ") + MONO;
     ctx.strokeStyle = GRID;
     ctx.fillStyle = FAINT;
     for (const p of [0, 0.25, 0.5, 0.75, 1]) {
@@ -204,10 +262,10 @@
       ctx.fillText(Math.round(p * 100) + "%", CH.x0 - 8, cy(p) + 3);
     }
     ctx.textAlign = "center";
-    for (let n = 0; n <= MAXN; n += 10) {
+    for (let n = 0; n <= MAXN; n += N ? 20 : 10) {
       ctx.fillText(String(n), cx(n), CH.y1 + 16);
     }
-    ctx.fillText("people in the room", (CH.x0 + CH.x1) / 2, CH.y1 + 34);
+    ctx.fillText("people in the room", (CH.x0 + CH.x1) / 2, CH.y1 + (N ? 36 : 34));
 
     // Landmarks: 23 and 70
     ctx.setLineDash([2, 4]);
@@ -258,9 +316,9 @@
     }
 
     // Legend
-    const lx = cx(46);
-    let ly = cy(0.36);
-    ctx.font = "11px " + SANS;
+    const lx = N ? 12 : cx(46);
+    let ly = N ? CH.y1 + 62 : cy(0.36);
+    ctx.font = (N ? "12px " : "11px ") + SANS;
     ctx.textAlign = "left";
     const legend = [["#e9eef7", "exact", false]];
     if (state.showApprox) legend.push(["#7f8ea6", "pairs estimate 1 − e^(−pairs/365)", true]);
@@ -271,8 +329,8 @@
       ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 22, ly); ctx.stroke();
       ctx.setLineDash([]); ctx.lineWidth = 1;
       ctx.fillStyle = "#c9d4e3";
-      ctx.fillText(txt, lx + 30, ly + 4);
-      ly += 18;
+      if (N) ly = wrapText(txt, lx + 30, ly + 4, W - lx - 42, 17) - 4 + 1;
+      else { ctx.fillText(txt, lx + 30, ly + 4); ly += 18; }
     }
 
     // Current room marker
@@ -285,7 +343,9 @@
     const label = "n = " + n + ": " + fmtPct(P[n]);
     const right = cx(n) > CH.x1 - 120;
     ctx.textAlign = right ? "right" : "left";
-    ctx.fillText(label, cx(n) + (right ? -10 : 10), cy(P[n]) - 10);
+    // On a phone, keep the label inside the plot when the point is near the top.
+    const below = N && cy(P[n]) - 10 < CH.y0 + 16;
+    ctx.fillText(label, cx(n) + (right ? -10 : 10), cy(P[n]) + (below ? 22 : -10));
   }
 
   // ---------- Stats ----------

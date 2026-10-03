@@ -213,3 +213,30 @@ I18N.add({
   "· real time": "· tiempo real",
   "× faster": "× más rápido"
 });
+
+I18N.add({
+  "The scales are hard to hold in your head. The gap to the Moon would fit {0} Earths in a row. The Sun is {1} times farther than the Moon, and Proxima Centauri about {2} times farther than the Sun. On the Proxima track, the whole Solar System out to Voyager {3} is squeezed into the first pixel.": "Las escalas cuestan de imaginar. En la distancia a la Luna cabrían {0} Tierras en fila. El Sol está {1} veces más lejos que la Luna, y Próxima Centauri unas {2} veces más lejos que el Sol. En el trayecto a Próxima, todo el Sistema Solar hasta la Voyager {3} cabe en el primer píxel.",
+  "Lunar ranging stations time the echo to about {0} picoseconds, the time light takes to cross {1} mm; since the light goes there and back, that is a {2} mm step in distance. The precision comes from averaging many returns, since only a tiny fraction of the photons sent ever make it back from the reflectors left on the Moon.": "Las estaciones de telemetría láser lunar miden el eco con una precisión de unos {0} picosegundos, el tiempo que tarda la luz en recorrer {1} mm; como la luz va y vuelve, eso equivale a un paso de {2} mm en la distancia. La precisión se logra promediando muchos retornos, porque solo una fracción ínfima de los fotones enviados regresa desde los reflectores dejados en la Luna.",
+  "<html>The <i>c</i> of relativity is the speed in a vacuum. In water light travels at about <i>c</i>/{0} and in glass at about <i>c</i>/{1}; nothing that carries energy or information goes faster than <i>c</i>.": "La <i>c</i> de la relatividad es la velocidad en el vacío. En el agua la luz viaja a unos <i>c</i>/{0} y en el vidrio a unos <i>c</i>/{1}; nada que transporte energía o información va más rápido que <i>c</i>.",
+  "<html>Light time is distance divided by the speed of light. For the Moon, {0} km / {1} km/s ≈ {2} s; for the Sun, {3} AU / <i>c</i> ≈ {4} s, which is {5} min {6} s. The page moves the pulse a fraction (elapsed time ÷ light time) of the way along the track, with elapsed time running at real time multiplied by the playback speed. The ruler at the top places each trip at log₁₀ <i>t</i>.": "El tiempo de luz es la distancia dividida entre la velocidad de la luz. Para la Luna, {0} km / {1} km/s ≈ {2} s; para el Sol, {3} UA / <i>c</i> ≈ {4} s, es decir, {5} min {6} s. La página avanza el pulso una fracción (tiempo transcurrido ÷ tiempo de luz) del trayecto, con el tiempo transcurrido corriendo a tiempo real multiplicado por la velocidad de reproducción. La regla de arriba coloca cada viaje en log₁₀ <i>t</i>.",
+  "A light-year is a distance: how far light goes in one Julian year of {0} days. Proxima Centauri at {1} light-years is about {2} km away, so its light time is simply {3} years.": "Un año luz es una distancia: lo que recorre la luz en un año juliano de {0} días. Próxima Centauri, a {1} años luz, está a unos {2} km, así que su tiempo de luz es simplemente {3} años.",
+  "<html>How late an eclipse of Io is seen, compared with when Earth and Jupiter are closest. <i>r</i><sub>J</sub> and <i>r</i><sub>E</sub> are the planets' positions, and <i>R</i><sub>J</sub> = {0} AU and <i>R</i><sub>E</sub> = {1} AU the radii of their orbits. The simulation puts both planets on circular orbits in one plane, fires an eclipse every {2} days of Io's orbit, applies this delay, and skips eclipses when Jupiter is within {3}° of the Sun, where it could not be observed.": "Cuánto se retrasa la observación de un eclipse de Ío respecto a cuando la Tierra y Júpiter están más cerca. <i>r</i><sub>J</sub> y <i>r</i><sub>E</sub> son las posiciones de los planetas, y <i>R</i><sub>J</sub> = {0} UA y <i>R</i><sub>E</sub> = {1} UA los radios de sus órbitas. La simulación pone ambos planetas en órbitas circulares en un mismo plano, genera un eclipse cada {2} días de la órbita de Ío, aplica este retraso y omite los eclipses cuando Júpiter está a menos de {3}° del Sol, donde no se podría observar.",
+  "<html>How far a rover moving at speed <i>v</i> drives between the moment your picture shows it and the moment your stop command arrives: the picture is <i>d</i>/<i>c</i> old and the command needs another <i>d</i>/<i>c</i>. At the page's {0} cm/s with {1} minutes each way, that is {2} m, more than the {3} m to the boulder; at the closest approach ({4} minutes) it is about {5} m.": "Lo que avanza un rover a velocidad <i>v</i> entre el momento en que tu imagen lo muestra y el momento en que llega tu orden de parar: la imagen tiene <i>d</i>/<i>c</i> de antigüedad y la orden necesita otro <i>d</i>/<i>c</i>. A los {0} cm/s de la página, con {1} minutos en cada sentido, son {2} m, más que los {3} m hasta la roca; en la máxima aproximación ({4} minutos) son unos {5} m.",
+  "of {0} s one way": "de {0} s de ida",
+  "of {0} s there and back": "de {0} s ida y vuelta",
+  "of {0} min {1} s one way": "de {0} min {1} s de ida",
+  "of {0} min {1} s there and back": "de {0} min {1} s ida y vuelta",
+  "of {0} h {1} min one way": "de {0} h {1} min de ida",
+  "of {0} h {1} min there and back": "de {0} h {1} min ida y vuelta",
+  "of {0} days one way": "de {0} días de ida",
+  "of {0} days there and back": "de {0} días ida y vuelta",
+  "of {0} years one way": "de {0} años de ida",
+  "of {0} years there and back": "de {0} años ida y vuelta",
+  "playing {0} minute per second": "a {0} minuto por segundo",
+  "playing {0} hour per second": "a {0} hora por segundo",
+  "playing {0} day per second": "a {0} día por segundo",
+  "playing {0} month per second": "a {0} mes por segundo",
+  "playing {0} year per second": "a {0} año por segundo",
+  "playing {0}× faster": "a {0}× más rápido",
+  "{0} days, {1} billion km": "{0} días, {1} mil millones de km"
+});

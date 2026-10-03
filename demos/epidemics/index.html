@@ -105,6 +105,7 @@
       <h2>What you're seeing</h2>
       <p>400 people wander about. Blue are susceptible, red are infected, grey have recovered and are immune, green were vaccinated. Each time an infected person meets a susceptible one there is a fixed chance of passing it on, set so that one case in a fully susceptible crowd infects R0 others on average. Each infected person recovers at random, after 10 days on average.</p>
       <p>On the chart, solid lines are the dots and dashed lines are the 1927 SIR equations for the same R0, which treat the crowd as perfectly mixed.</p>
+      <p data-depth="deep">Two people meet when they come within 8 px of each other; staying in contact does not count as a new meeting. When the page loads it lets 400 walkers wander for 500 ticks to measure how many new meetings one person has per tick, m. A day is 24 ticks, and each tick an infected person recovers with chance 1/240, so the infectious period is random, with an average of 10 days. The chance of passing the disease on at one meeting is then set to R0 ÷ (m × 240).</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -114,11 +115,24 @@
         <li>Pick Measles. The threshold jumps to 93%. Compare 90% and 95% vaccinated: at 90% the equations still predict an outbreak.</li>
         <li>Turn up social distancing. The peak drops and arrives later: the curve flattens, and the dots fall well below the equations, which know nothing about distancing.</li>
       </ul>
+      <p data-depth="deep">For R0 = 3 the equations predict that about 94% of an unprotected crowd eventually catches it and that the peak reaches about 30% infected at once. For flu-like R0 = 1.3 only about 42% catch it, and chance matters a lot: each early case starts a chain that dies out on its own with probability about 1/R0, so with five starting cases roughly one outbreak in four fizzles at the start.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Vaccinating enough people protects people who are not vaccinated. Once more than 1 − 1/R0 of the crowd is immune, each case infects fewer than one other on average, so chains of infection die out before they reach most unprotected people. The threshold is a tipping point, not a gradual slope: a few percent either side of it changes everything.</p>
       <p class="muted">The threshold formula assumes a well-mixed crowd and a vaccine that fully blocks infection. Real vaccines and real social networks move the number, which is why targets are set a little above it.</p>
+      <p data-depth="deep">Distancing in the dots works in a way the equations cannot capture. Meetings happen because people move relative to each other: two walkers meet others at a higher rate than one walker and one person standing still, and two people standing still never meet anew. Keeping half the crowd still therefore removes more than half of the meetings.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">dS/dt = −β S I ÷ N<br>dI/dt = β S I ÷ N − γ I<br>dR/dt = γ I<br>β = R₀ γ,   γ = 1/10 d⁻¹</div>
+      <p>The SIR equations of Kermack and McKendrick (1927). S, I and R are the numbers of susceptible, infected and recovered people out of N = 400, and vaccinated people simply stay out of all three flows. β S I ÷ N is the rate of new infections in a perfectly mixed crowd and γ I the rate of recoveries. The dashed lines come from integrating these with Euler steps of 0.05 days, starting from the same five cases.</p>
+      <div class="eq" data-depth="deep" translate="no">dI/dt = 0  ⇔  S/N = 1/R₀<br>I<sub>max</sub>/N<br>&nbsp;&nbsp;≈ 1 − (1 + ln R₀) ÷ R₀</div>
+      <p>The peak. New infections outpace recoveries only while S/N is above 1/R₀, the dashed line on the chart, so infections peak exactly as the susceptible share falls through it. The second line, valid when almost everyone starts susceptible, gives the height of the peak: 30% for R₀ = 3 and 75% for R₀ = 15.</p>
+      <div class="eq" data-depth="deep" translate="no">z = 1 − e<sup>−R₀ (1 − v) z</sup></div>
+      <p>The final size. z is the share of the unvaccinated who are ever infected and v the vaccinated share. The equation has a solution z &gt; 0 only when R₀ (1 − v) &gt; 1, which is the herd-immunity threshold v &gt; 1 − 1/R₀ shown on the gauge. It also explains why an outbreak stops before everyone is infected: at R₀ = 3, z ≈ 0.94.</p>
+      <div class="eq" data-depth="deep" translate="no">p = R₀ ÷ (m D),   D = 240</div>
+      <p>How the dots are tuned to the chosen R₀. A case stays infectious for D = 240 ticks on average and has m new meetings per tick, so it meets about m D people; infecting each with chance p gives R₀ cases in a fully susceptible crowd. Unlike the equations, the dots only meet nearby people, which is why their curves wobble and why distancing changes them while the dashed lines stay put.</p>
     </section>
   </div>
 

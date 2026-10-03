@@ -1,7 +1,6 @@
 (function () {
   const $ = (id) => document.getElementById(id);
-  const W = 960, H = 460;
-  const ctx = Lab.setupCanvas($("bench"), W, H);
+  let W = 960, H = 460, ctx;
   const MONO = "'IBM Plex Mono', ui-monospace, monospace";
   const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 
@@ -218,13 +217,33 @@
   }
 
   // ---------- Drawing ----------
-  const PX0 = 56, PX1 = 930, PY0 = 46, PY1 = 318;
+  // Two layouts: desktop (960 wide) and a narrower, taller one for phones, chosen from
+  // the canvas's displayed width so the labels stay readable.
+  let compact = null;
+  let PX0, PX1, PY0, PY1, BAR_Y, LEG_Y, F_S, F_M, PROB_SCALE, RE_SCALE;
   const EMAX = 2.4;
   const xPx = (x) => PX0 + (x + VIEW) / (2 * VIEW) * (PX1 - PX0);
   const ePx = (E) => PY1 - E / EMAX * (PY1 - PY0);
   const PEAK0 = 1 / (Math.sqrt(2 * Math.PI) * SIGMA);
-  const PROB_SCALE = 0.52 * (PY1 - PY0) / PEAK0;
-  const RE_SCALE = 0.2 * (PY1 - PY0) / Math.sqrt(PEAK0);
+  function geometry() {
+    if (!compact) {
+      W = 960; H = 460;
+      PX0 = 56; PX1 = 930; PY0 = 46; PY1 = 318; BAR_Y = 384; LEG_Y = 24; F_S = 11; F_M = 12;
+    } else {
+      W = 340; H = 424;
+      PX0 = 50; PX1 = 330; PY0 = 64; PY1 = 300; BAR_Y = 354; LEG_Y = 20; F_S = 12; F_M = 13;
+    }
+    PROB_SCALE = 0.52 * (PY1 - PY0) / PEAK0;
+    RE_SCALE = 0.2 * (PY1 - PY0) / Math.sqrt(PEAK0);
+  }
+  function layout() {
+    const next = ($("bench").clientWidth || 960) < 640;
+    if (next === compact) return;
+    compact = next;
+    geometry();
+    ctx = Lab.setupCanvas($("bench"), W, H);
+    if (Lab.reducedMotion) draw();
+  }
   function pct(p) {
     const v = Math.max(0, p * 100);
     if (v >= 1 || v === 0) return v.toFixed(1) + "%";
@@ -237,7 +256,7 @@
     ctx.fillRect(0, 0, W, H);
 
     // Energy axis
-    ctx.font = "11px " + MONO;
+    ctx.font = F_S + "px " + MONO;
     ctx.textAlign = "right";
     for (let e = 0; e <= 2.0001; e += 0.5) {
       const y = ePx(e);
@@ -247,7 +266,7 @@
       ctx.fillText(e.toFixed(1), PX0 - 8, y + 4);
     }
     ctx.save();
-    ctx.translate(16, (PY0 + PY1) / 2);
+    ctx.translate(compact ? 14 : 16, (PY0 + PY1) / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = "center";
     ctx.fillText("ENERGY (eV)", 0, 0);
@@ -260,6 +279,7 @@
       ctx.fillStyle = "#26324a";
       ctx.fillRect(px, PY1, 1, 5);
       ctx.fillStyle = "#56647c";
+      if (compact && x % 20) continue;
       ctx.fillText((x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x) + " nm", px, PY1 + 18);
     }
 
@@ -278,8 +298,17 @@
     ctx.lineWidth = 1;
     ctx.fillStyle = "#f0b35a";
     ctx.textAlign = "left";
-    ctx.font = "12px " + MONO;
-    ctx.fillText("barrier " + state.V0.toFixed(2) + " eV × " + state.a.toFixed(2) + " nm", bxc + 10, Math.max(PY0 + 4, by - 8));
+    ctx.font = F_M + "px " + MONO;
+    const bLabel = "barrier " + state.V0.toFixed(2) + " eV × " + state.a.toFixed(2) + " nm";
+    if (!compact) ctx.fillText(bLabel, bxc + 10, Math.max(PY0 + 4, by - 8));
+    else {
+      // Keep it inside the plot, and clear of the packet-energy label on the left.
+      const bw2 = ctx.measureText(bLabel).width;
+      const eyL = ePx(state.E) - 7;
+      let ly = Math.max(PY0 - 4, by - 8);
+      if (Math.abs(ly - eyL) < 18) ly = Math.max(PY0 - 22, Math.min(ly, eyL) - 18);
+      ctx.fillText(bLabel, Math.min(bxc + 10, PX1 - bw2), ly);
+    }
 
     // Packet energy line
     const ey = ePx(state.E);
@@ -342,16 +371,16 @@
       ctx.setLineDash([]);
       ctx.fillStyle = "#4cc48d";
       ctx.textAlign = "right";
-      ctx.fillText("×20", PX1 - 6, PY0 + 4);
+      ctx.fillText("×20", PX1 - 6, compact ? PY0 - 14 : PY0 + 4);
     }
     ctx.restore();
 
     // Energy label, on top of the wave
     const eLabel = "packet energy " + state.E.toFixed(2) + " eV";
-    ctx.font = "12px " + MONO;
+    ctx.font = F_M + "px " + MONO;
     const ew = ctx.measureText(eLabel).width;
     ctx.fillStyle = "rgba(5,8,14,0.8)";
-    ctx.fillRect(PX0 + 4, ey - 20, ew + 8, 17);
+    ctx.fillRect(PX0 + 4, ey - 7 - F_M - 1, ew + 8, F_M + 5);
     ctx.fillStyle = "#8fa6ff";
     ctx.textAlign = "left";
     ctx.fillText(eLabel, PX0 + 8, ey - 7);
@@ -364,30 +393,31 @@
         ctx.fillStyle = "#f08a5d";
         ctx.beginPath(); ctx.arc(px, ey - 7, 6, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = "#c9d4e3";
-        ctx.font = "11px " + MONO;
+        ctx.font = F_S + "px " + MONO;
         ctx.textAlign = "center";
-        ctx.fillText("classical ball", px, ey - 20);
+        ctx.fillText("classical ball", px, compact ? ey - 25 : ey - 20);
       }
     }
 
     // Legend and clock
-    ctx.font = "12px " + MONO;
+    ctx.font = F_M + "px " + MONO;
     ctx.textAlign = "left";
     ctx.fillStyle = "#7cc8ff";
-    ctx.fillText("■ |ψ|² where the electron may be", PX0, 24);
+    const L0 = compact ? 8 : PX0;
+    ctx.fillText("■ |ψ|² where the electron may be", L0, LEG_Y);
     if (state.showRe) {
       ctx.fillStyle = "#9aa7bb";
-      ctx.fillText("∿ Re ψ", PX0 + 270, 24);
+      ctx.fillText("∿ Re ψ", compact ? L0 : PX0 + 270, compact ? LEG_Y + 20 : LEG_Y);
     }
     ctx.textAlign = "right";
     ctx.fillStyle = "#c9d4e3";
-    ctx.fillText("t = " + state.t.toFixed(0) + " fs" + (state.done ? "  · finished" : ""), PX1, 24);
+    ctx.fillText("t = " + state.t.toFixed(0) + " fs" + (state.done ? "  · finished" : ""), compact ? W - 8 : PX1, compact ? LEG_Y + 20 : LEG_Y);
 
     drawSplitBar();
   }
 
   function drawSplitBar() {
-    const X = PX0, BW = PX1 - PX0, Y = 384, BH = 16;
+    const X = compact ? 10 : PX0, BW = compact ? W - 20 : PX1 - PX0, Y = BAR_Y, BH = 16;
     const R = Math.min(1, state.R), T = Math.min(1, state.T), M = Math.max(0, 1 - R - T);
     ctx.fillStyle = "#121b2b";
     ctx.fillRect(X, Y, BW, BH);
@@ -398,7 +428,7 @@
     ctx.fillStyle = "#4cc48d";
     ctx.fillRect(X + BW - T * BW, Y, T * BW, BH);
 
-    ctx.font = "12px " + MONO;
+    ctx.font = F_M + "px " + MONO;
     ctx.fillStyle = "#c9d4e3";
     ctx.textAlign = "left";
     ctx.fillText("REFLECTED " + pct(state.R), X, Y - 10);
@@ -416,9 +446,15 @@
       ctx.fillRect(Math.round(px) - 1, Y - 3, 2, BH + 6);
       ctx.beginPath();
       ctx.moveTo(px, Y + BH + 4); ctx.lineTo(px - 4, Y + BH + 10); ctx.lineTo(px + 4, Y + BH + 10); ctx.fill();
-      const tx = Math.min(X + BW, Math.max(X, px));
-      ctx.textAlign = px > X + BW - 160 ? "right" : px < X + 160 ? "left" : "center";
-      ctx.fillText(m.label, tx, Y + BH + 26 + m.dy);
+      if (!compact) {
+        const tx = Math.min(X + BW, Math.max(X, px));
+        ctx.textAlign = px > X + BW - 160 ? "right" : px < X + 160 ? "left" : "center";
+        ctx.fillText(m.label, tx, Y + BH + 26 + m.dy);
+      } else {
+        const half = ctx.measureText(m.label).width / 2;
+        ctx.textAlign = "center";
+        ctx.fillText(m.label, Math.min(X + BW - half, Math.max(X + half, px)), Y + BH + 28 + m.dy * 1.15);
+      }
     }
   }
 
@@ -498,6 +534,12 @@
     $("pause").hidden = true;
     $("loop").closest(".control").hidden = true;
   }
+
+  layout();
+  let resizeTimer = 0;
+  const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(layout, 120); };
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe($("bench").parentElement);
+  else window.addEventListener("resize", onResize);
 
   state.V0 = +$("height").value;
   state.a = +$("width").value;

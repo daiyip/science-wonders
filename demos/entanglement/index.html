@@ -42,6 +42,12 @@
   .table-wrap { overflow-x: auto; }
   .verdict { font-size: var(--step--1); }
   .verdict.broken { color: var(--warn); font-weight: 600; }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+  }
 </style>
 </head>
 <body>
@@ -127,6 +133,7 @@
       <h2>What you're seeing</h2>
       <p>A polarizer lets a photon through or blocks it. For one photon on its own, it's always 50/50. For an entangled pair, if Alice and Bob set the same angle they always agree. Set them 90° apart and they always disagree. In between, quantum mechanics says they agree with probability cos²(angle difference).</p>
       <p>The "hidden instructions" universe is Einstein's hope: each pair leaves the source carrying a shared secret, say a preferred angle, and each photon just follows it. That plan can match the 0° and 90° cases perfectly, but in between it can only manage a straight line.</p>
+      <p data-depth="deep">How the page runs each universe: in the quantum one, Alice's photon passes with probability ½, and Bob's result copies hers with probability cos²(a − b). This reproduces the predictions for the entangled state exactly, but it is a recipe, not a mechanism: it uses both angles at once. In the hidden-instructions one, each pair carries a random angle λ, and each photon passes if its polarizer is within 45° of λ. Each photon looks only at its own polarizer and λ, so this universe is local by construction.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -135,11 +142,24 @@
         <li>Put them 22.5° apart. Quantum gives 85% agreement, instructions give 75%.</li>
         <li>Switch universes and press Sweep. The cos² curve bulges above the straight line, and that bulge is what no local theory can produce.</li>
       </ul>
+      <p data-depth="deep">At 22.5° the gap is cos²(22.5°) ≈ 0.854 against 1 − 22.5/90 = 0.75. The gap is largest near 20°, and the Bell test below uses settings 22.5° and 67.5° apart, which is the choice that pushes the quantum score highest.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>John Bell proved in 1964 that no theory with local hidden instructions can score above 2. Experiments starting with Clauser (1972) and Aspect (1982), and loophole-free tests in 2015, keep getting about 2.8. Nature is not running on hidden instructions.</p>
       <p>It still can't be used to send a message: Bob's own results are pure coin flips whatever Alice does. The correlation only shows up when they compare notes.</p>
+      <p data-depth="deep">The Bell test sorts its 20,000 pairs randomly into the four settings, about 5,000 each. Each agreement score then carries random noise of about ±0.01, and S about ±0.02, which is why repeated runs of the hidden-instructions universe land a little above or below 2. Real experiments had to close loopholes this page does not have: detectors that miss photons, and settings chosen slowly enough for a signal to pass between the stations.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">|Φ⁺⟩ = (|HH⟩ + |VV⟩) ÷ √2<br>P(A = B) = cos²(a − b)</div>
+      <p>The pair's polarization state: both horizontal or both vertical, in an equal superposition. For polarizers at angles a and b, quantum mechanics gives probability cos²(a − b) that both photons do the same thing (both pass or both blocked). Each photon alone still passes with probability ½ at any angle, so neither side can see what the other chose.</p>
+      <div class="eq" data-depth="deep" translate="no">E(a, b) = P(A = B) − P(A ≠ B)<br>&nbsp;&nbsp;= cos 2(a − b)</div>
+      <p>The correlation score used in the Bell table: +1 if results always agree, −1 if they always disagree, 0 if they are unrelated. For the quantum state it is cos 2(a − b), so E = +0.707 at 22.5° and −0.707 at 67.5°.</p>
+      <div class="eq" data-depth="deep" translate="no">A = +1 ⇔ |a − λ| &lt; 45° (mod 180°)<br>P(A = B) = 1 − |a − b| ÷ 90°<br>E(a, b) = 1 − |a − b| ÷ 45°</div>
+      <p>The hidden-instructions universe: λ is a random angle shared by the pair, spread evenly over 0° to 180°. The two photons disagree only when λ lies inside one polarizer's 45° window but not the other's, which happens for a fraction |a − b| ÷ 90° of all λ. This gives the straight line on the chart (for differences between 0° and 90°). It matches the quantum curve at 0°, 45° and 90° and falls short everywhere else.</p>
+      <div class="eq" data-depth="deep" translate="no">S = E(a, b) + E(a′, b)<br>&nbsp;&nbsp;+ E(a′, b′) − E(a, b′)<br>|S| ≤ 2<br>S<sub>Q</sub> = 2√2 ≈ 2.83</div>
+      <p>The CHSH form of Bell's inequality, with a = 0°, a′ = 45°, b = 22.5°, b′ = 67.5°. In any local theory each photon's result is fixed by λ and its own setting, and the four terms can then add up to at most 2. The quantum values give 3 × 0.707 + 0.707 = 2√2, the largest any quantum state allows (Tsirelson's bound). The hidden-instructions model gives 0.5 + 0.5 + 0.5 − (−0.5) = 2, right at the limit.</p>
     </section>
   </div>
 

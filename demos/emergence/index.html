@@ -38,6 +38,8 @@
     max-width: 80ch;
   }
   [hidden] { display: none !important; }
+  .bench { position: relative; }
+  #paintPad { position: absolute; touch-action: none; cursor: crosshair; }
 </style>
 </head>
 <body>
@@ -65,6 +67,7 @@
 
   <div class="bench">
     <canvas id="bench" width="960" height="520" aria-label="The simulation world on the left, and on the right the complete list of rules it follows with live counts of what is happening"></canvas>
+    <div id="paintPad" aria-hidden="true"></div>
   </div>
   <div class="stats" aria-live="polite">
     <span>Rules in play <b id="ruleCount">3</b></span>
@@ -125,6 +128,7 @@
       <h2>What you're seeing</h2>
       <p><b>Game of Life.</b> Each square is alive or dead. Every generation, all cells update at once: a dead cell with exactly three live neighbours is born, a live cell with two or three survives, and every other cell dies or stays empty. Bright cells are newborn; they dim as they age.</p>
       <p><b>Flocking.</b> Each bird sees only neighbours within a short distance. It steers away from any that are too close, turns toward their average heading, and drifts toward their average position. Birds are coloured by the direction they fly, so a flock shows up as one colour.</p>
+      <p data-depth="deep">The Life grid you see is 100 by 70 cells, sitting inside a hidden 180 by 150 grid whose outermost ring is held dead. Gliders that fly off screen vanish there, and patterns that would have grown past the hidden edge are cut short. The birds live on a wraparound world: one leaving on the right comes back on the left. Each bird flies between 1.2 and 3 px per frame, and each rule can change its velocity by at most 0.06 px per frame, times that rule's slider weight.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -134,11 +138,24 @@
         <li>In Flocking, set alignment to zero. The birds still clump, but each clump swirls instead of flying off together.</li>
         <li>Turn on the hawk. Flocks split around it and re-form behind it, much like starlings around a falcon.</li>
       </ul>
+      <p data-depth="deep">A glider moves one cell diagonally every 4 generations, a quarter of the fastest speed anything can travel in Life (one cell per generation, because a cell only feels its immediate neighbours). The gun repeats itself every 30 generations and releases one glider each time, so its live cell count grows by 5 every 30 generations until the gliders leave the screen.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>Nothing in the rules mentions gliders, guns or flocks. Those are patterns in the behaviour of the whole, and you can only find them by running the rules and watching. Even with the rules in hand, there is in general no shortcut to predicting the future: Life is powerful enough to run any computer program, so asking whether a pattern ever dies out is as hard as the unsolvable halting problem.</p>
       <p class="muted">John Conway's game first appeared in Martin Gardner's column in Scientific American in October 1970. Bill Gosper found the glider gun weeks later and won Conway's $50 prize.</p>
+      <p data-depth="deep">Streams of gliders can act as signals, and colliding streams act as logic gates, which is how Life was shown to be a universal computer; Paul Rendell built a working Turing machine in it in 2000. Real flocks differ from this model in one telling way: studies of starlings found that each bird tracks its six or seven nearest neighbours whatever their distance, not every bird within a fixed radius as here, which keeps a flock cohesive when it stretches or thins.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">n<sub>i</sub> = ∑<sub>j ∈ N(i)</sub> s<sub>j</sub><br>|N(i)| = 8<br>s<sub>i</sub>′ = [ n<sub>i</sub> = 3 ]<br>&nbsp;&nbsp;∨ ( s<sub>i</sub> ∧ [ n<sub>i</sub> = 2 ] )</div>
+      <p>The whole of Conway's Life. s<sub>i</sub> is 1 for a live cell and 0 for a dead one, n<sub>i</sub> counts the live cells among its eight neighbours, and the brackets are 1 when the condition holds. A cell is alive next generation if it has exactly three live neighbours, or if it is alive now and has exactly two. Every cell is updated from the old grid at the same time; the code reads one array and writes another, then swaps them.</p>
+      <div class="eq" data-depth="deep" translate="no">F<sub>k</sub> = v<sub>max</sub> û<sub>k</sub> − v<br>|F<sub>k</sub>| ≤ F<sub>max</sub><br>v ← v + w<sub>s</sub> F<sub>s</sub><br>&nbsp;&nbsp;+ w<sub>a</sub> F<sub>a</sub> + w<sub>c</sub> F<sub>c</sub></div>
+      <p>Reynolds' steering rule, used for each of the three urges. û<sub>k</sub> is the direction the urge points, and the steering force is the difference between flying that way at full speed v<sub>max</sub> = 3 px per frame and the bird's current velocity v, capped at F<sub>max</sub> = 0.06. The weights w are the three sliders. The new velocity is then capped at 3 and raised to at least 1.2 px per frame.</p>
+      <div class="eq" data-depth="deep" translate="no">û<sub>s</sub> ∥ −∑<sub>|r<sub>j</sub>| &lt; 20</sub> r<sub>j</sub> ÷ |r<sub>j</sub>|²<br>û<sub>a</sub> ∥ ∑<sub>|r<sub>j</sub>| &lt; 50</sub> v<sub>j</sub><br>û<sub>c</sub> ∥ ∑<sub>|r<sub>j</sub>| &lt; 50</sub> r<sub>j</sub></div>
+      <p>Where each urge points. r<sub>j</sub> is the offset from the bird to neighbour j, measured across the wraparound edges. Separation points away from birds closer than 20 px, each weighted by one over its distance so the nearest count most. Alignment points along the neighbours' average velocity, and cohesion toward their average position, both over all birds within 50 px.</p>
+      <div class="eq" data-depth="deep" translate="no">φ = | ∑<sub>i</sub> v<sub>i</sub> ÷ |v<sub>i</sub>| | ÷ N</div>
+      <p>The alignment readout, a standard order parameter for flocks. Add up every bird's unit heading and divide the length of the sum by the number of birds N. Random headings give about 0.9/√N on average, near 0.06 for 200 birds, and a single flock flying one way gives 1. Several flocks flying different ways give something in between, even when each one is perfectly ordered.</p>
     </section>
   </div>
 

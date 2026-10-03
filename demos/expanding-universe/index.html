@@ -31,6 +31,10 @@
     font-size: var(--step--1);
     max-width: 80ch;
   }
+  @media (max-width: 640px) {
+    .controls button { min-height: 40px; }
+    .controls input[type="range"] { height: 32px; }
+  }
 </style>
 </head>
 <body>
@@ -99,6 +103,7 @@
       <h2>What you're seeing</h2>
       <p>Galaxies sit on a grid that is being stretched, like raisins in rising dough or dots on an inflating balloon. Nothing moves through space here; the space between them grows. Every distance is multiplied by the same scale factor, so a galaxy twice as far away gains twice as much distance each second.</p>
       <p>That is Hubble's law: speed = H × distance. The plot shows each galaxy's speed away from home against its distance. Small random motions scatter the points, as they do in real data, but the fitted slope stays put.</p>
+      <p data-depth="deep">Each galaxy here has a random motion of about 250 km/s in each direction on top of the expansion. At 10 Mpc the expansion adds only 700 km/s, so nearby galaxies scatter a lot; at 300 Mpc it adds 21,000 km/s and the scatter hardly shows. That is why Hubble's law is measured with distant galaxies. Our neighbour Andromeda is actually approaching us.</p>
     </section>
     <section>
       <h2>Try this</h2>
@@ -108,12 +113,25 @@
         <li>Press Run the clock backwards. Every galaxy converges on every other one at once, about 1/H₀ ago: roughly 14 billion years.</li>
         <li>Lower the emission slider. Blue light from a young universe arrives red, then infrared.</li>
       </ul>
+      <p data-depth="deep">Turning a slope into an age is a units conversion: one megaparsec is 3.086 × 10¹⁹ km, so 1 / (70 km/s/Mpc) is 4.41 × 10¹⁷ seconds, or 13.97 billion years.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
       <p>The Big Bang was not an explosion at one point in space. It happened everywhere at once, and every point has an equal claim to be its centre. The galaxies themselves do not stretch, because gravity holds them together; only the gaps between them grow.</p>
+      <p data-depth="deep">Hubble's law has no speed limit. Beyond <i>c</i>/H₀, about 4,300 Mpc, galaxies recede faster than light. Nothing breaks relativity: no galaxy passes another one locally faster than light; it is the distance between them that grows.</p>
       <p>Redshift here is not a Doppler shift from motion through space. The light's wavelength stretches by exactly the factor the universe grew while it travelled.</p>
       <p class="muted">The model uses steady "coasting" growth, where the age is exactly 1/H. The real universe slowed down, then sped up, and the two nearly cancel: its age is 13.8 billion years, against 1/H₀ ≈ 14.0.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no"><i>d</i>(<i>t</i>) = <i>a</i>(<i>t</i>) χ<br><i>v</i> = d<i>d</i>/d<i>t</i> = (<i>ȧ</i>/<i>a</i>) <i>d</i> = <i>H d</i></div>
+      <p>Each galaxy has a fixed comoving position χ on the grid; its real distance <i>d</i> is χ times the scale factor <i>a</i>, which is 1 today. Differentiating gives Hubble's law with <i>H</i> = <i>ȧ</i>/<i>a</i>, the same for every galaxy at a given moment, wherever home is. The simulation computes exactly this for every galaxy in view, adds its random motion, and wraps a 1,400 Mpc patch of 260 galaxies so the field never runs out.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>H</i><sub>fit</sub> = ∑ <i>v</i><sub>i</sub><i>d</i><sub>i</sub> / ∑ <i>d</i><sub>i</sub>²</div>
+      <p>The slope of the best straight line through the origin, by least squares. The yellow line and the "Fitted slope H" readout use this formula over every galaxy in view more than 3 Mpc from home.</p>
+      <div class="eq" data-depth="deep" translate="no"><i>a</i>(<i>t</i>) = <i>t</i> / <i>t</i><sub>0</sub><br><i>H</i> = 1/<i>t</i><br><i>t</i><sub>0</sub> = 1/H₀</div>
+      <p>The page's model: a "coasting" universe that grows at a steady rate, so the age is exactly 1/H₀ and <i>H</i> was larger in the past. The real universe follows the Friedmann equation, <i>H</i>² = H₀²(Ω<sub>m</sub><i>a</i>⁻³ + Ω<sub>Λ</sub>) for its matter and dark energy (radiation matters only very early). With Ω<sub>m</sub> ≈ 0.31 and Ω<sub>Λ</sub> ≈ 0.69 that gives an age of about 0.955/H₀, close to the coasting value.</p>
+      <div class="eq" data-depth="deep" translate="no">1 + <i>z</i> = λ<sub>obs</sub> / λ<sub>emit</sub> = <i>a</i><sub>now</sub> / <i>a</i><sub>emit</sub></div>
+      <p>Cosmological redshift: a wavelength stretches by the same factor as every other length while the light is in flight. With the slider at 70%, hydrogen's 486 nm line arrives at 486 / 0.7 ≈ 694 nm, so <i>z</i> ≈ 0.43. The spectrum bars use this formula exactly; the drawn wave just lengthens smoothly from end to end and does not track when the light passed each point.</p>
     </section>
   </div>
 

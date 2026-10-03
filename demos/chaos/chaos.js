@@ -1,14 +1,41 @@
 (function () {
-  const W = 960, H = 520;
   const canvas = document.getElementById("bench");
-  const ctx = Lab.setupCanvas(canvas, W, H);
   const $ = (id) => document.getElementById(id);
 
   // ---------- Layout (logical pixels) ----------
-  const PIV_X = 245, PIV_Y = 250;   // pivot of every pendulum
-  const SCALE = 105;                // pixels per metre (two 1 m arms reach 210 px)
-  const PLOT = { x: 548, y: 46, w: 386, h: 404 };
+  // Wide benches use a fixed 960 x 520 frame with the panels side by side. On a
+  // narrow bench (phones) the logical width matches the displayed CSS width, so
+  // canvas text keeps its real size, and the plot moves under the pendulums.
+  let W = 960, H = 520, narrow = false, ctx;
+  let PIV_X = 245, PIV_Y = 250;     // pivot of every pendulum
+  let SCALE = 105;                  // pixels per metre (two 1 m arms reach 210 px)
+  let PLOT = { x: 548, y: 46, w: 386, h: 404 };
+  let PEND_TITLE_Y = 28, PLOT_TITLE_Y = 28, LEGEND_Y = H - 36, PLOT_TITLE_X = 741;
   const LOG_MIN = -10, LOG_MAX = 1.5; // plot range, log10 of separation
+  const fpx = (n) => (narrow ? Math.max(11, n) : n) + "px";
+
+  function layout() {
+    const cw = Math.round(canvas.clientWidth || canvas.parentElement.clientWidth || 960);
+    narrow = cw < 640;
+    if (!narrow) {
+      W = 960; H = 520;
+      PIV_X = 245; PIV_Y = 250; SCALE = 105;
+      PLOT = { x: 548, y: 46, w: 386, h: 404 };
+      PEND_TITLE_Y = 28; PLOT_TITLE_Y = 28; LEGEND_Y = H - 36; PLOT_TITLE_X = PLOT.x + PLOT.w / 2;
+    } else {
+      W = Math.max(280, cw);
+      SCALE = Math.min(80, (W - 24) / 4.3);
+      PIV_X = W / 2; PIV_Y = 30 + 2 * SCALE + 6;
+      PEND_TITLE_Y = 18;
+      LEGEND_Y = PIV_Y + 2 * SCALE + 24;
+      PLOT_TITLE_Y = LEGEND_Y + 56;
+      PLOT = { x: 46, y: PLOT_TITLE_Y + 14, w: W - 46 - 20, h: Math.round(Math.min(260, W * 0.62)) };
+      PLOT_TITLE_X = W / 2;
+      H = Math.round(PLOT.y + PLOT.h + 62);
+    }
+    ctx = Lab.setupCanvas(canvas, W, H);
+  }
+  layout();
 
   // ---------- Physics ----------
   // Double pendulum, equal masses m and equal arms l = 1 m. Angles from straight down.
@@ -149,7 +176,7 @@
     ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.fillStyle = "#7f8ea6";
     ctx.textAlign = "center";
-    ctx.fillText(state.n === 2 ? "TWO PENDULUMS, OVERLAID" : state.n + " PENDULUMS, OVERLAID", PIV_X, 28);
+    fitText(state.n === 2 ? "TWO PENDULUMS, OVERLAID" : state.n + " PENDULUMS, OVERLAID", PIV_X, PEND_TITLE_Y, W - 16);
 
     // Reach circle
     ctx.strokeStyle = "#1a2436";
@@ -204,12 +231,13 @@
     // Legend
     ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.textAlign = "left";
+    const lx = narrow ? 12 : 24;
     if (n === 2) {
-      ctx.fillStyle = "rgb(240,179,90)"; ctx.fillText("● start angle θ", 24, H - 36);
-      ctx.fillStyle = "rgb(92,200,255)"; ctx.fillText("● start angle θ + " + fmtExp(Math.pow(10, state.logEps)) + " rad", 24, H - 18);
+      ctx.fillStyle = "rgb(240,179,90)"; ctx.fillText("● start angle θ", lx, LEGEND_Y);
+      ctx.fillStyle = "rgb(92,200,255)"; fitText("● start angle θ + " + fmtExp(Math.pow(10, state.logEps)) + " rad", lx, LEGEND_Y + 18, W - lx - 8);
     } else {
       ctx.fillStyle = "#7f8ea6";
-      ctx.fillText("Starts spread evenly over " + fmtExp(Math.pow(10, state.logEps)) + " rad", 24, H - 18);
+      fitText("Starts spread evenly over " + fmtExp(Math.pow(10, state.logEps)) + " rad", lx, LEGEND_Y + 18, W - lx - 8);
     }
   }
 
@@ -223,13 +251,13 @@
     ctx.font = "12px 'IBM Plex Mono', ui-monospace, monospace";
     ctx.fillStyle = "#7f8ea6";
     ctx.textAlign = "center";
-    ctx.fillText("SEPARATION, FIRST VS LAST (LOG SCALE)", P.x + P.w / 2, 28);
+    fitText("SEPARATION, FIRST VS LAST (LOG SCALE)", PLOT_TITLE_X, PLOT_TITLE_Y, narrow ? W - 16 : P.w + 60);
 
     ctx.fillStyle = "#0a0f19";
     ctx.fillRect(P.x, P.y, P.w, P.h);
 
     // Decade grid lines
-    ctx.font = "10px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.font = fpx(10) + " 'IBM Plex Mono', ui-monospace, monospace";
     ctx.textAlign = "right";
     for (let e = LOG_MIN; e <= 1; e++) {
       const y = yOf(Math.pow(10, e));
@@ -238,7 +266,8 @@
       if (e % 2 === 0) { ctx.fillStyle = "#56647c"; ctx.fillText(e === 0 ? "1" : "1e" + e, P.x - 6, y + 3); }
     }
     ctx.textAlign = "center";
-    const tick = tMax <= 40 ? 5 : tMax <= 100 ? 10 : 30;
+    let tick = tMax <= 40 ? 5 : tMax <= 100 ? 10 : 30;
+    if (narrow && P.w / (tMax / tick) < 44) tick *= 2;
     for (let t = 0; t <= tMax; t += tick) {
       const x = xOf(t);
       ctx.strokeStyle = "#151e2e";
@@ -297,18 +326,50 @@
 
     ctx.fillStyle = "#7f8ea6";
     ctx.textAlign = "center";
-    ctx.font = "11px 'IBM Plex Sans', system-ui, sans-serif";
+    ctx.font = fpx(11) + " 'IBM Plex Sans', system-ui, sans-serif";
     const caption = state.fit ? "Straight dashed line: steady exponential growth" : "A straight climb on this scale means exponential growth";
-    ctx.fillText(caption, P.x + P.w / 2, P.y + P.h + 34);
+    if (narrow) wrapText(caption, W / 2, P.y + P.h + 34, W - 24, 15);
+    else ctx.fillText(caption, P.x + P.w / 2, P.y + P.h + 34);
   }
 
   function draw() {
     ctx.fillStyle = "#05080e";
     ctx.fillRect(0, 0, W, H);
     ctx.strokeStyle = "#1a2436";
-    ctx.beginPath(); ctx.moveTo(500.5, 20); ctx.lineTo(500.5, H - 20); ctx.stroke();
+    ctx.beginPath();
+    if (narrow) { const y = Math.round(PLOT_TITLE_Y - 26) + 0.5; ctx.moveTo(12, y); ctx.lineTo(W - 12, y); }
+    else { ctx.moveTo(500.5, 20); ctx.lineTo(500.5, H - 20); }
+    ctx.stroke();
     drawPendulums();
     drawPlot();
+  }
+
+  // Shrink a one-line label (down to 10 px) only if it would not fit.
+  function fitText(text, x, y, maxW) {
+    const m = /(\d+(?:\.\d+)?)px/.exec(ctx.font);
+    let size = m ? +m[1] : 12;
+    const base = ctx.font;
+    while (size > 10 && ctx.measureText(text).width > maxW) {
+      size -= 0.5;
+      ctx.font = base.replace(/\d+(?:\.\d+)?px/, size + "px");
+    }
+    ctx.fillText(text, x, y);
+    ctx.font = base;
+  }
+  // Wrap by words; translate the whole sentence first. Chinese wraps per character.
+  function wrapText(text, x, y, maxW, lh) {
+    if (window.I18N) text = window.I18N.t(text);
+    const cjk = /[\u3000-\u9fff]/.test(text);
+    const words = cjk ? [...text] : text.split(" ");
+    const sep = cjk ? "" : " ";
+    let line = "";
+    for (const w of words) {
+      const t = line ? line + sep + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = w; }
+      else line = t;
+    }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+    return y;
   }
 
   // ---------- Readouts ----------
@@ -377,6 +438,19 @@
       restartAndShow();
     });
   }
+
+  // Re-layout when the bench changes width; the simulation state is kept.
+  let lastCW = 0;
+  function onResize() {
+    const cw = Math.round(canvas.parentElement.clientWidth);
+    if (cw === lastCW) return;
+    lastCW = cw;
+    const was = narrow, oldW = W;
+    layout();
+    if (was !== narrow || oldW !== W) draw();
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(canvas.parentElement);
+  else window.addEventListener("resize", onResize);
 
   restart();
   if (Lab.reducedMotion) { setPlay(false); preroll(); }
