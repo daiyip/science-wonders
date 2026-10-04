@@ -67,8 +67,12 @@
   const state = {
     H0: 70, t: 9, playing: !Lab.reducedMotion, mode: "forward", hold: 0,
     home: 0, pan: [0, 0], aEmit: 0.7, arrows: true, grid: true,
-    visible: [], fit: 70, wavePhase: 0,
+    visible: [], fit: 70, wavePhase: 0, measured: false,
   };
+  // Measured data (data.js): least-squares slopes through the origin.
+  const HD = window.HUBBLE_DATA || null;
+  const slopeOf = (pts) => { let a = 0, b = 0; for (const p of pts) { a += p[0] * p[1]; b += p[0] * p[0]; } return a / b; };
+  const SN_FIT = HD ? slopeOf(HD.sn) : 0, H29_FIT = HD ? slopeOf(HD.hubble1929) : 0;
   const tNow = () => KM_S_MPC_TO_GYR / state.H0;
   const aOf = (t) => t / tNow();
   const T_MIN_FRAC = 0.075;
@@ -89,7 +93,8 @@
   }
   W8.describer(() => {
     const stats = [...document.querySelectorAll(".stats > span")].map((s) => s.textContent.replace(/\s+/g, " ").trim()).join(". ") + ".";
-    return tr("A field of galaxies spreading apart around the home galaxy, a plot of their speed against distance with a fitted straight line, and a light wave stretched on its way to us.") + " " + stats;
+    return tr("A field of galaxies spreading apart around the home galaxy, a plot of their speed against distance with a fitted straight line, and a light wave stretched on its way to us.") + " " + stats +
+      (state.measured && HD ? " " + tr("Measured data is on: " + HD.sn.length + " real supernovae lie along a slope of " + SN_FIT.toFixed(1) + " km/s/Mpc, and Hubble's 1929 galaxies along " + Math.round(H29_FIT) + " km/s/Mpc.") : "");
   });
 
   // ---------- Measure: positions, speeds, the fit ----------
@@ -311,6 +316,13 @@
       if (++n > 1500) break;
       ctx.fillRect(X(p.d) - 1.5, Y(p.v) - 1.5, 3, 3);
     }
+    // measured supernovae: white dots with distance error bars
+    if (state.measured && HD) {
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      for (const [d, v, e] of HD.sn) ctx.fillRect(X(d - e), Y(v) - 0.5, Math.max(1, X(d + e) - X(d - e)), 1);
+      ctx.fillStyle = "#ffffff";
+      for (const [d, v] of HD.sn) { ctx.beginPath(); ctx.arc(X(d), Y(v), NARROW ? 2.2 : 1.8, 0, Math.PI * 2); ctx.fill(); }
+    }
     // fitted line
     ctx.strokeStyle = "#f0b35a";
     ctx.lineWidth = 1.6;
@@ -321,6 +333,13 @@
     const y2 = y0 + (NARROW ? 30 : 22);
     if (!tn) label("dashed: today's H₀ = " + state.H0, x0 + 10, y2, "left", "#7f8ea6", 11, x1 - x0 - 10);
     else label("this is H₀, today's value", x0 + 10, y2, "left", "#7f8ea6", 11, x1 - x0 - 10);
+    if (state.measured && HD) {
+      const y3 = y2 + (NARROW ? 26 : 18);
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(x0 + 14, y3 - 4, 3, 0, Math.PI * 2); ctx.fill();
+      label("Measured: Type Ia supernovae, 2022", x0 + 22, y3, "left", "#e9eef7", 11, x1 - x0 - 22);
+      label("Pantheon+ slope: " + SN_FIT.toFixed(1) + " km/s/Mpc", x0 + 22, y3 + (NARROW ? 22 : 15), "left", "#c9d4e3", 11, x1 - x0 - 22);
+    }
   }
 
   function drawSpectrum() {
@@ -389,6 +408,70 @@
     if (NARROW) label("infrared →", SPEC.x1 - 4, bars[0].y + 44, "right", "#7f8ea6", 10);
     else label("infrared →", SPEC.x1 - 4, 441, "right", "#56647c", 10);
     label("wavelength × " + stretch.toFixed(2) + ": " + Math.round(H_BETA) + " → " + Math.round(H_BETA * stretch) + " nm", NARROW ? 18 : SPEC.x0, NARROW ? yt + 50 : 534, "left", "#c9d4e3", 11, NARROW ? W - 36 : 290);
+  }
+
+  // ---------- Hubble's 1929 data, on its own small chart ----------
+  const c29 = $("hubble29");
+  let ctx29 = null, W29 = 960, H29 = 300, N29 = false;
+  function layout29() {
+    N29 = (c29.parentElement.clientWidth || 960) < 640;
+    W29 = N29 ? 480 : 960; H29 = N29 ? 440 : 300;
+    c29.setAttribute("width", W29); c29.setAttribute("height", H29);
+    ctx29 = Lab.setupCanvas(c29, W29, H29);
+  }
+  function draw29() {
+    if (!state.measured || !HD) return;
+    if (!ctx29) layout29();
+    const c = ctx29;
+    const f = (px) => (N29 ? Math.max(17, Math.round(px * 1.42)) : px) + "px " + MONO;
+    const txt = (t, x, y, align, col, size, maxW) => {
+      c.font = f(size || 12); c.fillStyle = col || "#7f8ea6"; c.textAlign = align || "left";
+      t = tr(t);
+      if (maxW && c.measureText(t).width > maxW) c.fillText(t, x, y, maxW); else c.fillText(t, x, y);
+    };
+    c.fillStyle = "#05080e"; c.fillRect(0, 0, W29, H29);
+    const x0 = N29 ? 96 : 90, x1 = W29 - 24, y0 = N29 ? 150 : 74, y1 = H29 - (N29 ? 64 : 46);
+    const dMax = 2.2, vMin = -400, vMax = 1200;
+    const X = (d) => x0 + d / dMax * (x1 - x0), Y = (v) => y1 - (v - vMin) / (vMax - vMin) * (y1 - y0);
+    txt("HUBBLE'S 1929 DATA: SPEED vs DISTANCE", 18, 26, "left", null, 12, W29 - 36);
+    // axes, ticks, zero line
+    c.strokeStyle = "#26324a";
+    c.beginPath(); c.moveTo(x0 + 0.5, y0); c.lineTo(x0 + 0.5, y1 + 0.5); c.lineTo(x1, y1 + 0.5); c.stroke();
+    c.strokeStyle = "#1a2436";
+    c.beginPath(); c.moveTo(x0, Y(0) + 0.5); c.lineTo(x1, Y(0) + 0.5); c.stroke();
+    c.font = f(10); c.fillStyle = "#7f8ea6"; c.textAlign = "center";
+    for (let d = 0; d <= 2.0001; d += 0.5) { c.fillRect(X(d), y1, 1, 4); c.fillText(d.toFixed(1), X(d), y1 + (N29 ? 22 : 16)); }
+    c.fillText(tr("distance (Mpc), Hubble's estimates"), (x0 + x1) / 2, y1 + (N29 ? 46 : 32));
+    c.textAlign = "right";
+    for (let v = -400; v <= vMax; v += 400) { c.fillRect(x0 - 4, Y(v), 4, 1); c.fillText(v < 0 ? "−" + Math.abs(v) : String(v), x0 - 7, Y(v) + 4); }
+    c.save(); c.translate(N29 ? 24 : 22, (y0 + y1) / 2); c.rotate(-Math.PI / 2);
+    c.textAlign = "center"; c.fillText(tr("speed (km/s)"), 0, 0); c.restore();
+    // lines: fit through the 24 points, and today's H0 for comparison
+    c.save(); c.beginPath(); c.rect(x0, y0, x1 - x0, y1 - y0); c.clip();
+    c.strokeStyle = "#f0b35a"; c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(dMax), Y(H29_FIT * dMax)); c.stroke();
+    c.strokeStyle = "rgba(127,142,166,0.8)"; c.lineWidth = 1.2; c.setLineDash([4, 4]);
+    c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(dMax), Y(state.H0 * dMax)); c.stroke();
+    c.setLineDash([]); c.lineWidth = 1;
+    // points
+    for (const [d, v] of HD.hubble1929) {
+      c.fillStyle = "#ffffff";
+      c.beginPath(); c.arc(X(d), Y(v), N29 ? 4.5 : 3.5, 0, Math.PI * 2); c.fill();
+    }
+    c.restore();
+    // legend
+    const lx = N29 ? 18 : x0 + 12, ly = N29 ? 60 : 50, st = N29 ? 26 : 18;
+    c.fillStyle = "#ffffff"; c.beginPath(); c.arc(lx + 6, ly - 4, 3.5, 0, Math.PI * 2); c.fill();
+    txt("Measured: Hubble's 24 galaxies, 1929", lx + 18, ly, "left", "#e9eef7", 12, W29 - lx - 30);
+    c.fillStyle = "#f0b35a"; c.fillRect(lx, ly + st - 5, 14, 2);
+    txt("line through them: " + Math.round(H29_FIT) + " km/s/Mpc", lx + 18, ly + st, "left", "#f0b35a", 12, W29 - lx - 30);
+    if (N29) {
+      c.strokeStyle = "rgba(127,142,166,0.8)"; c.setLineDash([4, 4]);
+      c.beginPath(); c.moveTo(lx, ly + 2 * st - 4); c.lineTo(lx + 14, ly + 2 * st - 4); c.stroke(); c.setLineDash([]);
+      txt("today's H₀ = " + state.H0 + " km/s/Mpc", lx + 18, ly + 2 * st, "left", "#7f8ea6", 12, W29 - lx - 30);
+    } else {
+      txt("dashed: today's H₀ = " + state.H0 + " km/s/Mpc", x1, ly, "right", "#7f8ea6", 12, 330);
+    }
   }
 
   function lamColour(l, alpha) {
@@ -494,6 +577,7 @@
     const frac = state.t / tNow();
     state.H0 = +e.target.value;
     $("h0Out").textContent = state.H0 + " km/s/Mpc";
+    draw29();
     $("time").max = tNow().toFixed(2);
     state.t = frac * tNow();
     $("time").value = state.t.toFixed(2);
@@ -510,6 +594,15 @@
     W8.describe("Light that left when the universe was " + Math.round(state.aEmit * 100) + "% of today's size arrives with redshift z = " + (1 / state.aEmit - 1).toFixed(2) + ": the 486 nm hydrogen line is seen at " + Math.round(seen) + " nm" + (seen > 700 ? ", in the infrared." : "."));
     W8.sound("tick", { pitch: 1 - (state.aEmit - 0.4) / 0.6 });
     if (seen > 700) W8.challenge("infrared");
+  });
+  $("measured").addEventListener("change", (e) => {
+    state.measured = e.target.checked && !!HD;
+    $("dataFig").hidden = !state.measured;
+    if (!state.measured) return;
+    layout29(); draw29();
+    const msg = "Measured data on: " + HD.sn.length + " Type Ia supernovae from 2022 follow a slope of " + SN_FIT.toFixed(1) + " km/s/Mpc. Hubble's 24 galaxies from 1929, in the chart below, give " + Math.round(H29_FIT) + " km/s/Mpc, because his distances were too small.";
+    $("hint").textContent = msg;
+    W8.describe(msg, { now: true });
   });
   $("arrows").addEventListener("change", (e) => { state.arrows = e.target.checked; });
   $("grid").addEventListener("change", (e) => { state.grid = e.target.checked; });
@@ -537,10 +630,14 @@
     clearTimeout(rzTimer);
     rzTimer = setTimeout(() => {
       if (((canvas.parentElement.clientWidth || 960) < 640) !== NARROW) { layout(); draw(); }
+      if (state.measured && ((c29.parentElement.clientWidth || 960) < 640) !== N29) { layout29(); draw29(); }
     }, 120);
   }).observe(canvas.parentElement);
 
   // ---------- Start ----------
+  state.measured = $("measured").checked && !!HD;
+  $("dataFig").hidden = !state.measured;
+  if (state.measured) { layout29(); draw29(); }
   $("time").max = tNow().toFixed(2);
   if (Lab.reducedMotion) {
     state.t = tNow();

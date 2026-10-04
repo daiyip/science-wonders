@@ -40,6 +40,12 @@
     .controls button { min-height: 40px; }
     .controls input[type="range"] { height: 32px; }
   }
+  .data-panel { margin-top: 14px; }
+  .data-legend { font-size: var(--step--1); color: var(--ink-soft); margin: 8px 0 0; max-width: 80ch; }
+  .data-legend .key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 2px; }
+  .data-legend .key-meas { background: #ffc857; box-shadow: 0 0 0 1px #8a6a1e; }
+  .data-legend .key-line { width: 14px; height: 3px; border-radius: 0; vertical-align: 3px; background: #5b78e6; }
+  .footer .data-cite { margin: 10px 0 0; }
 </style>
 </head>
 <body>
@@ -119,6 +125,10 @@
       <label class="switch" for="tilt"><input type="checkbox" id="tilt" checked> Tilt to show the warped sheet</label>
     </div>
     <div class="control">
+      <span class="label">Our Solar System</span>
+      <label class="switch" for="showData"><input type="checkbox" id="showData"> Show measured data</label>
+    </div>
+    <div class="control">
       <span class="label">Simulation</span>
       <div class="button-row">
         <button id="play" class="primary">Pause</button>
@@ -127,6 +137,10 @@
     </div>
   </div>
   <p class="callout" id="hint">Drag on the sheet to launch a particle: press where it starts and pull in the direction it should move. Longer drags launch faster.</p>
+  <div class="data-panel" id="dataPanel" hidden>
+    <div class="bench"><canvas id="dataChart" width="960" height="360" role="img" aria-label="Measured data for the Sun. Left: starlight bending at the Sun's edge measured at the 1919 eclipse and by radio interferometry, against this page's formulas for Einstein and Newton. Right: the part of Mercury's perihelion shift that the other planets do not explain, measured against the page's weak-field formula."></canvas></div>
+    <p class="data-legend"><span class="key key-meas" aria-hidden="true"></span> Measured: starlight bending (Dyson, Eddington and Davidson 1920; Shapiro et al. 2004) and Mercury's unexplained perihelion shift (Clemence 1947). <span class="key key-line" aria-hidden="true"></span> This page's formulas, worked out for the Sun.</p>
+  </div>
 
   <div class="explain">
     <section>
@@ -148,6 +162,12 @@
       <p>Nothing pulls on the planets. Each one moves as straight as it can through curved spacetime, and the curve shows up as an orbit. Close to the hole the geometry gets so steep that no stable orbit exists below 3 r<sub>s</sub>, and at 1.5 r<sub>s</sub> even light, the fastest thing there is, can only circle.</p>
       <p class="muted">Einstein explained Mercury's orbit with this in 1915. Eddington's eclipse expedition measured starlight bending by the Sun in 1919, twice the amount a Newtonian calculation gives.</p>
       <p data-depth="deep">For Mercury the extra turn is tiny: 43 arcseconds per century, out of about 575 in total, the rest coming from the pull of the other planets. Starlight grazing the Sun bends by 1.75 arcseconds; the Newtonian figure is 0.87.</p>
+    </section>
+    <section>
+      <h2>Checked against the Sun</h2>
+      <p>The weak-field formulas this page uses for its readouts also work for the Sun, whose r<sub>s</sub> is only 2.95 km. Turn on Show measured data. For starlight grazing the Sun's edge, 4GM/(c²b) gives 1.75 arcseconds; Newton gives half. At the 1919 eclipse the Sobral team measured 1.98 ± 0.12 and the Príncipe team 1.61 ± 0.30, closer to Einstein than to Newton but not by a wide margin. Radio telescopes tracking quasars near the Sun from 1979 to 1999 pinned it down to 1.7510 ± 0.0004, within about a hundredth of a percent of Einstein.</p>
+      <p>For Mercury, 6πGM/(c²a(1 − e²)) per orbit adds up to 42.98 arcseconds per century. Clemence's 1947 analysis of the observations left 42.56 ± 0.94 unexplained after every other known effect: Einstein's number lies inside that range.</p>
+      <p data-depth="deep">The 1919 numbers are extrapolated to the Sun's edge from stars a few solar radii away, and the uncertainties are "probable errors", the custom then, which are about two thirds of a standard deviation. A third set of plates, from Sobral's larger astrographic telescope, gave 0.93 arcseconds with no stated uncertainty; the authors set it aside because the Sun's heat had distorted the telescope's mirror and blurred the star images. That choice was argued about for decades; historians who have gone back over the records mostly find it justified. The radio value is the measured γ = 0.99983 ± 0.00045 of Shapiro and colleagues, turned into a bending at the edge with (1 + γ)/2 × 1.7512 arcseconds. Clemence's residual is the observed 5,599.74 ± 0.41 arcseconds per century minus 5,557.18 ± 0.85 from the other planets and the slow turning of Earth's axis.</p>
     </section>
     <section data-depth="deep" class="deep-math">
       <h2>The math</h2>
@@ -208,7 +228,9 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Geometric units, G = c = 1. Orbits are integrated with RK4 in proper time using the exact Schwarzschild radial equation; Newton's light rays are treated as particles moving at c.</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. Geometric units, G = c = 1. Orbits are integrated with RK4 in proper time using the exact Schwarzschild radial equation; Newton's light rays are treated as particles moving at c.</span>
+    <p class="data-cite">Data: <span translate="no">F. W. Dyson, A. S. Eddington and C. Davidson, "A Determination of the Deflection of Light by the Sun's Gravitational Field, from Observations Made at the Total Eclipse of May 29, 1919", Philosophical Transactions of the Royal Society A 220, 291 (1920)</span>, <a href="https://doi.org/10.1098/rsta.1920.0009" translate="no">doi:10.1098/rsta.1920.0009</a>; <span translate="no">S. S. Shapiro, J. L. Davis, D. E. Lebach and J. S. Gregory, "Measurement of the Solar Gravitational Deflection of Radio Waves using Geodetic Very-Long-Baseline Interferometry Data, 1979–1999", Physical Review Letters 92, 121101 (2004)</span>, <a href="https://doi.org/10.1103/PhysRevLett.92.121101" translate="no">doi:10.1103/PhysRevLett.92.121101</a>; <span translate="no">G. M. Clemence, "The Relativity Effect in Planetary Motions", Reviews of Modern Physics 19, 361–364 (1947)</span>, <a href="https://doi.org/10.1103/RevModPhys.19.361" translate="no">doi:10.1103/RevModPhys.19.361</a>. Solar and orbital constants: <span translate="no">IAU 2015 nominal solar values; JPL planetary orbital elements</span>.</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>

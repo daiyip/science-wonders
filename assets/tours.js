@@ -45,5 +45,17 @@
       { slug: "benford", goal: "Compare powers of 2 with the uniform control. Which one follows the law?" },
       { slug: "infinity", goal: "Check infinitely many buses into the full hotel, then run the diagonal." }
     ]
+  },
+  {
+    id: "everyday",
+    title: "The physics of an ordinary day",
+    blurb: "A blue sky, a rainbow after the rain, a passing siren, a swing and the tide coming in. Five everyday sights with surprising physics behind them.",
+    steps: [
+      { slug: "blue-sky", goal: "Slide the sun down to the horizon. Why does the sun turn red while the sky overhead stays blue?" },
+      { slug: "rainbow", goal: "Move the ray through the raindrop and find the turning point where the light piles up near 42 degrees." },
+      { slug: "doppler", goal: "Let the siren drive past the listener, then push it past Mach 1 and wait for the boom." },
+      { slug: "resonance", goal: "Pick the wine glass and tune the drive to its note until it shatters." },
+      { slug: "tides", goal: "Step through Moon's pull, Subtract the average and Tidal force to see where the second bulge comes from." }
+    ]
   }
 ];

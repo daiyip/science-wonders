@@ -49,6 +49,25 @@
     .controls label.switch { min-height: 36px; }
     .controls button { min-height: 38px; }
   }
+  .meas { display: grid; gap: 12px; border-top: 1px solid var(--rule); padding-top: 12px; }
+  .meas h3 { margin: 0; font-size: var(--step-0); }
+  .meas-row { display: grid; gap: 4px; font-size: var(--step--1); }
+  .meas-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+  .meas-head b { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .meas .gauge { background: var(--paper); }
+  .meas .gauge .zone { position: absolute; top: 0; bottom: 0; left: 66.67%; right: 5.72%; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .meas .gauge .tsir { position: absolute; top: -5px; bottom: -5px; width: 0; border-left: 2px dashed var(--accent); }
+  .meas .gauge .err { position: absolute; top: 50%; height: 10px; margin-top: -5px; border-left: 2px solid #c98a12; border-right: 2px solid #c98a12; box-sizing: border-box; min-width: 4px; transform: translateX(-50%); }
+  .meas .gauge .err::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: #c98a12; }
+  .meas .gauge .dot { position: absolute; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #ffc857; box-shadow: 0 0 0 1.5px #8a6a1e; }
+  .meas-scale { margin: -6px 6px 0 0; }
+  .meas-scale span:first-child { transform: none; }
+  .meas .gauge .pred { position: absolute; top: 50%; width: 17px; height: 17px; margin: -8.5px 0 0 -8.5px; transform: rotate(45deg); border: 2px solid var(--accent); background: var(--panel); box-sizing: border-box; }
+  .meas .note, .meas .data-legend { font-size: var(--step--1); color: var(--ink-soft); margin: 0; }
+  .data-legend .key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: -1px; margin-right: 2px; background: #ffc857; box-shadow: 0 0 0 1px #8a6a1e; }
+  .data-legend .key-pred { border-radius: 0; width: 9px; height: 9px; transform: rotate(45deg); background: var(--panel); box-shadow: none; border: 2px solid var(--accent); }
+  .data-legend .key-tsir { border-radius: 0; width: 0; height: 12px; background: none; box-shadow: none; border-left: 2px dashed var(--accent); }
+  .footer .data-cite { margin: 10px 0 0; }
 </style>
 </head>
 <body>
@@ -100,6 +119,10 @@
         <button id="burst">Send 500</button>
       </div>
     </div>
+    <div class="control">
+      <span class="label">Real experiments</span>
+      <label class="switch" for="showData"><input type="checkbox" id="showData"> Show measured data</label>
+    </div>
   </div>
 
   <div class="grid2">
@@ -126,6 +149,24 @@
         <div class="score-row"><span></span><div class="gauge-scale"><span style="left:0%">0</span><span style="left:33.33%">1</span><span style="left:66.67%">2 · limit</span><span style="left:94.28%">2.83</span></div><span></span></div>
       </div>
       <p class="verdict" id="verdict">Press the button to run both universes side by side.</p>
+      <div class="meas" id="dataPanel" hidden>
+        <h3>Measured in real labs</h3>
+        <div class="meas-row">
+          <div class="meas-head"><span>Aspect, Grangier and Roger 1982, Orsay</span><b>S = 2.697 ± 0.015</b></div>
+          <div class="gauge" aria-hidden="true"><span class="zone"></span><span class="mark" style="left:66.67%"></span><span class="tsir" style="left:94.28%"></span><span class="err" style="left:89.90%; width:1.00%"></span><span class="pred" style="left:90.00%"></span><span class="dot" style="left:89.90%"></span></div>
+        </div>
+        <div class="meas-row">
+          <div class="meas-head"><span>Weihs et al. 1998, Innsbruck, 400 m apart</span><b>S = 2.73 ± 0.02</b></div>
+          <div class="gauge" aria-hidden="true"><span class="zone"></span><span class="mark" style="left:66.67%"></span><span class="tsir" style="left:94.28%"></span><span class="err" style="left:91.00%; width:1.33%"></span><span class="dot" style="left:91.00%"></span></div>
+        </div>
+        <div class="meas-row">
+          <div class="meas-head"><span>Hensen et al. 2015, Delft, 1.3 km apart, loophole-free</span><b>S = 2.42 ± 0.20</b></div>
+          <div class="gauge" aria-hidden="true"><span class="zone"></span><span class="mark" style="left:66.67%"></span><span class="tsir" style="left:94.28%"></span><span class="err" style="left:80.67%; width:13.33%"></span><span class="dot" style="left:80.67%"></span></div>
+        </div>
+        <div class="gauge-scale meas-scale" aria-hidden="true"><span style="left:0%">0</span><span style="left:33.33%">1</span><span style="left:66.67%">2 · limit</span><span style="left:94.28%">2.83</span></div>
+        <p class="data-legend"><span class="key"></span> Measured S with its published ± (Aspect 1982, Weihs 1998, Hensen 2015). <span class="key key-pred"></span> Quantum prediction for Aspect's actual apparatus, 2.70. <span class="key key-tsir"></span> Perfect quantum score, 2√2 ≈ 2.83.</p>
+        <p class="note">Aspect's team used exactly this page's angles: 0° and 45° for one side, 22.5° and 67.5° for the other. The 2015 photon tests in Vienna (Giustina et al.) and Boulder (Shalm et al.) used a different form of Bell's inequality, so they report no S; the chance that hidden instructions produced their results was at most 3.74 × 10⁻³¹ and 2.3 × 10⁻⁷.</p>
+      </div>
     </div>
   </div>
 
@@ -147,8 +188,9 @@
     </section>
     <section>
       <h2>Why it's strange</h2>
-      <p>John Bell proved in 1964 that no theory with local hidden instructions can score above 2. Experiments starting with Clauser (1972) and Aspect (1982), and loophole-free tests in 2015, keep getting about 2.8. Nature is not running on hidden instructions.</p>
+      <p>John Bell proved in 1964 that no theory with local hidden instructions can score above 2. Experiments starting with Clauser (1972) and Aspect (1982), and loophole-free tests in 2015, keep breaking that limit. Nature is not running on hidden instructions.</p>
       <p>It still can't be used to send a message: Bob's own results are pure coin flips whatever Alice does. The correlation only shows up when they compare notes.</p>
+      <p>Turn on Show measured data to see real scores next to yours. Aspect's 1982 experiment measured S = 2.697 ± 0.015, which is 46 times its uncertainty above 2 and right on the 2.70 that quantum mechanics predicts for its real polarizers and lenses. Real scores fall short of this page's 2.83 because no apparatus is perfect: polarizers leak a little, and detectors collect photons over a spread of angles. Hensen's loophole-free test scored 2.42 ± 0.20 from only 245 trials, so its error bar is wide, but it still put the odds of a hidden-instruction explanation at about 4%.</p>
       <p data-depth="deep">The Bell test sorts its 20,000 pairs randomly into the four settings, about 5,000 each. Each agreement score then carries random noise of about ±0.01, and S about ±0.02, which is why repeated runs of the hidden-instructions universe land a little above or below 2. Real experiments had to close loopholes this page does not have: detectors that miss photons, and settings chosen slowly enough for a signal to pass between the stations.</p>
     </section>
     <section data-depth="deep" class="deep-math">
@@ -210,7 +252,9 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Pairs are simulated in the state (|HH⟩ + |VV⟩)/√2, where agreement is cos²(a − b).</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. Pairs are simulated in the state (|HH⟩ + |VV⟩)/√2, where agreement is cos²(a − b).</span>
+    <p class="data-cite">Data: <span translate="no">A. Aspect, P. Grangier and G. Roger, "Experimental Realization of Einstein-Podolsky-Rosen-Bohm Gedankenexperiment: A New Violation of Bell's Inequalities", Physical Review Letters 49, 91 (1982)</span>, <a href="https://doi.org/10.1103/PhysRevLett.49.91" translate="no">doi:10.1103/PhysRevLett.49.91</a>; <span translate="no">G. Weihs et al., "Violation of Bell's inequality under strict Einstein locality conditions", Physical Review Letters 81, 5039 (1998)</span>, <a href="https://doi.org/10.1103/PhysRevLett.81.5039" translate="no">doi:10.1103/PhysRevLett.81.5039</a>; <span translate="no">B. Hensen et al., "Loophole-free Bell inequality violation using electron spins separated by 1.3 kilometres", Nature 526, 682 (2015)</span>, <a href="https://doi.org/10.1038/nature15759" translate="no">doi:10.1038/nature15759</a>; <span translate="no">M. Giustina et al., Physical Review Letters 115, 250401 (2015)</span>, <a href="https://doi.org/10.1103/PhysRevLett.115.250401" translate="no">doi:10.1103/PhysRevLett.115.250401</a>; <span translate="no">L. K. Shalm et al., Physical Review Letters 115, 250402 (2015)</span>, <a href="https://doi.org/10.1103/PhysRevLett.115.250402" translate="no">doi:10.1103/PhysRevLett.115.250402</a>.</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>

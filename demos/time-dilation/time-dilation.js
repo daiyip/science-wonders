@@ -56,6 +56,7 @@
     playing: true,
     clockS: 0,             // light-clock animation time, seconds
     trail: true,
+    showData: false,
   };
 
   // ---------- Physics ----------
@@ -473,7 +474,7 @@
     if (state.gamma >= 2.95 && state.gamma <= 3.05) W8.challenge("gamma-three");
     if (state.dest === "sirius" && Math.abs(state.tau - 10) <= 0.05) W8.challenge("sirius-ten");
   }
-  W8.describer(() => tr(hintText()) + " " + tr(phaseText()));
+  W8.describer(() => tr(hintText()) + " " + tr(phaseText()) + (state.showData ? " " + tr(dataSentence()) : ""));
 
   function updateStats() {
     $("gamma").textContent = fmtGamma(state.gamma);
@@ -508,6 +509,7 @@
   function settingsChanged(restartTrip) {
     recompute();
     updateStats();
+    if (state.showData) drawData();
     W8.describe(hintText());
     W8.sound("tick", { pitch: Math.min(1, Math.log10(state.gamma) / 1.4) });
     checkSettings();
@@ -552,10 +554,216 @@
     }, 120);
   }).observe(canvas.parentElement);
 
+
+  // ---------- Measured data (cited single measurements) ----------
+  // Muons: Bailey et al., Nature 268, 301 (1977): γ = 29.33, μ+ lifetime 64.419 ± 0.058 µs.
+  //   Rest lifetime 2.1969811 µs (Particle Data Group). μ− is left out: its rest lifetime
+  //   in that paper was derived assuming relativity, so it is not an independent test.
+  // Airliner clocks: Hafele & Keating, Science 177, 166 and 168 (1972), nanoseconds.
+  // NTS-2: Ashby, Living Rev. Relativ. 6, 1 (2003): +442.5 measured vs +446.5 predicted,
+  //   parts in 10^12, shown here × 86,400 s as µs per day. GPS split from Ashby's Eq. 35:
+  //   GM/(ac²) and GM/(2ac²) with a = 26,562 km give +45.8 (gravity) and −7.2 (speed) µs/day.
+  const MUON = { gamma: 29.33, tau: 64.419, err: 0.058, tau0: 2.1969811 };
+  const HK = [
+    { name: "Flown east", pred: -40, predErr: 23, meas: -59, measErr: 10, speed: -184, grav: 144 },
+    { name: "Flown west", pred: 275, predErr: 21, meas: 273, measErr: 7, speed: 96, grav: 179 },
+  ];
+  const NTS2 = { pred: 446.5e-12 * 86400e6, meas: 442.5e-12 * 86400e6, grav: 45.8, speed: -7.2 };
+  const AMBER = "#ffc857", PRED = "#8fa6ff";
+  const dataCanvas = $("dataChart");
+  let dctx = null, DW = 960, DH = 420, DNARROW = null;
+  function dataLayout() {
+    const w = dataCanvas.parentElement.clientWidth;
+    if (!w) return false;
+    const n = w < 640;
+    if (n !== DNARROW || !dctx) {
+      DNARROW = n;
+      DW = n ? 480 : 960; DH = n ? 1110 : 450;
+      dctx = Lab.setupCanvas(dataCanvas, DW, DH);
+    }
+    return true;
+  }
+  // Font size on the data chart: larger on phones so it stays readable once scaled down.
+  const dfs = (px) => (DNARROW ? Math.max(17, Math.round(px * 1.42)) : px) + "px ";
+  function dText(t, x, y, maxW) {
+    const s = tr(t);
+    if (maxW && dctx.measureText(s).width > maxW) dctx.fillText(s, x, y, maxW); else dctx.fillText(s, x, y);
+  }
+  function dDot(x, y, r) {
+    dctx.fillStyle = AMBER; dctx.strokeStyle = "#05080e"; dctx.lineWidth = 1.5;
+    dctx.beginPath(); dctx.arc(x, y, r, 0, Math.PI * 2); dctx.fill(); dctx.stroke();
+    dctx.lineWidth = 1;
+  }
+  function dDiamond(x, y, r) {
+    dctx.strokeStyle = PRED; dctx.lineWidth = 2; dctx.fillStyle = "#05080e";
+    dctx.beginPath(); dctx.moveTo(x, y - r); dctx.lineTo(x + r, y); dctx.lineTo(x, y + r); dctx.lineTo(x - r, y); dctx.closePath();
+    dctx.fill(); dctx.stroke(); dctx.lineWidth = 1;
+  }
+  function dErr(x0, x1, y, col) {
+    dctx.strokeStyle = col; dctx.lineWidth = 1.5;
+    dctx.beginPath(); dctx.moveTo(x0, y); dctx.lineTo(x1, y);
+    dctx.moveTo(x0, y - 5); dctx.lineTo(x0, y + 5); dctx.moveTo(x1, y - 5); dctx.lineTo(x1, y + 5); dctx.stroke();
+    dctx.lineWidth = 1;
+  }
+  const signed = (v, d) => (v < 0 ? "−" : "+") + Math.abs(v).toFixed(d || 0);
+
+  // Left: γ against speed, this page's formula, the ship, and the CERN muons.
+  function drawGammaPanel(ox, oy, w, h) {
+    const L = ox + (DNARROW ? 58 : 52), R = ox + w - 16, T = oy + (DNARROW ? 70 : 52), B = oy + h - (DNARROW ? 64 : 48);
+    const GMAX = 50;
+    const X = (b) => L + (R - L) * b, Y = (g) => B - (B - T) * Math.log10(g) / Math.log10(GMAX);
+    dctx.font = dfs(12) + MONO; dctx.textAlign = "left"; dctx.fillStyle = "#7f8ea6";
+    dText("MOVING CLOCKS: γ AGAINST SPEED", ox + 16, oy + 26, w - 32);
+    dctx.font = dfs(10) + MONO;
+    for (const g of [1, 2, 5, 10, 20, 50]) {
+      dctx.strokeStyle = "#141d2d"; dctx.beginPath(); dctx.moveTo(L, Y(g)); dctx.lineTo(R, Y(g)); dctx.stroke();
+      dctx.fillStyle = "#7f8ea6"; dctx.textAlign = "right"; dctx.fillText(String(g), L - 8, Y(g) + 4);
+    }
+    for (const b of [0, 0.25, 0.5, 0.75, 1]) {
+      dctx.strokeStyle = "#141d2d"; dctx.beginPath(); dctx.moveTo(X(b), T); dctx.lineTo(X(b), B); dctx.stroke();
+      dctx.fillStyle = "#7f8ea6"; dctx.textAlign = "center"; dctx.fillText(b + " c", X(b), B + 18);
+    }
+    dctx.textAlign = "center"; dctx.fillStyle = "#97a6b9";
+    dText("speed", (L + R) / 2, B + (DNARROW ? 44 : 36));
+    dctx.save(); dctx.translate(ox + 14, (T + B) / 2); dctx.rotate(-Math.PI / 2); dText("γ (log scale)", 0, 0); dctx.restore();
+    // The page's formula.
+    dctx.strokeStyle = PRED; dctx.lineWidth = 2; dctx.beginPath();
+    for (let i = 0; i <= 400; i++) {
+      const b = Math.min(1 - 1 / (2 * GMAX * GMAX), 1 - Math.pow(1 - i / 400, 2));
+      const y = Y(1 / Math.sqrt(1 - b * b));
+      i ? dctx.lineTo(X(b), y) : dctx.moveTo(X(b), y);
+    }
+    dctx.stroke(); dctx.lineWidth = 1;
+    // The ship.
+    const sg = Math.min(GMAX, state.gamma);
+    dctx.strokeStyle = "#f0b35a"; dctx.lineWidth = 2;
+    dctx.beginPath(); dctx.arc(X(state.beta), Y(sg), 7, 0, Math.PI * 2); dctx.stroke(); dctx.lineWidth = 1;
+    dctx.font = dfs(11) + MONO; dctx.fillStyle = "#f0b35a"; dctx.textAlign = "left";
+    const shipLabel = "your ship: γ = " + fmtGamma(state.gamma);
+    if (state.beta < 0.6) dText(shipLabel, X(state.beta) + 12, Y(sg) - 10);
+    else { dctx.textAlign = "right"; dText(shipLabel, X(state.beta) - 12, Y(sg) + (state.gamma > 8 ? 22 : -10)); }
+    // CERN muons: measured lifetime ÷ lifetime at rest, at the published γ.
+    const mb = Math.sqrt(1 - 1 / (MUON.gamma * MUON.gamma));
+    const mg = MUON.tau / MUON.tau0, me = MUON.err / MUON.tau0;
+    const mx = X(mb), my = Y(mg);
+    dctx.strokeStyle = AMBER; dctx.lineWidth = 1.5;
+    dctx.beginPath(); dctx.moveTo(mx - 5, Y(mg + me)); dctx.lineTo(mx + 5, Y(mg + me)); dctx.moveTo(mx - 5, Y(mg - me)); dctx.lineTo(mx + 5, Y(mg - me)); dctx.stroke();
+    dctx.lineWidth = 1;
+    dDot(mx, my, 6);
+    dctx.font = dfs(11) + MONO; dctx.textAlign = "right"; dctx.fillStyle = "#ffe2a0";
+    const lx = mx - 14, ly = my + (DNARROW ? 4 : 2);
+    dText("muons, CERN 1977", lx, ly);
+    dctx.fillStyle = "#c9d4e3";
+    dText("lived " + MUON.tau.toFixed(2) + " µs = " + mg.toFixed(2) + " × " + MUON.tau0.toFixed(3) + " µs", lx, ly + (DNARROW ? 24 : 16), mx - L - 20);
+    dText("formula: γ = " + MUON.gamma.toFixed(2), lx, ly + (DNARROW ? 48 : 32));
+  }
+
+  // Right: clocks compared, predicted (hollow diamond) against measured (amber dot).
+  function drawClockPanel(ox, oy, w, h) {
+    const L = ox + 20, R = ox + w - 20;
+    dctx.font = dfs(12) + MONO; dctx.textAlign = "left"; dctx.fillStyle = "#7f8ea6";
+    dText("CLOCKS COMPARED: PREDICTED AND MEASURED", ox + 16, oy + 26, w - 32);
+    // Airliner clocks, nanoseconds.
+    const a0 = -250, a1 = 350;
+    const AX = (v) => L + (R - L) * (v - a0) / (a1 - a0);
+    const top = oy + (DNARROW ? 74 : 56), rowH = DNARROW ? 136 : 80;
+    dctx.font = dfs(11) + SANS; dctx.fillStyle = "#c9d4e3";
+    dText("Airliner clocks flown around the world, 1971 (ns gained)", L, top, R - L);
+    const axisY = top + 24 + rowH * 2;
+    for (const v of [-200, -100, 0, 100, 200, 300]) {
+      dctx.strokeStyle = v === 0 ? "#3a4760" : "#141d2d";
+      dctx.beginPath(); dctx.moveTo(AX(v), top + 12); dctx.lineTo(AX(v), axisY); dctx.stroke();
+      dctx.font = dfs(10) + MONO; dctx.fillStyle = "#7f8ea6"; dctx.textAlign = "center";
+      dctx.fillText((v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v), AX(v), axisY + 16);
+    }
+    HK.forEach((r, i) => {
+      const y0 = top + 26 + rowH * i;
+      dctx.font = dfs(11) + MONO; dctx.textAlign = "left"; dctx.fillStyle = "#97a6b9";
+      dText(r.name, L, y0 + 4);
+      // Speed part of the prediction: the same γ formula as the ship. Gravity adds the rest.
+      const yb = y0 + (DNARROW ? 22 : 16);
+      dctx.fillStyle = "rgba(143,166,255,0.5)";
+      dctx.fillRect(Math.min(AX(0), AX(r.speed)), yb - 3, Math.abs(AX(r.speed) - AX(0)), 6);
+      dctx.fillStyle = "rgba(76,196,141,0.5)";
+      dctx.fillRect(Math.min(AX(r.speed), AX(r.speed + r.grav)), yb + 4, Math.abs(AX(r.grav) - AX(0)), 6);
+      const yp = y0 + (DNARROW ? 44 : 32), ym = yp + (DNARROW ? 22 : 16);
+      dErr(AX(r.pred - r.predErr), AX(r.pred + r.predErr), yp, PRED);
+      dDiamond(AX(r.pred), yp, 6);
+      dErr(AX(r.meas - r.measErr), AX(r.meas + r.measErr), ym, AMBER);
+      dDot(AX(r.meas), ym, 5.5);
+      dctx.font = dfs(10) + MONO; dctx.fillStyle = "#c9d4e3";
+      const txt = "predicted " + signed(r.pred) + " ± " + r.predErr + " · measured " + signed(r.meas) + " ± " + r.measErr;
+      if (DNARROW) { dctx.textAlign = "left"; dText(txt, L, ym + 30, R - L); }
+      else {
+        const right = r.pred > 50;
+        dctx.textAlign = right ? "right" : "left";
+        dText(txt, right ? AX(r.pred) - 30 : AX(Math.max(r.pred, r.meas) + 40), yp + 8, right ? AX(r.pred) - 30 - L : R - AX(Math.max(r.pred, r.meas) + 40));
+      }
+    });
+    dctx.font = dfs(10) + SANS; dctx.textAlign = "left";
+    dctx.fillStyle = "rgba(143,166,255,0.9)";
+    dText("thin bars: speed part (this page's γ)", L, axisY + (DNARROW ? 44 : 34), R - L);
+    dctx.fillStyle = "rgba(120,214,150,0.9)";
+    dText("plus gravity part (higher clocks run faster)", L, axisY + (DNARROW ? 68 : 50), R - L);
+
+    // NTS-2 satellite clock, microseconds per day.
+    const s0 = -10, s1 = 50;
+    const SX = (v) => L + (R - L) * (v - s0) / (s1 - s0);
+    const st = axisY + (DNARROW ? 110 : 84);
+    dctx.font = dfs(11) + SANS; dctx.fillStyle = "#c9d4e3";
+    dText("NTS-2, the first GPS-style satellite clock, 1977 (µs gained per day)", L, st, R - L);
+    const sAxis = st + (DNARROW ? 104 : 74);
+    for (const v of [0, 10, 20, 30, 40, 50]) {
+      dctx.strokeStyle = v === 0 ? "#3a4760" : "#141d2d";
+      dctx.beginPath(); dctx.moveTo(SX(v), st + 12); dctx.lineTo(SX(v), sAxis); dctx.stroke();
+      dctx.font = dfs(10) + MONO; dctx.fillStyle = "#7f8ea6"; dctx.textAlign = "center";
+      dctx.fillText((v > 0 ? "+" : "") + v, SX(v), sAxis + 16);
+    }
+    const yb = st + (DNARROW ? 30 : 24);
+    dctx.fillStyle = "rgba(76,196,141,0.5)"; dctx.fillRect(SX(0), yb - 3, SX(NTS2.grav) - SX(0), 6);
+    dctx.fillStyle = "rgba(143,166,255,0.5)"; dctx.fillRect(SX(NTS2.grav + NTS2.speed), yb + 4, SX(NTS2.grav) - SX(NTS2.grav + NTS2.speed), 6);
+    const yp = yb + (DNARROW ? 30 : 22), ym = yp + (DNARROW ? 24 : 18);
+    dDiamond(SX(NTS2.pred), yp, 6);
+    dDot(SX(NTS2.meas), ym, 5.5);
+    dctx.font = dfs(10) + MONO; dctx.fillStyle = "#c9d4e3"; dctx.textAlign = "right";
+    dctx.textAlign = "left"; dctx.font = dfs(10) + SANS; dctx.fillStyle = "#97a6b9";
+    dText("bars: gravity +" + NTS2.grav.toFixed(1) + " and speed " + signed(NTS2.speed, 1) + " µs per day, for a GPS orbit", L, sAxis + (DNARROW ? 44 : 34), R - L);
+    dctx.font = dfs(10) + MONO; dctx.fillStyle = "#c9d4e3"; dctx.textAlign = "right";
+    const ntsTxt = "predicted +" + NTS2.pred.toFixed(2) + " · measured +" + NTS2.meas.toFixed(2);
+    if (DNARROW) { dctx.textAlign = "left"; dText(ntsTxt, L, sAxis + 72, R - L); }
+    else dText(ntsTxt, SX(NTS2.pred) - 14, ym + 4, SX(NTS2.pred) - 14 - L);
+  }
+
+  function drawData() {
+    if (!state.showData || !dataLayout()) return;
+    dctx.fillStyle = "#05080e"; dctx.fillRect(0, 0, DW, DH);
+    if (DNARROW) {
+      drawGammaPanel(0, 0, DW, 400);
+      dctx.fillStyle = "#121b2b"; dctx.fillRect(20, 404, DW - 40, 1);
+      drawClockPanel(0, 410, DW, 700);
+    } else {
+      drawGammaPanel(0, 0, 450, DH);
+      dctx.fillStyle = "#121b2b"; dctx.fillRect(470, 20, 1, DH - 40);
+      drawClockPanel(480, 0, 480, DH);
+    }
+  }
+  function dataSentence() {
+    return "Measured data: muons circling at CERN in 1977 lived " + MUON.tau.toFixed(2) + " µs, " + (MUON.tau / MUON.tau0).toFixed(2) +
+      " times their lifetime at rest, against γ = " + MUON.gamma.toFixed(2) + ". Airliner clocks in 1971 gained −59 ± 10 ns flying east and +273 ± 7 ns flying west, against predictions of −40 ± 23 and +275 ± 21 ns.";
+  }
+  function setShowData(on) {
+    state.showData = on;
+    $("dataPanel").hidden = !on;
+    if (on) { drawData(); W8.describe(dataSentence(), { now: true }); }
+  }
+  $("showData").addEventListener("change", (e) => setShowData(e.target.checked));
+  new ResizeObserver(() => { if (state.showData && dataLayout()) drawData(); }).observe(dataCanvas.parentElement);
+
   // ---------- Start ----------
   state.beta = Math.tanh(+$("speed").value);
   state.dest = $("dest").value;
   state.trail = $("trail").checked;
+  if ($("showData").checked) setShowData(true);
   recompute();
   updateStats();
   if (Lab.reducedMotion) {

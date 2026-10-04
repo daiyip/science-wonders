@@ -89,6 +89,10 @@
       <label class="switch" for="sun"><input type="checkbox" id="sun"> Add the Sun's tide</label>
     </div>
     <div class="control">
+      <span class="label">Real tide</span>
+      <label class="switch" for="measured"><input type="checkbox" id="measured"> Show measured data: Halifax, 2003</label>
+    </div>
+    <div class="control">
       <label for="speed">Speed <output id="speedOut">4 h per second</output></label>
       <input type="range" id="speed" min="0" max="6" step="1" value="3">
     </div>
@@ -126,6 +130,12 @@
       <p>Real tides are messier than this picture. Continents stop the bulges from sweeping round the planet, so each ocean basin holds a tide wave that circles inside it. Some bays resonate: the Bay of Fundy in Canada sloshes with a natural period close to 12 h 25 min and its tides reach about 16 m, while much of the Mediterranean sees only a few tens of centimetres.</p>
       <p class="muted">Newton explained the two daily tides in the Principia in 1687. In 1775 Laplace showed that real tides are waves shaped by the depth and outline of the oceans.</p>
       <p data-depth="deep">The equilibrium tide is only 0.36 m for the Moon and 0.16 m for the Sun, close to the real open-ocean tide of around half a metre. The ocean cannot keep up with the bulges, and friction drags on it, so high water usually comes hours after the Moon passes overhead and spring tides arrive a day or two after new or full moon. The Moon's orbit is also tilted to the equator, which makes the two daily tides at most places unequal in height. This model leaves both effects out.</p>
+    </section>
+    <section>
+      <h2>A real tide gauge</h2>
+      <p>Turn on Show measured data to replace the 30-day chart with four days of the real sea level at Halifax, Canada, from 24 to 28 September 2003, read every hour by a tide gauge. The amber dots are the measurements. The blue line is this page's equilibrium tide worked out for Halifax at the same hours, using where the Moon and Sun really were. Both are drawn around their own four-day average.</p>
+      <p>Three things differ. The real tide is more than three times bigger: a range of about 1.8 m against 0.55 m in the model. It is late: high water comes about 7.6 hours after the model's. And at the start and end of these days the model's two daily highs are very unequal, because the Moon was 15° north of the equator and then 10° south of it, but the real highs stay nearly the same height. The water in the North Atlantic does not settle into the bulges. It rocks as a wave inside the ocean basin, which happens to respond strongly to the twice-a-day push and only weakly to the once-a-day part.</p>
+      <p data-depth="deep">The highs also grow from the 24th to the 28th. That is the spring tide, which arrives a day or two after the new moon of 26 September. The record is hourly and nothing has been smoothed or filled in. The model curve uses the Moon's and Sun's real distances and directions from an astronomical ephemeris and the same formula as the page, so it includes the tilt of the Moon's orbit that the animation leaves out. A day later, on 29 September, Hurricane Juan pushed the water at this gauge about 1.5 m above the predicted tide, a reminder that weather adds to tides too.</p>
     </section>
     <section data-depth="deep" class="deep-math">
       <h2>The math</h2>
@@ -186,10 +196,13 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Equilibrium tide for a Moon and Sun in the plane of Earth's equator, seen by a town on the equator, with Earth's present 23.93 h turn and Kepler's third law for the Moon's period. The arrows are exact differences of Newtonian gravity. Bulges, arrows and distances in the picture are exaggerated or not to scale; the readouts use real values.</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. Equilibrium tide for a Moon and Sun in the plane of Earth's equator, seen by a town on the equator, with Earth's present 23.93 h turn and Kepler's third law for the Moon's period. The arrows are exact differences of Newtonian gravity. Bulges, arrows and distances in the picture are exaggerated or not to scale; the readouts use real values.</span>
+    <p class="data-cite">Data: hourly observed water level at Halifax, Nova Scotia (station 490), from <span translate="no">Fisheries and Oceans Canada, Marine Environmental Data Service</span>, 2003, as packaged in the <span translate="no">oce</span> R package by <span translate="no">D. Kelley and C. Richards</span> (<a href="https://github.com/dankelley/oce" translate="no">dankelley/oce</a>, dataset <span translate="no">sealevel</span>). Model curve computed with the <span translate="no">PyEphem</span> ephemeris.</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>
+<script src="data.js"></script>
 <script src="tides.js"></script>
 <script src="../../assets/catalog.js"></script>
 <script src="../../assets/tours.js"></script>

@@ -32,6 +32,10 @@
     font-size: var(--step--1);
     max-width: 80ch;
   }
+  .data-fig { margin-top: 14px; background: var(--bench); border-radius: var(--radius); padding: 14px; border: 1px solid var(--bench-rule); }
+  .data-fig[hidden] { display: none; }
+  .data-fig canvas { display: block; width: 100%; height: auto; border-radius: 6px; }
+  .footer .data-cite { margin: 10px 0 0; }
   @media (max-width: 640px) {
     .controls button { min-height: 40px; }
     .controls input[type="range"] { height: 32px; }
@@ -96,6 +100,13 @@
       <label class="switch" for="arrows"><input type="checkbox" id="arrows" checked> Velocity arrows</label>
       <label class="switch" for="grid"><input type="checkbox" id="grid" checked> Stretching grid</label>
     </div>
+    <div class="control">
+      <span class="label">Real data</span>
+      <label class="switch" for="measured"><input type="checkbox" id="measured"> Show measured data</label>
+    </div>
+  </div>
+  <div class="data-fig" id="dataFig" hidden>
+    <canvas id="hubble29" width="960" height="300" role="img" aria-label="Hubble's 1929 plot: speed against distance for 24 nearby galaxies, with the straight line through them, steeper than today's value of the expansion rate."></canvas>
   </div>
   <p class="callout" id="hint">Click any galaxy in the field to make it home. The plot redraws from there, and the slope comes out the same.</p>
 
@@ -122,6 +133,12 @@
       <p data-depth="deep">Hubble's law has no speed limit. Beyond <i>c</i>/H₀, about 4,300 Mpc, galaxies recede faster than light. Nothing breaks relativity: no galaxy passes another one locally faster than light; it is the distance between them that grows.</p>
       <p>Redshift here is not a Doppler shift from motion through space. The light's wavelength stretches by exactly the factor the universe grew while it travelled.</p>
       <p class="muted">The model uses steady "coasting" growth, where the age is exactly 1/H. The real universe slowed down, then sped up, and the two nearly cancel: its age is 13.8 billion years, against 1/H₀ ≈ 14.0.</p>
+    </section>
+    <section>
+      <h2>The real measurements</h2>
+      <p>Turn on Show measured data. On the main plot, each white dot is a Type Ia supernova from the Pantheon+ catalogue (2022), with its distance measured from how bright it looks, and its speed from the redshift of its host galaxy. The thin bars show each distance's uncertainty. The real points fall along a straight line with a slope of about 74 km/s/Mpc, close to the model's 70. Far away they scatter more than the model's points, because each supernova's distance is uncertain by about 9%, while the model's galaxies only have random speeds of about 250 km/s.</p>
+      <p>A second chart shows the 24 galaxies Edwin Hubble used in 1929, all within 2 Mpc by his estimates. They scatter widely, and the straight line through them has a slope of about 420 km/s/Mpc; Hubble's own solution gave 465 ± 50. That is six or seven times today's value, because his distances were too small. His distance markers, Cepheid stars and the brightest stars in each galaxy, are brighter than astronomers then thought, and some of his "stars" were really glowing gas clouds, so the galaxies are farther away. The shape of the law was right; its scale was not.</p>
+      <p data-depth="deep">The supernova distances here are calibrated with Cepheid stars by the SH0ES team, which is why the slope comes out near 73, the "late universe" side of the Hubble tension. The speeds are c × redshift, which runs a few percent above the true recession speed at 450 Mpc. Repeat observations of one supernova are averaged, and only the 598 supernovae closer than 450 Mpc are shown.</p>
     </section>
     <section data-depth="deep" class="deep-math">
       <h2>The math</h2>
@@ -182,10 +199,13 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. A flat 2D slice with coasting expansion (size proportional to time), so H = 1/t. Galaxies get random motions of a few hundred km/s, like real ones. Distances shown are within a few hundred megaparsecs, where speed = H × distance holds well.</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. A flat 2D slice with coasting expansion (size proportional to time), so H = 1/t. Galaxies get random motions of a few hundred km/s, like real ones. Distances shown are within a few hundred megaparsecs, where speed = H × distance holds well.</span>
+    <p class="data-cite">Data: <span translate="no">E. Hubble, "A Relation between Distance and Radial Velocity among Extra-Galactic Nebulae", Proc. Natl. Acad. Sci. 15, 168 (1929)</span>, Table 1, as in the R package <a href="https://github.com/cran/Sleuth2" translate="no">Sleuth2</a> (dataset case0701); Type Ia supernovae from <span translate="no">D. Brout et al., "The Pantheon+ Analysis: Cosmological Constraints", Astrophys. J. 938, 110 (2022)</span>, with SH0ES Cepheid calibration (<span translate="no">A. G. Riess et al., Astrophys. J. Lett. 934, L7 (2022)</span>), file <a href="https://github.com/PantheonPlusSH0ES/DataRelease" translate="no">Pantheon+SH0ES.dat</a>.</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>
+<script src="data.js"></script>
 <script src="expanding-universe.js"></script>
 <script src="../../assets/catalog.js"></script>
 <script src="../../assets/tours.js"></script>

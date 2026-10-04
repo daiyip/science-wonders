@@ -17,7 +17,8 @@
     NW = cw < 640;
     if (NW) {
       W = Math.max(300, Math.round(cw));
-      BX0 = 40; BX1 = W - 10; BY0 = 112; BY1 = 306;
+      const ex = REAL[currentDataset()] ? 58 : 0;
+      BX0 = 40; BX1 = W - 10; BY0 = 112 + ex; BY1 = 306 + ex;
       SX0 = 14; SX1 = W - 14; SY0 = BY1 + 82; SY1 = SY0 + 60;
       H = SY1 + 30;
     } else {
@@ -27,6 +28,13 @@
     }
     ctx = Lab.setupCanvas(canvas, W, H);
   }
+  // Real measured datasets (from data.js), each with its legend text.
+  const REAL = {
+    population: { legend: "Measured: country populations, World Bank 2025", unit: "countries" },
+    gdp: { legend: "Measured: country GDP in US$, World Bank 2023", unit: "economies" },
+    constants: { legend: "Measured: physical constants, CODATA 2022", unit: "constants" },
+  };
+  const currentDataset = () => document.getElementById("dataset").value;
   layout();
   let lastCW = canvas.clientWidth;
   if (window.ResizeObserver) new ResizeObserver(() => {
@@ -85,6 +93,17 @@
     return m.toFixed(3) + " × 10^" + e;
   };
 
+  // Country names in the page's language, from the browser's own list.
+  let regionNames = null;
+  try {
+    const lang = (window.I18N && I18N.lang && I18N.lang !== "collect") ? I18N.lang : "en";
+    regionNames = new Intl.DisplayNames([lang, "en"], { type: "region" });
+  } catch (e) { regionNames = null; }
+  const regionName = (code) => { try { return regionNames ? regionNames.of(code) : code; } catch (e) { return code; } };
+
+  // The option group label is an attribute the page translator does not read.
+  { const og = document.querySelector("#dataset optgroup"); if (og && window.I18N) og.label = I18N.t(og.label); }
+
   // ---------- Datasets ----------
   function build() {
     const N = state.size;
@@ -119,6 +138,19 @@
       for (let i = 0; i < N; i++) {
         const v = 1 + Math.floor(Math.random() * 9999);
         items.push(item(Math.log10(v), "", digitFromNumber(v)));
+      }
+    } else if (REAL[state.dataset]) {
+      // Every value in the measured set, in the file's order (alphabetical by country code).
+      const D = window.BENFORD_DATA || {};
+      const rows = D[state.dataset] || [];
+      for (const r of rows) {
+        const v = Array.isArray(r) ? r[1] : r;
+        if (!v) continue;
+        const name = Array.isArray(r) ? regionName(r[0]) : "";
+        const val = state.dataset === "population" ? Math.round(v).toLocaleString("en-US")
+          : state.dataset === "gdp" ? "$" + sci(Math.log10(Math.abs(v))) : sci(Math.log10(Math.abs(v)));
+        items.push(item(Math.log10(Math.abs(v)), name ? name + " = " + val : val, digitFromNumber(v)));
+        items[items.length - 1].plain = true;
       }
     } else {
       for (const x of parseCustom($("custom").value)) {
@@ -167,10 +199,28 @@
       state.revealStart = performance.now();
       state.genTimer = performance.now() + 700;
     }
-    const custom = state.dataset === "custom";
+    const custom = state.dataset === "custom" || !!REAL[state.dataset];
     $("size").disabled = custom;
+    if (NW) layout();
+    realHint();
     $("reroll").disabled = !(state.dataset === "growth" || state.dataset === "uniform");
     updateStats();
+  }
+
+  // The callout under the controls describes a measured dataset and how much chance alone moves its bars.
+  const HINT0 = $("hint").textContent;
+  const sampleWobble = (n) => (100 * Math.sqrt(BENFORD[1] * (1 - BENFORD[1]) / n)).toFixed(1);
+  function realHint() {
+    const n = state.items.length;
+    if (!REAL[state.dataset] || !n) { if ($("hint").dataset.real) { $("hint").textContent = HINT0; delete $("hint").dataset.real; } return; }
+    const text = {
+      population: "Populations of " + n + " countries and territories in 2025, from the World Bank.",
+      gdp: "GDP of " + n + " economies in current US dollars, the latest year each reported (mostly 2023), from the World Bank.",
+      constants: "All " + n + " physical constants in the CODATA 2022 list, in SI units.",
+    }[state.dataset];
+    // One whole sentence pair, translated by the page's DOM translator.
+    $("hint").textContent = text + " With only " + n + " numbers, chance alone moves the share for digit 1 by about ±" + sampleWobble(n) + " percentage points, so expect small wiggles.";
+    $("hint").dataset.real = "1";
   }
 
   // ---------- Statistics ----------
@@ -256,7 +306,7 @@
     } else if (n > 0 && state.items[n - 1].label) {
       ctx.textAlign = NW ? "left" : "right";
       const it = state.items[n - 1];
-      let txt = state.dataset === "custom" ? it.label : it.label + " = " + sci(it.L);
+      let txt = state.dataset === "custom" || it.plain ? it.label : it.label + " = " + sci(it.L);
       if (NW) while (txt.length > 4 && ctx.measureText(txt).width > W - 24) txt = txt.slice(0, -2) + "…";
       ctx.fillText(txt, tx, ty);
     }
@@ -314,6 +364,29 @@
       ctx.fillStyle = "#e9eef7";
       ctx.textAlign = NW ? "left" : "right";
       ctx.fillText("white marks: Benford, log₁₀(1 + 1/d)", NW ? 12 : BX1, NW ? 82 : BY0 + 2);
+    }
+    if (REAL[state.dataset] && n) {
+      // Legend for measured data and a sample-size note.
+      ctx.font = (NW ? "12px " : "11px ") + SANS;
+      ctx.textAlign = NW ? "left" : "right";
+      ctx.fillStyle = "rgba(143,166,255,0.75)";
+      const lx = NW ? 12 : BX1, ly = NW ? 100 : BY0 + 20;
+      ctx.fillRect(NW ? lx : lx - ctx.measureText(REAL[state.dataset].legend).width - 16, ly - 8, 10, 8);
+      ctx.fillStyle = BLUE;
+      const note = state.items.length + " numbers, so chance alone moves digit 1 by about ±" + sampleWobble(state.items.length) + " points";
+      if (NW) {
+        // Phone: shrink the legend to fit one line (not below 10 px) and wrap the note.
+        let size = 12;
+        while (size > 10 && ctx.measureText(REAL[state.dataset].legend).width > W - 40) { size -= 0.5; ctx.font = size + "px " + SANS; }
+        ctx.fillText(REAL[state.dataset].legend, lx + 16, ly);
+        ctx.font = "12px " + SANS;
+        ctx.fillStyle = DIM;
+        wrapText(note, lx, ly + 17, W - 24, 15);
+      } else {
+        ctx.fillText(REAL[state.dataset].legend, lx, ly);
+        ctx.fillStyle = DIM;
+        ctx.fillText(note, lx, ly + 16);
+      }
     }
 
     // Log strip
@@ -389,7 +462,7 @@
   }
   WONDERS.describer(() => {
     const { n, c, verdict } = summary();
-    const names = { pow2: "powers of 2", fib: "Fibonacci numbers", fact: "factorials", growth: "town populations that grew randomly", uniform: "uniform random numbers from 1 to 9,999", custom: "numbers you pasted" };
+    const names = { pow2: "powers of 2", fib: "Fibonacci numbers", fact: "factorials", growth: "town populations that grew randomly", uniform: "uniform random numbers from 1 to 9,999", custom: "numbers you pasted", population: "country populations measured in 2025", gdp: "country GDP figures in US dollars", constants: "physical constants from CODATA 2022" };
     const out = ["The chart shows the leading digits of " + n.toLocaleString("en-US") + " " + names[state.dataset] + "."];
     if (state.dataset === "growth") out.push("Growth has reached generation " + state.gen + " of " + GENERATIONS + ".");
     if (n >= 2) {

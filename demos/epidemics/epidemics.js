@@ -43,7 +43,7 @@
   const COL = ["#6fa8ff", "#ff5d4d", "#7d889b", "#4cc48d"];
 
   const state = {
-    r0: 3, vax: 0, distance: 0, speed: 2, ode: true, running: true,
+    r0: 3, vax: 0, distance: 0, speed: 2, ode: true, running: true, measured: false,
     people: [], tick: 0, peak: 0, over: false, everInfected: 0,
     hist: [], odeSeries: [], pInfect: 0, encounterRate: 0,
   };
@@ -211,7 +211,75 @@
     ctx.fillText(label, AOX + m + 7, AOY + m + 14);
   }
 
+  // ---------- Measured data: the 1978 boarding-school influenza outbreak ----------
+  const SCHOOL = window.EPIDEMIC_DATA && window.EPIDEMIC_DATA.school;
+  // The fitted SIR curve, integrated with fourth-order Runge-Kutta steps of 0.05 days.
+  const schoolFit = (() => {
+    if (!SCHOOL) return [];
+    const { beta, gamma, I0 } = SCHOOL.fit, Nn = SCHOOL.N;
+    const f = (s, i) => [-beta * s * i / Nn, beta * s * i / Nn - gamma * i];
+    let s = Nn - I0, i = I0;
+    const out = [[0, i]], h = 0.05;
+    for (let k = 1; k <= 15 / h; k++) {
+      const a = f(s, i), b = f(s + h / 2 * a[0], i + h / 2 * a[1]);
+      const c = f(s + h / 2 * b[0], i + h / 2 * b[1]), d = f(s + h * c[0], i + h * c[1]);
+      s += h / 6 * (a[0] + 2 * b[0] + 2 * c[0] + d[0]);
+      i += h / 6 * (a[1] + 2 * b[1] + 2 * c[1] + d[1]);
+      out.push([k * h, i]);
+    }
+    return out;
+  })();
+  const AMBER = "#f0b35a";
+  function drawSchool() {
+    const days = 15, top = 350;
+    const X = (d) => CX + d / days * CW;
+    const Y = (n) => CY + CH - n / top * CH;
+    ctx.font = "11px " + MONO;
+    ctx.fillStyle = "#7f8ea6";
+    ctx.textAlign = "left";
+    if (narrow) fitText("BOARDING SCHOOL FLU, 1978: BOYS IN BED", CX - 30, CY - 14, W - CX + 20);
+    else ctx.fillText("BOARDING SCHOOL FLU, 1978: BOYS IN BED", CX, CY - 14);
+    ctx.strokeStyle = "#1a2436";
+    ctx.fillStyle = "#56647c";
+    ctx.font = fpx(10) + MONO;
+    for (let n = 0; n <= 300; n += 100) {
+      ctx.beginPath(); ctx.moveTo(CX, Y(n) + 0.5); ctx.lineTo(CX + CW, Y(n) + 0.5); ctx.stroke();
+      ctx.textAlign = "right"; ctx.fillText(String(n), CX - 6, Y(n) + 3);
+    }
+    ctx.textAlign = "center";
+    for (let d = 0; d <= 14; d += narrow ? 4 : 2) ctx.fillText(String(d), X(d), CY + CH + 14);
+    ctx.textAlign = "right";
+    ctx.fillText("days from 22 January", CX + CW, CY + CH + 28);
+    // Fitted SIR curve
+    ctx.strokeStyle = COL[I]; ctx.lineWidth = 2;
+    ctx.beginPath();
+    schoolFit.forEach(([d, v], k) => { k ? ctx.lineTo(X(d), Y(v)) : ctx.moveTo(X(d), Y(v)); });
+    ctx.stroke(); ctx.lineWidth = 1;
+    // Measured counts: amber dots with a dark rim
+    SCHOOL.inBed.forEach((v, d) => {
+      ctx.fillStyle = AMBER; ctx.strokeStyle = "#05080e"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(X(d), Y(v), narrow ? 4.5 : 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+    ctx.lineWidth = 1;
+    // Peak label
+    const pk = SCHOOL.inBed.indexOf(Math.max(...SCHOOL.inBed));
+    ctx.font = fpx(10) + MONO; ctx.fillStyle = AMBER; ctx.textAlign = "left";
+    ctx.fillText(SCHOOL.inBed[pk] + " of " + SCHOOL.N, X(pk + 1.1), Y(SCHOOL.inBed[pk] + 22));
+    // Legend
+    const fit = SCHOOL.fit;
+    let ly = CY + CH + 46;
+    const lx = narrow ? GX : CX, lw = narrow ? GWID : CW;
+    ctx.font = "11px " + MONO; ctx.textAlign = "left";
+    ctx.fillStyle = AMBER; ctx.beginPath(); ctx.arc(lx + 5, ly - 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#97a6b9"; fitText("Measured: boys in bed, BMJ 1978", lx + 16, ly, lw - 16);
+    ly += 18;
+    ctx.fillStyle = COL[I]; ctx.fillRect(lx, ly - 5, 12, 3);
+    ctx.fillStyle = "#97a6b9";
+    fitText("SIR fit: β = " + fit.beta.toFixed(2) + "/day, γ = " + fit.gamma.toFixed(3) + "/day, R0 = " + fit.R0.toFixed(1), lx + 16, ly, lw - 16);
+  }
+
   function drawChart() {
+    if (state.measured && SCHOOL) { drawSchool(); return; }
     ctx.font = "11px " + MONO;
     ctx.fillStyle = "#7f8ea6";
     ctx.textAlign = "left";
@@ -408,6 +476,7 @@
       "Day " + day + ": " + c[S] + " susceptible, " + c[I] + " infected, " + c[R] + " recovered and " + c[V] + " vaccinated. The peak so far is " + Math.max(state.peak, c[I]) + " infected at once.",
       state.over ? "The outbreak is over; " + state.everInfected + " people caught it." : "The outbreak is still going.",
       state.vax > herd ? "Vaccination is above the herd-immunity threshold of " + herd + "%." : "Vaccination is below the herd-immunity threshold of " + herd + "%.",
+      ...(state.measured && SCHOOL ? ["The chart shows the 1978 boarding-school flu outbreak instead of the crowd: " + SCHOOL.N + " boys, a peak of " + Math.max(...SCHOOL.inBed) + " in bed on day 5, and an SIR fit with R0 = " + SCHOOL.fit.R0.toFixed(1) + "."] : []),
     ].map(t).join(" ");
   });
 
@@ -468,6 +537,15 @@
   });
   $("speed").addEventListener("input", (e) => { state.speed = +e.target.value; syncOutputs(); });
   $("ode").addEventListener("change", (e) => { state.ode = e.target.checked; if (!state.running) draw(); });
+  $("measured").addEventListener("change", (e) => {
+    state.measured = e.target.checked && !!SCHOOL;
+    if (!state.running) draw();
+    if (state.measured) {
+      const f = SCHOOL.fit;
+      W_.describe("Showing the 1978 boarding-school flu outbreak: of " + SCHOOL.N + " boys, at most " + Math.max(...SCHOOL.inBed) + " were in bed at once, on day 5. The fitted SIR curve has R0 = " + f.R0.toFixed(1) + " and an average of " + (1 / f.gamma).toFixed(1) + " days in bed.", { now: true });
+      W_.sound("event", { pitch: 0.6 });
+    } else W_.describe("Back to the simulated crowd's chart.", { now: true });
+  });
   function setRunning(on) { state.running = on; $("play").textContent = on ? "Pause" : "Play"; }
   $("play").addEventListener("click", () => setRunning(!state.running));
   $("restart").addEventListener("click", () => restart());

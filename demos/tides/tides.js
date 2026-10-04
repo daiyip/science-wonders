@@ -25,7 +25,7 @@
   // ---------- State ----------
   const START = { moon: 0.42, sunA: 0 };
   const state = {
-    d: D_REF, sun: false, speedIdx: 3, mode: "tidal",
+    d: D_REF, sun: false, speedIdx: 3, mode: "tidal", measured: false,
     running: !Lab.reducedMotion,
     t: 0, earth: START.moon - Math.PI / 2, moon: START.moon, sunA: START.sunA,
   };
@@ -62,7 +62,7 @@
       const left = 46;
       C1 = { x: left, y: W + 40 + 34, w: W - left - 12, h: 150 };
       C2 = { x: left, y: C1.y + C1.h + 72, w: W - left - 12, h: 140 };
-      H = Math.round(C2.y + C2.h + 78);
+      H = Math.round(C2.y + C2.h + 78 + (state.measured ? 30 : 0));
     }
     ctx = Lab.setupCanvas(canvas, W, H);
   }
@@ -422,8 +422,66 @@
     fitText(cap, C.x, C.y + C.h + 30, (narrow ? W - C.x - 8 : C.w));
   }
 
+  // ---------- Measured data: four days of the Halifax tide gauge ----------
+  const TD = window.TIDE_DATA;
+  const halifax = (() => {
+    if (!TD) return null;
+    const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    const mM = mean(TD.measured), mE = mean(TD.model);
+    const meas = TD.measured.map((v) => v - mM), model = TD.model.map((v) => v - mE);
+    const peaks = (a) => { const out = []; for (let i = 1; i < a.length - 1; i++) if (a[i] > a[i - 1] && a[i] >= a[i + 1]) out.push(i); return out; };
+    const hm = peaks(meas), he = peaks(model);
+    // Lag: each measured high water against the latest model high water before it.
+    const lags = [];
+    for (const i of hm) { const prev = he.filter((j) => j <= i); if (prev.length) lags.push(i - prev[prev.length - 1]); }
+    const range = (a) => Math.max(...a) - Math.min(...a);
+    return { meas, model, hm, he, lag: mean(lags), rangeM: range(meas), rangeE: range(model) };
+  })();
+  function drawHalifax() {
+    const C = C2, n = halifax.meas.length - 1;
+    const ticks = [[0, "24"], [0.25, "25"], [0.5, "26"], [0.75, "27"]];
+    const yOf = chartFrame(C, "HALIFAX, 24 TO 28 SEPTEMBER 2003 (UTC)", 1.05, ticks);
+    ctx.font = mono(FT); ctx.fillStyle = "#56647c"; ctx.textAlign = "right";
+    ctx.fillText("28", C.x + C.w + 2, C.y + C.h + 14);
+    const xOf = (i) => C.x + (i / n) * C.w;
+    ctx.save(); ctx.beginPath(); ctx.rect(C.x, C.y, C.w, C.h); ctx.clip();
+    // Equilibrium model for Halifax at the same hours
+    ctx.strokeStyle = "#5cc8ff"; ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    halifax.model.forEach((v, i) => (i ? ctx.lineTo(xOf(i), yOf(v)) : ctx.moveTo(xOf(i), yOf(v))));
+    ctx.stroke(); ctx.lineWidth = 1;
+    // Measured hourly readings, joined by a faint line so the wave is easy to follow
+    ctx.strokeStyle = "rgba(240,179,90,0.35)";
+    ctx.beginPath();
+    halifax.meas.forEach((v, i) => (i ? ctx.lineTo(xOf(i), yOf(v)) : ctx.moveTo(xOf(i), yOf(v))));
+    ctx.stroke();
+    ctx.fillStyle = "#f0b35a";
+    const r = narrow ? 1.7 : 2;
+    halifax.meas.forEach((v, i) => { ctx.beginPath(); ctx.arc(xOf(i), yOf(v), r, 0, TAU); ctx.fill(); });
+    ctx.restore();
+    // New moon
+    const xn = xOf(TD.newMoonHours), yn = C.y + C.h - 10;
+    ctx.strokeStyle = "#c9ced8"; ctx.fillStyle = "#0a0f19";
+    ctx.beginPath(); ctx.arc(xn, yn, 5, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.font = mono(FT); ctx.fillStyle = "#8796ad"; ctx.textAlign = "right";
+    ctx.fillText("new moon", xn - 9, yn + 4);
+    ctx.strokeStyle = "#1f2a3f"; ctx.strokeRect(C.x + 0.5, C.y + 0.5, C.w - 1, C.h - 1);
+    // Legend and the comparison in numbers
+    const lw = narrow ? W - C.x - 8 : C.w;
+    let y = C.y + C.h + 30;
+    ctx.font = sans(11); ctx.textAlign = "left";
+    ctx.fillStyle = "#f0b35a"; ctx.beginPath(); ctx.arc(C.x + 4, y - 4, 3, 0, TAU); ctx.fill();
+    fitText("Measured: Halifax tide gauge, 2003, hourly", C.x + 12, y, lw - 12);
+    y += 15;
+    ctx.fillStyle = "#5cc8ff"; ctx.fillRect(C.x, y - 5, 9, 2);
+    fitText("Equilibrium model for Halifax, same hours", C.x + 12, y, lw - 12);
+    ctx.fillStyle = "#93a3bb";
+    wrapText("Range " + halifax.rangeM.toFixed(2) + " m measured, " + halifax.rangeE.toFixed(2) + " m in the model. High water comes " + halifax.lag.toFixed(1) + " h after the model's.", C.x, y + 15, lw, 14);
+  }
+
   const SPAN2 = 720, STEP2 = 0.5, N2 = SPAN2 / STEP2;
   function drawChart2() {
+    if (state.measured && halifax) { drawHalifax(); return; }
     const C = C2, r = rates();
     const ymax = (kMoon() + (state.sun ? K_SUN : 0)) * 1.15;
     const ticks = [];
@@ -574,7 +632,8 @@
       : tideKind() === "spring" ? "The Sun is lined up with the Moon, so these are spring tides with a range of " + (an.range || 0).toFixed(2) + " m."
       : tideKind() === "neap" ? "The Sun is at right angles to the Moon, so these are neap tides with a range of " + (an.range || 0).toFixed(2) + " m."
       : "The Sun's tide is added to the Moon's; the range is now " + (an.range || 0).toFixed(2) + " m.";
-    return [s1, s2, s3].map(tr).join(" ");
+    const s4 = state.measured && halifax ? "The lower chart shows four days of measured tide at Halifax in September 2003: a range of " + halifax.rangeM.toFixed(2) + " m against the equilibrium model's " + halifax.rangeE.toFixed(2) + " m, with high water about " + halifax.lag.toFixed(1) + " hours after the model's." : "";
+    return [s1, s2, s3, s4].filter(Boolean).map(tr).join(" ");
   });
 
   // ---------- Loop ----------
@@ -613,6 +672,15 @@
       const an = analyse(), ratio = tidalAcc(state.d) / A_REF;
       W_.describe("Moon at " + state.d.toFixed(1) + " Earth radii. The tidal force is " + ratio.toFixed(2) + " times today's, and high tides come " + (an.gap ? fmtGap(an.gap) : "–") + " apart.");
     }, 700);
+  });
+  $("measured").addEventListener("change", (e) => {
+    state.measured = e.target.checked && !!halifax;
+    if (narrow) { layout(); }
+    lastAn = draw();
+    if (state.measured) {
+      W_.describe("The lower chart now shows four days of the real tide at Halifax, Canada, in September 2003. The measured range is " + halifax.rangeM.toFixed(2) + " m, against " + halifax.rangeE.toFixed(2) + " m for the equilibrium model, and high water comes about " + halifax.lag.toFixed(1) + " hours after the model's.", { now: true });
+      W_.sound("event", { pitch: 0.6 });
+    } else W_.describe("The lower chart shows the model town's last 30 days again.", { now: true });
   });
   $("sun").addEventListener("change", (e) => {
     state.sun = e.target.checked;

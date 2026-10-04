@@ -209,3 +209,27 @@ I18N.add({
   "Spread": "跨度",
   ". Free to print and share for teaching.": "。可免费打印并分享用于教学。"
 });
+
+// Measured datasets
+I18N.add({
+  "Measured data": "实测数据",
+  "Country populations, {0} (World Bank)": "各国人口，{0}年（世界银行）",
+  "Country GDP in US$, latest year (World Bank)": "各国GDP（美元），最新年份（世界银行）",
+  "Physical constants (CODATA {0})": "物理常数（CODATA {0}）",
+  "Pick the three measured datasets under Data. Which comes closest to Benford, and which digit is furthest off?": "在“数据”中依次选择三组实测数据。哪一组最接近本福特定律？哪个数字偏离最远？",
+  "Real measurements": "真实测量数据",
+  "Three of the data choices are real published numbers, not simulations. Country populations: {0} countries and territories in {1} from the World Bank, spanning about {2} powers of ten from Tuvalu to India. Country GDP: {3} economies in current US dollars, the latest year each one reported ({4} for {5} of them). Physical constants: all {6} values in the CODATA {7} list, from the speed of light to the mass of the alpha particle, in SI units.": "有三个数据选项是真实发表的数字，而不是模拟。各国人口：世界银行公布的{1}年{0}个国家和地区的人口，从图瓦卢到印度，跨越约{2}个数量级。各国GDP：{3}个经济体以现价美元计的GDP，取每个经济体公布的最新年份（其中{5}个为{4}年）。物理常数：CODATA {7}列表中的全部{6}个数值，从光速到α粒子的质量，均用国际单位制表示。",
+  "Populations come closest, with {0}% starting with {1} against Benford's {2}%. GDP is near Benford too, but has only {3} values starting with {4}. The constants have too many {5}s ({6}%) and too few {7}s and {8}s, and fail the MAD test. With a few hundred numbers, chance alone moves each bar by {9} to {10} percentage points, so small wiggles mean little. The constants also depend on the choice of units and include many near-copies of one value in different units, so they are not independent draws.": "人口数据最接近：以{1}开头的占{0}%，本福特定律预测为{2}%。GDP也接近本福特定律，但以{4}开头的只有{3}个。物理常数中以{5}开头的太多（{6}%），以{7}和{8}开头的太少，没有通过MAD检验。只有几百个数字时，仅凭偶然，每根柱子就会上下浮动{9}到{10}个百分点，所以小的起伏说明不了什么。此外，物理常数取决于单位的选择，而且列表里有许多是同一个量换了单位的近似副本，所以它们并不是相互独立的样本。",
+  "Population figures are the World Bank indicator SP.POP.TOTL and GDP is NY.GDP.MKTP.CD, both taken from the Open Knowledge datasets mirrors on GitHub and limited to the {0} ISO {1} countries and territories, so regional and world totals are left out. The constants are the CODATA {2} recommended values as shipped in SciPy; the first digit of a negative constant, such as a magnetic moment, is read from its size. The page uses every value; nothing is sampled or filtered beyond that.": "人口数据是世界银行指标SP.POP.TOTL，GDP是NY.GDP.MKTP.CD，二者都取自GitHub上Open Knowledge的datasets镜像，并只保留{0}个ISO {1}国家和地区，因此不含地区合计和世界合计。物理常数是SciPy中附带的CODATA {2}推荐值；负的常数（例如某些磁矩）按其绝对值读取首位数字。页面使用了全部数值，除此之外没有抽样或筛选。",
+  "<html>Data: country populations (SP.POP.TOTL, {0}) and GDP in current US$ (NY.GDP.MKTP.CD) from <span translate=\"no\">World Bank, World Development Indicators (CC BY {1})</span>, via <a href=\"https://github.com/datasets/population\" translate=\"no\">datasets/population</a> and <a href=\"https://github.com/datasets/gdp\" translate=\"no\">datasets/gdp</a>; physical constants from <span translate=\"no\">P. J. Mohr, D. B. Newell, B. N. Taylor and E. Tiesinga, CODATA recommended values of the fundamental physical constants: {2} (NIST, {3})</span> (<a href=\"https://physics.nist.gov/cuu/Constants/\" translate=\"no\">physics.nist.gov/constants</a>), via <span translate=\"no\">SciPy {4} scipy.constants</span>.": "数据：各国人口（SP.POP.TOTL，{0}年）和以现价美元计的GDP（NY.GDP.MKTP.CD）来自<span translate=\"no\">World Bank, World Development Indicators (CC BY {1})</span>，经由<a href=\"https://github.com/datasets/population\" translate=\"no\">datasets/population</a>和<a href=\"https://github.com/datasets/gdp\" translate=\"no\">datasets/gdp</a>获取；物理常数来自<span translate=\"no\">P. J. Mohr, D. B. Newell, B. N. Taylor and E. Tiesinga, CODATA recommended values of the fundamental physical constants: {2} (NIST, {3})</span>（<a href=\"https://physics.nist.gov/cuu/Constants/\" translate=\"no\">physics.nist.gov/constants</a>），经由<span translate=\"no\">SciPy {4} scipy.constants</span>获取。",
+  "Populations of {0} countries and territories in {1}, from the World Bank. With only {2} numbers, chance alone moves the share for digit {3} by about ±{4} percentage points, so expect small wiggles.": "世界银行公布的{1}年{0}个国家和地区的人口。只有{2}个数字时，仅凭偶然，以{3}开头的比例就会浮动约±{4}个百分点，所以会有小的起伏。",
+  "GDP of {0} economies in current US dollars, the latest year each reported (mostly {1}), from the World Bank. With only {2} numbers, chance alone moves the share for digit {3} by about ±{4} percentage points, so expect small wiggles.": "{0}个经济体以现价美元计的GDP，取每个经济体公布的最新年份（大多为{1}年），来自世界银行。只有{2}个数字时，仅凭偶然，以{3}开头的比例就会浮动约±{4}个百分点，所以会有小的起伏。",
+  "All {0} physical constants in the CODATA {1} list, in SI units. With only {2} numbers, chance alone moves the share for digit {3} by about ±{4} percentage points, so expect small wiggles.": "CODATA {1}列表中的全部{0}个物理常数，均用国际单位制表示。只有{2}个数字时，仅凭偶然，以{3}开头的比例就会浮动约±{4}个百分点，所以会有小的起伏。",
+  "Measured: country populations, World Bank {0}": "实测：各国人口，世界银行 {0}",
+  "Measured: country GDP in US$, World Bank {0}": "实测：各国GDP（美元），世界银行 {0}",
+  "Measured: physical constants, CODATA {0}": "实测：物理常数，CODATA {0}",
+  "{0} numbers, so chance alone moves digit {1} by about ±{2} points": "共{0}个数字，仅凭偶然，数字{1}的比例就会浮动约±{2}个百分点",
+  "The chart shows the leading digits of {0} country populations measured in {1}.": "图表显示{1}年测得的{0}个国家人口的首位数字。",
+  "The chart shows the leading digits of {0} country GDP figures in US dollars.": "图表显示{0}个国家以美元计的GDP数值的首位数字。",
+  "The chart shows the leading digits of {0} physical constants from CODATA {1}.": "图表显示CODATA {1}中{0}个物理常数的首位数字。"
+});

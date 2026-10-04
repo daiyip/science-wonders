@@ -92,6 +92,10 @@
       <label class="switch" for="ode"><input type="checkbox" id="ode" checked> Overlay the SIR equations</label>
     </div>
     <div class="control">
+      <span class="label">Real outbreak</span>
+      <label class="switch" for="measured"><input type="checkbox" id="measured"> Show measured data: 1978 school flu</label>
+    </div>
+    <div class="control">
       <span class="label">Run</span>
       <div class="button-row">
         <button id="play" class="primary">Pause</button>
@@ -117,6 +121,12 @@
         <li>Turn up social distancing. The peak drops and arrives later: the curve flattens, and the dots fall well below the equations, which know nothing about distancing.</li>
       </ul>
       <p data-depth="deep">For R0 = 3 the equations predict that about 94% of an unprotected crowd eventually catches it and that the peak reaches about 30% infected at once. For flu-like R0 = 1.3 only about 42% catch it, and chance matters a lot: each early case starts a chain that dies out on its own with probability about 1/R0, so with five starting cases roughly one outbreak in four fizzles at the start.</p>
+    </section>
+    <section>
+      <h2>A real outbreak</h2>
+      <p>In January 1978 influenza swept through a boys' boarding school in England. Of 763 boys, 512 fell ill, and the school recorded how many were confined to bed each day. Turn on Show measured data to swap the chart for those daily counts, drawn as amber dots, with the SIR equations fitted to them as a red line.</p>
+      <p>The fit is good: the curve rises, peaks and falls with the dots, with a typical miss of about 16 boys. The fitted values are β = 1.79 per day and γ = 0.456 per day, so a boy stayed in bed for about 2.2 days and R0 = β/γ ≈ 3.9. The flu here ran much faster than the page's crowd, because each case lasted 2 days, not 10. Where the model and the school disagree is the total: SIR with R0 = 3.9 predicts that about 747 boys would catch it, but only 512 were reported ill. Some boys were probably immune already or had infections too mild to put them in bed.</p>
+      <p data-depth="deep">The fit treats "in bed" as the infected group I and adjusts three numbers, β, γ and the number infected on 22 January, to minimise the squared differences from the 14 daily counts. The standard errors are about ±0.11 for β, ±0.02 for γ and ±0.2 for R0. The counts were first published as a graph, so different books list slightly different numbers; these are the ones tabulated by De Vries and colleagues and shipped in the R package outbreaks. The dots end on 4 February, when 4 boys were still in bed.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
@@ -183,10 +193,13 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. One simulated day is a fraction of a second. The infection chance per meeting is tuned so a case in a fully susceptible crowd infects R0 others on average; individual runs vary by chance, especially when cases are few.</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. One simulated day is a fraction of a second. The infection chance per meeting is tuned so a case in a fully susceptible crowd infects R0 others on average; individual runs vary by chance, especially when cases are few.</span>
+    <p class="data-cite">Data: boys in bed each day, from <span translate="no">Anonymous, "Influenza in a boarding school", British Medical Journal 1978; 1: 587</span> (<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1603269/" translate="no">PMC1603269</a>), as tabulated in <span translate="no">G. de Vries, T. Hillen, M. Lewis, J. Müller and B. Schönfisch, A Course in Mathematical Biology (SIAM, 2006)</span> and distributed in the R package <a href="https://github.com/reconhub/outbreaks" translate="no">reconhub/outbreaks</a>. SIR fit by least squares on this page's data.</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>
+<script src="data.js"></script>
 <script src="epidemics.js"></script>
 <script src="../../assets/catalog.js"></script>
 <script src="../../assets/tours.js"></script>

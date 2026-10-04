@@ -35,6 +35,7 @@
     font-size: var(--step--1);
     max-width: 80ch;
   }
+  .footer .data-cite { margin: 10px 0 0; }
   @media (max-width: 640px) {
     .controls button { min-height: 40px; }
     .button-row button.preset { padding: 8px 12px; }
@@ -110,11 +111,16 @@
       <span class="label">Sound</span>
       <div class="button-row">
         <button id="chirp">Play the chirp</button>
+        <button id="chirpReal">Play LIGO's recording</button>
       </div>
     </div>
     <div class="control">
       <span class="label">Pitch</span>
       <label class="switch" for="audioShift"><input type="checkbox" id="audioShift" checked> Raise 2 octaves for small speakers</label>
+    </div>
+    <div class="control">
+      <span class="label">Real data</span>
+      <label class="switch" for="measured"><input type="checkbox" id="measured"> Show measured data</label>
     </div>
   </div>
   <p class="callout" id="hint">Load the GW150914 preset and press Play the chirp: that rising "whoop" is the sound of the first gravitational wave ever detected, as heard in LIGO's data on 14 September 2015.</p>
@@ -141,6 +147,12 @@
       <p>In a fifth of a second, three Suns' worth of mass vanished into waves. For that moment the merger outshone all the stars in the observable universe combined, yet it emitted no light at all.</p>
       <p data-depth="deep">Three solar masses is about 5 × 10⁴⁷ J. At the peak, the power was around 3.6 × 10⁴⁹ W. Yet the strain reaching Earth was only 10⁻²¹, because spacetime is extremely stiff: the energy carried by a wave grows with the square of its strain and of its frequency, multiplied by <i>c</i>³/<i>G</i>, a huge number.</p>
       <p class="muted">Einstein predicted the waves in 1916 and doubted they could ever be measured.</p>
+    </section>
+    <section>
+      <h2>The real signal</h2>
+      <p>Turn on Show measured data to lay LIGO's actual recording over the model. The amber line is the strain measured at the Hanford detector on 14 September 2015, filtered to 35 to 350 Hz as in the discovery paper. The white line is the waveform LIGO computed from a full simulation of Einstein's equations for the best-fitting black holes, filtered the same way. Both are lined up so their peak sits on the model's merger line.</p>
+      <p>With the GW150914 preset the model gets the timing right: the real signal also rises from about 35 Hz to about 150 Hz in the last 0.2 s, and its peak strain, 1.0 × 10⁻²¹, is close to the model's. The crests do not line up one by one, because the model uses only the leading-order formula and ignores the detector's orientation, and its bridge into the ringdown is only a sketch. Before the peak the amber line also wobbles with detector noise.</p>
+      <p data-depth="deep">Play LIGO's recording plays 2 s of Hanford data around the merger, whitened (each frequency scaled by the detector's noise level) and kept between 43 and 300 Hz, following LIGO's open-data tutorial. The pitch option shifts it up by 400 Hz rather than two octaves, as that tutorial does. Most of what you hear is noise; the chirp is the short upward sweep near the end. The page stores every fourth sample of the Figure 1 data (4096 per second).</p>
     </section>
     <section data-depth="deep" class="deep-math">
       <h2>The math</h2>
@@ -201,10 +213,13 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Inspiral uses the leading-order (quadrupole) chirp, f ∝ (t<sub>c</sub> − t)<sup>−3/8</sup>, cut off near merger; ringdown uses fitted values for the remnant's mass, spin and ringing. Strain is for an average sky position and orientation, and cosmic redshift is ignored.</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. Inspiral uses the leading-order (quadrupole) chirp, f ∝ (t<sub>c</sub> − t)<sup>−3/8</sup>, cut off near merger; ringdown uses fitted values for the remnant's mass, spin and ringing. Strain is for an average sky position and orientation, and cosmic redshift is ignored.</span>
+    <p class="data-cite">Data: LIGO Hanford strain and numerical-relativity waveform for GW150914 from the Figure 1 data release of <span translate="no">B. P. Abbott et al. (LIGO Scientific and Virgo Collaborations), "Observation of Gravitational Waves from a Binary Black Hole Merger", Phys. Rev. Lett. 116, 061102 (2016)</span>, via the copy in <a href="https://github.com/gwastro/gw150914_investigation" translate="no">gwastro/gw150914_investigation</a>; audio from the 32 s Hanford file in LIGO's open-data tutorial, <a href="https://github.com/gwosc-tutorial/LOSC_Event_tutorial" translate="no">gwosc-tutorial/LOSC_Event_tutorial</a> (<span translate="no">LIGO Open Science Center, gwosc.org</span>).</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>
+<script src="data.js"></script>
 <script src="gravitational-waves.js"></script>
 <script src="../../assets/catalog.js"></script>
 <script src="../../assets/tours.js"></script>

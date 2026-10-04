@@ -324,7 +324,9 @@
       : `No pairs measured at this angle difference yet; quantum mechanics predicts ${fmt(qAgree(d))}% agreement and the best hidden-instruction plan ${fmt(cAgree(d))}%.`;
     return rules + " " + angles + " " + measured;
   }
-  WONDERS.describer(describeScene);
+  // The engine translates the description as a whole; with measured data shown, translate each sentence group first.
+  const t8 = (x) => (window.I18N ? I18N.t(x) : x);
+  WONDERS.describer(() => (showData ? t8(describeScene()) + " " + t8(dataSentence()) : describeScene()));
 
   // ---------- Bell test ----------
   const SETTINGS = [[0, 22.5, +1], [45, 22.5, +1], [45, 67.5, +1], [0, 67.5, -1]];
@@ -412,6 +414,19 @@
     WONDERS.describe("Measured data cleared.", { now: true });
     dirtyStats = true;
   });
+
+
+  // ---------- Measured data (cited single measurements; values are in the page's HTML) ----------
+  // Aspect, Grangier, Roger, PRL 49, 91 (1982): S = 2.697 ± 0.015, prediction 2.70 ± 0.05.
+  // Weihs et al., PRL 81, 5039 (1998): S = 2.73 ± 0.02. Hensen et al., Nature 526, 682 (2015): S = 2.42 ± 0.20.
+  let showData = false;
+  const dataSentence = () => "Measured Bell scores: Aspect's team got S = 2.697 ± 0.015 in 1982, Weihs's team 2.73 ± 0.02 in 1998, and Hensen's loophole-free test 2.42 ± 0.20 in 2015. All are above the limit of 2 and below the perfect quantum score of 2.83.";
+  $("showData").addEventListener("change", (e) => {
+    showData = e.target.checked;
+    $("dataPanel").hidden = !showData;
+    if (showData) WONDERS.describe(dataSentence(), { now: true });
+  });
+  if ($("showData").checked) { showData = true; $("dataPanel").hidden = false; }
 
   // ---------- Loop ----------
   let last = performance.now();

@@ -3,6 +3,7 @@
   // Wide: 960 x 520, orbit and ring side by side over the waveform.
   // Narrow (phones): 480 wide, the three panels stacked, with larger type.
   let W = 960, H = 520, NARROW = false, ctx;
+  let MEAS = false;              // measured-data overlay on (phones get room for its legend)
   const $ = (id) => document.getElementById(id);
 
   // ---------- Constants (SI) ----------
@@ -19,7 +20,7 @@
   function layout() {
     NARROW = (canvas.parentElement.clientWidth || 960) < 640;
     if (NARROW) {
-      W = 480; H = 900;
+      W = 480; H = MEAS ? 956 : 900;
       RING = { x: 0, y: 300, w: 480, h: 336, cx: 240, cy: 475, r: 92 };
       WAVE = { y: 636, x0: 122, x1: 458, cy: 792, amp: 70 };
     } else {
@@ -39,6 +40,7 @@
     playing: !Lab.reducedMotion, t: 0, hold: 0, tv: 0,
     ripples: [], lastCycle: 0,
   };
+  const GWD = window.GW150914_DATA || null;
   let P = {};          // derived parameters
   let curve = [];      // precomputed waveform samples
   let audioCtx = null;
@@ -351,11 +353,43 @@
       }
     }
     ctx.lineWidth = 1;
+    if (MEAS && GWD) drawMeasured(tx);
     // Playhead
     const xp = tx(state.t);
     ctx.strokeStyle = "rgba(233,238,247,0.5)";
     ctx.beginPath(); ctx.moveTo(xp + 0.5, cy - amp - 8); ctx.lineTo(xp + 0.5, cy + amp + 6); ctx.stroke();
   }
+  // LIGO Hanford strain (amber) and LIGO's relativity waveform (white), at true
+  // scale (strain) and time, with the waveform's peak placed on the model's merger.
+  function drawMeasured(tx) {
+    const { x0, x1, cy, amp } = WAVE;
+    const scale = amp / P.hPeak * 1e-21;      // data are strain × 10²¹
+    const top = NARROW ? WAVE.y + 66 : WAVE.y + 40, bot = NARROW ? 900 : H - 4;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, top, x1 - x0, bot - top); ctx.clip();
+    for (const [arr, t0, col, lw] of [[GWD.obs, GWD.t0o, "rgba(240,179,90,0.95)", 1.3], [GWD.nr, GWD.t0w, "rgba(255,255,255,0.9)", 1.4]]) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      for (let i = 0; i < arr.length; i++) {
+        const x = tx(P.tMerge + t0 + i * GWD.dt), y = cy - arr[i] * scale;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.lineWidth = 1;
+    // Legend
+    const lx = NARROW ? 18 : x0 + 8;
+    const ly = NARROW ? 918 : 352;
+    const step = NARROW ? 24 : 16;
+    if (!NARROW) { ctx.fillStyle = "rgba(5,8,14,0.7)"; ctx.fillRect(lx - 4, ly - 12, 300, step * 2 + 2); }
+    ctx.fillStyle = "rgba(240,179,90,0.95)"; ctx.fillRect(lx, ly - 5, 14, 2);
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(lx, ly + step - 5, 14, 2);
+    label("Measured: LIGO Hanford strain, 2015", lx + 20, ly, "left", "rgba(240,179,90,0.95)", NARROW ? W - 60 : 270);
+    label("LIGO relativity simulation, 2016", lx + 20, ly + step, "left", "#e9eef7", NARROW ? W - 60 : 270);
+  }
+
   function niceStep(x) {
     const e = Math.pow(10, Math.floor(Math.log10(x)));
     const m = x / e;
@@ -448,6 +482,35 @@
       Math.round(P.fRd * k) + " Hz" + (k > 1 ? " (two octaves above the true " + Math.round(fA) + " to " + Math.round(P.fRd) + " Hz)." : ", the true pitch. Most phone and laptop speakers can't reproduce it; try headphones.");
   }
 
+  // LIGO's whitened Hanford recording, resampled to the audio context's rate.
+  function playReal() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || !GWD) { $("hint").textContent = "This browser can't synthesize audio."; return; }
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const shifted = $("audioShift").checked;
+    const raw = atob(shifted ? GWD.audio.shift : GWD.audio.raw);
+    const src8 = new Int8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) src8[i] = raw.charCodeAt(i) << 24 >> 24;
+    const sr = audioCtx.sampleRate, k = GWD.audio.fs / sr;
+    const n = Math.floor(src8.length / k);
+    const buf = audioCtx.createBuffer(1, n, sr);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      const u = i * k, j = Math.floor(u), f = u - j;
+      const y = ((src8[j] || 0) * (1 - f) + (src8[j + 1] || 0) * f) / 127;
+      const fade = Math.min(1, i / (0.05 * sr), (n - i) / (0.05 * sr));
+      data[i] = 0.5 * y * fade;
+    }
+    const node = audioCtx.createBufferSource();
+    node.buffer = buf;
+    node.connect(audioCtx.destination);
+    node.start();
+    $("hint").textContent = shifted
+      ? "Playing 2 s of LIGO Hanford data, whitened and filtered to 43 to 300 Hz, shifted up by 400 Hz. The hiss is detector noise; the chirp is the short whoop 1.6 s in."
+      : "Playing 2 s of LIGO Hanford data, whitened and filtered to 43 to 300 Hz, at the true pitch. The hiss is detector noise; the chirp is the short whoop 1.6 s in. Try headphones.";
+  }
+
   // ---------- Narration, sound and challenges ----------
   const W8 = window.WONDERS;
   // Peak strain of GW150914 itself, for the "half the strain" challenge.
@@ -468,7 +531,8 @@
   }
   W8.describer(() => {
     const stats = [...document.querySelectorAll(".stats > span")].map((s) => s.textContent.replace(/\s+/g, " ").trim()).join(". ") + ".";
-    return tr("Two black holes orbiting and merging, a ring of free particles stretched and squeezed by the passing wave, and the strain waveform rising in frequency then ringing down.") + " " + stats;
+    return tr("Two black holes orbiting and merging, a ring of free particles stretched and squeezed by the passing wave, and the strain waveform rising in frequency then ringing down.") + " " + stats +
+      (MEAS ? " " + tr("Measured data is on: LIGO's Hanford strain from 2015 and LIGO's relativity waveform are drawn over the model, peaks aligned at the merger.") : "");
   });
 
   // ---------- Controls ----------
@@ -531,6 +595,18 @@
   });
   $("replay").addEventListener("click", () => { restart(); setPlaying(true); });
   $("chirp").addEventListener("click", playChirp);
+  $("chirpReal").addEventListener("click", playReal);
+  $("measured").addEventListener("change", (e) => {
+    MEAS = e.target.checked && !!GWD;
+    if (NARROW) { layout(); draw(sample(state.t)); }
+    if (!MEAS) return;
+    const isRef = (state.m1 === 36 && state.m2 === 29) || (state.m1 === 29 && state.m2 === 36);
+    const msg = isRef
+      ? "Measured data on: the amber line is LIGO Hanford's filtered strain from 2015, the white line LIGO's relativity waveform, both at true scale with their peak on the model's merger."
+      : "Measured data on: LIGO's GW150914 signal is drawn at true scale. Load the GW150914 preset to compare it with a model of the same black holes.";
+    $("hint").textContent = msg;
+    W8.describe(msg, { now: true });
+  });
 
   // Switch layouts at the phone breakpoint; the playback state carries over.
   let rzTimer = 0;
@@ -542,6 +618,8 @@
   }).observe(canvas.parentElement);
 
   // ---------- Start ----------
+  MEAS = $("measured").checked && !!GWD;
+  if (MEAS && NARROW) layout();
   measureRef();
   updateReadouts();
   if (Lab.reducedMotion) {

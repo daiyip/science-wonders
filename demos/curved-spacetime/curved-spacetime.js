@@ -193,9 +193,9 @@
   }
   W8.describer(() => {
     if (state.mode === "orbits") {
-      return tr("A black hole at the centre of a warped sheet, with test particles orbiting it. The dashed green ring is the last stable orbit at 3 rₛ.") + " " + statsText("orbitStats");
+      return tr("A black hole at the centre of a warped sheet, with test particles orbiting it. The dashed green ring is the last stable orbit at 3 rₛ.") + " " + statsText("orbitStats") + (showData ? " " + tr(dataSentence()) : "");
     }
-    return tr("A black hole at the centre of a warped sheet, with light rays passing it from the left. The dashed yellow ring is the photon sphere at 1.5 rₛ.") + " " + statsText("lightStats");
+    return tr("A black hole at the centre of a warped sheet, with light rays passing it from the left. The dashed yellow ring is the photon sphere at 1.5 rₛ.") + " " + statsText("lightStats") + (showData ? " " + tr(dataSentence()) : "");
   });
 
   // ---------- Presets ----------
@@ -722,6 +722,141 @@
     if (state.mode === "orbits") { state.launches = []; state.particles = []; state.colourIdx = 0; updateOrbitStats(); }
     else { state.b = 3.2 * RS; $("impact").value = "3.2"; computeRays(); }
   });
+
+
+  // ---------- Measured data for the Sun (cited single measurements) ----------
+  // The page's weak-field formulas, worked out with GM☉ = 1.32712440018e20 m³/s² and the
+  // IAU nominal solar radius 6.957e8 m: α = 4GM/(c²b) at the limb = 1.7512″ (Newton half).
+  // Mercury: Δφ = 6πGM/(c²a(1 − e²)) per orbit, a = 5.7909e10 m, e = 0.20563, period
+  // 87.969 d, gives 42.98″ per century.
+  // 1919: Dyson, Eddington & Davidson, Phil. Trans. R. Soc. A 220, 291 (1920); ± are
+  //   probable errors. Sobral astrographic 0.93″ was published without an uncertainty.
+  // VLBI: Shapiro et al., PRL 92, 121101 (2004), γ = 0.99983 ± 0.00045 → (1+γ)/2 × 1.7512″.
+  // Mercury: Clemence, Rev. Mod. Phys. 19, 361 (1947): 5599.74 ± 0.41 − 5557.18 ± 0.85 = 42.56 ± 0.94.
+  const SUN = (() => {
+    const GM = 1.32712440018e20, C = 299792458, RSUN = 6.957e8, ARC = 180 / Math.PI * 3600;
+    const limb = 4 * GM / (C * C * RSUN) * ARC;
+    const a = 5.7909e10, e = 0.20563, period = 87.969;
+    const merc = 6 * Math.PI * GM / (C * C * a * (1 - e * e)) * ARC * 36525 / period;
+    return { limb, newton: limb / 2, merc };
+  })();
+  const VLBI_G = 0.99983, VLBI_GERR = 0.00045;
+  const BEND = [
+    { name: "Sobral, 4-inch lens, 1919", v: 1.98, err: 0.12 },
+    { name: "Príncipe, 1919", v: 1.61, err: 0.30 },
+    { name: "Sobral, astrograph, 1919 (set aside)", v: 0.93, err: null },
+    { name: "Radio VLBI, 1979–1999", v: (1 + VLBI_G) / 2 * SUN.limb, err: VLBI_GERR / 2 * SUN.limb },
+  ];
+  const MERC = { v: 42.56, err: 0.94 };
+  const AMBER = "#ffc857", EIN = "#8fa6ff";
+  const dataCanvas = $("dataChart");
+  let dctx = null, DW = 960, DH = 360, DNARROW = null, showData = false;
+  function dataLayout() {
+    const w = dataCanvas.parentElement.clientWidth;
+    if (!w) return false;
+    const n = w < 640;
+    if (n !== DNARROW || !dctx) {
+      DNARROW = n; DW = n ? 480 : 960; DH = n ? 740 : 340;
+      dctx = Lab.setupCanvas(dataCanvas, DW, DH);
+    }
+    return true;
+  }
+  const dfs = (px) => (DNARROW ? Math.max(17, Math.round(px * 1.42)) : px) + "px ";
+  const SANS = "'IBM Plex Sans', system-ui, sans-serif";
+  function dText(t, x, y, maxW) {
+    const s = tr(t);
+    if (maxW && dctx.measureText(s).width > maxW) dctx.fillText(s, x, y, maxW); else dctx.fillText(s, x, y);
+  }
+  // A forest plot: one row per measurement on a shared axis, with vertical lines for the theories.
+  function forest(ox, oy, w, title, unit, lo, hi, ticks, lines, rows, note) {
+    const L = ox + 20, R = ox + w - 20;
+    const X = (v) => L + (R - L) * (v - lo) / (hi - lo);
+    const rowH = DNARROW ? 62 : 44, top = oy + (DNARROW ? 76 : 62);
+    dctx.font = dfs(12) + MONO; dctx.textAlign = "left"; dctx.fillStyle = "#7f8ea6";
+    dText(title, ox + 16, oy + 26, w - 32);
+    const bottom = top + 14 + rowH * rows.length;
+    for (const t of ticks) {
+      dctx.strokeStyle = "#141d2d"; dctx.beginPath(); dctx.moveTo(X(t), top); dctx.lineTo(X(t), bottom); dctx.stroke();
+      dctx.font = dfs(10) + MONO; dctx.fillStyle = "#7f8ea6"; dctx.textAlign = "center";
+      dctx.fillText(String(t), X(t), bottom + 16);
+    }
+    dctx.fillStyle = "#97a6b9"; dctx.font = dfs(10) + SANS;
+    dText(unit, (L + R) / 2, bottom + (DNARROW ? 42 : 34), R - L);
+    for (const ln of lines) {
+      dctx.strokeStyle = ln.col; dctx.lineWidth = 2; dctx.setLineDash(ln.dash || []);
+      dctx.beginPath(); dctx.moveTo(X(ln.v), top - 4); dctx.lineTo(X(ln.v), bottom); dctx.stroke();
+      dctx.setLineDash([]); dctx.lineWidth = 1;
+      dctx.font = dfs(10) + MONO; dctx.fillStyle = ln.col; dctx.textAlign = ln.align || "center";
+      dText(ln.label, X(ln.v) + (ln.align === "left" ? 4 : ln.align === "right" ? -4 : 0), top - 10);
+    }
+    rows.forEach((r, i) => {
+      const y = top + 14 + rowH * i + rowH * 0.62;
+      dctx.font = dfs(11) + SANS; dctx.fillStyle = "#c9d4e3"; dctx.textAlign = "left";
+      const label = r.name + ": " + (r.err == null ? r.v.toFixed(2) + " (no ± given)" : r.v.toFixed(r.dp || 2) + " ± " + r.err.toFixed(r.dp || 2));
+      const lw = Math.min(R - L, dctx.measureText(tr(label)).width), ly = y - (DNARROW ? 20 : 14);
+      dctx.fillStyle = "rgba(5,8,14,0.85)"; dctx.fillRect(L - 3, ly - (DNARROW ? 17 : 12), lw + 6, DNARROW ? 22 : 16);
+      dctx.fillStyle = "#c9d4e3";
+      dText(label, L, ly, R - L);
+      if (r.err != null) {
+        dctx.strokeStyle = AMBER; dctx.lineWidth = 1.5;
+        const x0 = X(r.v - r.err), x1 = X(r.v + r.err);
+        dctx.beginPath(); dctx.moveTo(x0, y); dctx.lineTo(x1, y); dctx.moveTo(x0, y - 5); dctx.lineTo(x0, y + 5); dctx.moveTo(x1, y - 5); dctx.lineTo(x1, y + 5); dctx.stroke();
+        dctx.lineWidth = 1;
+      }
+      dctx.lineWidth = 1.5;
+      dctx.beginPath(); dctx.arc(X(r.v), y, 5.5, 0, Math.PI * 2);
+      if (r.err == null) { dctx.strokeStyle = AMBER; dctx.fillStyle = "#05080e"; dctx.fill(); dctx.stroke(); }
+      else { dctx.fillStyle = AMBER; dctx.strokeStyle = "#05080e"; dctx.fill(); dctx.stroke(); }
+      dctx.lineWidth = 1;
+    });
+    let ny = bottom + (DNARROW ? 68 : 54);
+    dctx.font = dfs(10) + SANS; dctx.fillStyle = "#7f8ea6"; dctx.textAlign = "left";
+    for (const n of note || []) {
+      // Wrap each note line (translated whole first; Chinese wraps per character).
+      const t = tr(n), cjk = /[\u3000-\u9fff]/.test(t), words = cjk ? [...t] : t.split(" ");
+      let line = "";
+      for (const wd of words) {
+        const next = line ? line + (cjk ? "" : " ") + wd : wd;
+        if (dctx.measureText(next).width > R - L && line) { dctx.fillText(line, L, ny); ny += DNARROW ? 22 : 16; line = wd; }
+        else line = next;
+      }
+      if (line) { dctx.fillText(line, L, ny); ny += DNARROW ? 22 : 16; }
+    }
+  }
+  function drawData() {
+    if (!showData || !dataLayout()) return;
+    dctx.fillStyle = "#05080e"; dctx.fillRect(0, 0, DW, DH);
+    const bendLines = [
+      { v: SUN.newton, col: "rgba(201,212,227,0.6)", dash: [4, 4], label: "Newton " + SUN.newton.toFixed(2), align: "right" },
+      { v: SUN.limb, col: EIN, label: "Einstein " + SUN.limb.toFixed(2), align: "left" },
+    ];
+    const mercLines = [
+      { v: 0, col: "rgba(201,212,227,0.6)", dash: [4, 4], label: "Newton 0", align: "left" },
+      { v: SUN.merc, col: EIN, label: "Einstein " + SUN.merc.toFixed(2), align: "right" },
+    ];
+    const bendRows = BEND.map((b, i) => (i === 3 ? { ...b, dp: 4 } : b));
+    const mercRows = [{ name: "Clemence 1947, observed minus other effects", v: MERC.v, err: MERC.err }];
+    const w = DNARROW ? DW : 560;
+    const mercNote = ["observed " + (5599.74).toFixed(2) + " ± 0.41 minus " + (5557.18).toFixed(2) + " ± 0.85", "from the other planets and Earth's turning axis"];
+    forest(0, 0, w, "STARLIGHT BENDING AT THE SUN'S EDGE", "arcseconds", 0, 2.5, [0, 0.5, 1, 1.5, 2, 2.5], bendLines, bendRows,
+      ["1919 bars are probable errors as published, about 0.67 σ"]);
+    if (DNARROW) { dctx.fillStyle = "#121b2b"; dctx.fillRect(20, 450, DW - 40, 1); forest(0, 460, DW, "MERCURY'S UNEXPLAINED PERIHELION SHIFT", "arcseconds per century", 0, 50, [0, 10, 20, 30, 40, 50], mercLines, mercRows, mercNote); }
+    else { dctx.fillStyle = "#121b2b"; dctx.fillRect(580, 20, 1, DH - 40); forest(590, 0, 370, "MERCURY'S UNEXPLAINED PERIHELION SHIFT", "arcseconds per century", 0, 50, [0, 10, 20, 30, 40, 50], mercLines, mercRows, mercNote); }
+  }
+  function dataSentence() {
+    return "Measured data: starlight passing the Sun's edge bends by " + BEND[0].v.toFixed(2) + " ± " + BEND[0].err.toFixed(2) + " arcseconds at Sobral and " +
+      BEND[1].v.toFixed(2) + " ± " + BEND[1].err.toFixed(2) + " at Príncipe in 1919, and " + BEND[3].v.toFixed(4) + " ± " + BEND[3].err.toFixed(4) +
+      " by radio; Einstein's formula gives " + SUN.limb.toFixed(2) + " and Newton's " + SUN.newton.toFixed(2) + ". Mercury's unexplained perihelion shift is " +
+      MERC.v.toFixed(2) + " ± " + MERC.err.toFixed(2) + " arcseconds per century, against " + SUN.merc.toFixed(2) + " from Einstein.";
+  }
+  function setShowData(on) {
+    showData = on;
+    $("dataPanel").hidden = !on;
+    if (on) { drawData(); W8.describe(dataSentence(), { now: true }); }
+  }
+  $("showData").addEventListener("change", (e) => setShowData(e.target.checked));
+  new ResizeObserver(() => { if (showData && dataLayout()) drawData(); }).observe(dataCanvas.parentElement);
+  if ($("showData").checked) setShowData(true);
 
   // Open with a precessing orbit already traced so the rosette is visible at once.
   if (!state.running) $("play").textContent = "Play";

@@ -96,6 +96,11 @@
         <option value="fact">Factorials: 1, 2, 6, 24, 120, …</option>
         <option value="growth" selected>Growing populations (random growth)</option>
         <option value="uniform">Uniform random, 1 to 9,999 (control)</option>
+        <optgroup label="Measured data">
+          <option value="population">Country populations, 2025 (World Bank)</option>
+          <option value="gdp">Country GDP in US$, latest year (World Bank)</option>
+          <option value="constants">Physical constants (CODATA 2022)</option>
+        </optgroup>
         <option value="custom">Your numbers (paste below)</option>
       </select>
     </div>
@@ -135,7 +140,14 @@
         <li>Shrink the size to 20. Small samples wobble a lot; the law is about proportions in the long run.</li>
         <li>Compare powers of 2 with the uniform control. Both look "random", but only one spreads evenly on the log strip.</li>
         <li>Paste prices from a receipt, then paste populations of countries. Which spans more powers of ten?</li>
+        <li>Pick the three measured datasets under Data. Which comes closest to Benford, and which digit is furthest off?</li>
       </ul>
+    </section>
+    <section>
+      <h2>Real measurements</h2>
+      <p>Three of the data choices are real published numbers, not simulations. Country populations: 215 countries and territories in 2025 from the World Bank, spanning about 5 powers of ten from Tuvalu to India. Country GDP: 212 economies in current US dollars, the latest year each one reported (2023 for 184 of them). Physical constants: all 355 values in the CODATA 2022 list, from the speed of light to the mass of the alpha particle, in SI units.</p>
+      <p>Populations come closest, with 30.2% starting with 1 against Benford's 30.1%. GDP is near Benford too, but has only 4 values starting with 9. The constants have too many 1s (35.5%) and too few 3s and 7s, and fail the MAD test. With a few hundred numbers, chance alone moves each bar by 2 to 3 percentage points, so small wiggles mean little. The constants also depend on the choice of units and include many near-copies of one value in different units, so they are not independent draws.</p>
+      <p data-depth="deep">Population figures are the World Bank indicator SP.POP.TOTL and GDP is NY.GDP.MKTP.CD, both taken from the Open Knowledge datasets mirrors on GitHub and limited to the 249 ISO 3166 countries and territories, so regional and world totals are left out. The constants are the CODATA 2022 recommended values as shipped in SciPy; the first digit of a negative constant, such as a magnetic moment, is read from its size. The page uses every value; nothing is sampled or filtered beyond that.</p>
     </section>
     <section>
       <h2>Why it's strange</h2>
@@ -202,10 +214,13 @@
     </div>
   </section>
 
-  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Very large terms such as 3000! are handled by their logarithms, which is all a first digit needs. Your pasted numbers stay in your browser.</footer>
+  <footer class="footer"><span>Part of <a href="../../index.html">Science Wonders</a>. Very large terms such as 3000! are handled by their logarithms, which is all a first digit needs. Your pasted numbers stay in your browser.</span>
+    <p class="data-cite">Data: country populations (SP.POP.TOTL, 2025) and GDP in current US$ (NY.GDP.MKTP.CD) from <span translate="no">World Bank, World Development Indicators (CC BY 4.0)</span>, via <a href="https://github.com/datasets/population" translate="no">datasets/population</a> and <a href="https://github.com/datasets/gdp" translate="no">datasets/gdp</a>; physical constants from <span translate="no">P. J. Mohr, D. B. Newell, B. N. Taylor and E. Tiesinga, CODATA recommended values of the fundamental physical constants: 2022 (NIST, 2024)</span> (<a href="https://physics.nist.gov/cuu/Constants/" translate="no">physics.nist.gov/constants</a>), via <span translate="no">SciPy 1.17 scipy.constants</span>.</p>
+  </footer>
 </div>
 
 <script src="../../assets/lab.js"></script>
+<script src="data.js"></script>
 <script src="benford.js"></script>
 <script src="../../assets/catalog.js"></script>
 <script src="../../assets/tours.js"></script>
