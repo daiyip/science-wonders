@@ -4,12 +4,13 @@ Interactive experiments with the strangest, most beautiful ideas in science. Pla
 
 ## Experiments
 
-Twenty experiments in four categories, each with controls to play with, a short explainer and real-world applications.
+Thirty experiments in five categories, each with controls to play with, a short explainer and real-world applications.
 
-- **Quantum world:** double slit, entanglement (Bell test), tunneling, quantum eraser, decoherence, Stern–Gerlach
-- **Space and time:** time dilation, curved spacetime, gravitational waves, expanding universe, speed of light
-- **Life and complexity:** chaos, entropy, evolution, emergence (Game of Life and flocking), epidemics
-- **Mind-bending math:** Monty Hall, infinity, birthday paradox, Benford's law
+- **Quantum world:** double slit, entanglement (Bell test), tunneling, quantum eraser, decoherence, Stern–Gerlach, path integral
+- **Space and time:** time dilation, curved spacetime, gravitational waves, expanding universe, speed of light, ladder paradox
+- **Life and complexity:** chaos, entropy, evolution, emergence (Game of Life and flocking), epidemics, Mandelbrot set
+- **Mind-bending math:** Monty Hall, infinity, birthday paradox, Benford's law, Fourier series, prime spirals
+- **Everyday wonders:** blue sky, rainbow, Doppler effect, resonance, tides
 
 ## Features on every experiment
 

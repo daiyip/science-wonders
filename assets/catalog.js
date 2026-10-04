@@ -3,7 +3,8 @@
   "quantum": "Quantum world",
   "cosmos": "Space and time",
   "complexity": "Life and complexity",
-  "math": "Mind-bending math"
+  "math": "Mind-bending math",
+  "everyday": "Everyday wonders"
 };
 window.WONDERS.catalog = [
   {
@@ -180,5 +181,40 @@ window.WONDERS.catalog = [
     "title": "Prime spirals",
     "eyebrow": "Ulam spiral",
     "blurb": "Write the numbers in a spiral, light up the primes, and find diagonals nobody fully understands."
+  },
+  {
+    "slug": "blue-sky",
+    "cat": "everyday",
+    "title": "Why the sky is blue",
+    "eyebrow": "Rayleigh scattering",
+    "blurb": "Shine sunlight through air and see why noon is blue, sunsets are red and clouds are white."
+  },
+  {
+    "slug": "rainbow",
+    "cat": "everyday",
+    "title": "Inside a rainbow",
+    "eyebrow": "Optics of raindrops",
+    "blurb": "Trace sunlight through a single raindrop and find out why every rainbow sits at 42 degrees."
+  },
+  {
+    "slug": "doppler",
+    "cat": "everyday",
+    "title": "The Doppler effect",
+    "eyebrow": "Moving sources",
+    "blurb": "Drive a siren past a listener, then past the speed of sound, and watch the waves bunch into a shock."
+  },
+  {
+    "slug": "resonance",
+    "cat": "everyday",
+    "title": "Resonance",
+    "eyebrow": "Driven oscillators",
+    "blurb": "Push a swing, a wine glass or a bridge at just the right rhythm and small nudges add up to a huge swing."
+  },
+  {
+    "slug": "tides",
+    "cat": "everyday",
+    "title": "Why there are two tides",
+    "eyebrow": "Tidal forces",
+    "blurb": "See how the Moon stretches the whole Earth, so the ocean bulges on the far side too."
   }
 ];

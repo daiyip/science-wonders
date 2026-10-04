@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="doppler"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Doppler effect · Science Wonders</title>
+<meta name="description" content="Drive a siren past a listener and watch its sound waves bunch up ahead and spread out behind. Hear the pitch drop as it passes, then push past the speed of sound and watch the waves pile into a Mach cone and a sonic boom.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="The Doppler effect">
+<meta property="og:description" content="Drive a siren past a listener, then past the speed of sound, and watch the waves bunch into a shock.">
+<meta property="og:url" content="https://science.daiyip.com/demos/doppler/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/doppler.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../../assets/icon-192.png">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  select {
+    font: inherit;
+    font-size: var(--step--1);
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    color: var(--ink);
+    width: 100%;
+    min-width: 0;
+  }
+  #bench { touch-action: none; cursor: crosshair; }
+  .bench canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  #listen.on { background: var(--warn); border-color: var(--warn); color: var(--accent-ink); }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+    select { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Acoustics · 1842 / 1845 / 1947</div>
+    <h1>The Doppler effect</h1>
+    <p class="lede">A siren sings one steady note, yet you hear it high as it comes and low as it goes. Each ring of sound spreads out from the spot where it was made, and the siren chases its own rings. Speed it up past the speed of sound and the rings pile into a cone that you hear all at once, as a boom.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="560" tabindex="0" aria-label="A siren moving along a road from left to right, sending out circular sound waves that bunch up ahead of it and spread out behind it, a listener you can move, and a plot of the pitch the listener hears. Drag the listener, or focus the picture and move it with the arrow keys; plus and minus change the speed and space pauses."></canvas>
+  </div>
+  <div class="stats">
+    <span>Source speed <b id="speedNow">–</b></span>
+    <span>Emitted <b id="fEmit">–</b></span>
+    <span>Heard now <b id="fHeard">–</b></span>
+    <span>Pitch ratio <b id="ratio">–</b></span>
+    <span>Heard sound left the source <b id="ago">–</b></span>
+    <span>Mach cone half-angle <b id="coneAngle">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="mach">Source speed <output id="machOut">Mach 0.40</output></label>
+      <input type="range" id="mach" min="0" max="2" step="0.01" value="0.4">
+    </div>
+    <div class="control">
+      <span class="label">Speed presets</span>
+      <div class="button-row">
+        <button id="preCar">Car</button>
+        <button id="preJet">Airliner</button>
+        <button id="preMach1">Mach 1</button>
+        <button id="preMach2">Mach 2</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="freq">Siren frequency <output id="freqOut">440 Hz</output></label>
+      <input type="range" id="freq" min="200" max="1000" step="10" value="440">
+    </div>
+    <div class="control">
+      <span class="label">Hear it</span>
+      <div class="button-row">
+        <button id="listen" class="primary">Play sound</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="volume">Volume <output id="volumeOut">40%</output></label>
+      <input type="range" id="volume" min="0" max="100" step="1" value="40">
+    </div>
+    <div class="control">
+      <label for="slowmo">Time</label>
+      <select id="slowmo">
+        <option value="15" selected>Slow motion, 15 times slower</option>
+        <option value="5">Slow motion, 5 times slower</option>
+        <option value="1">Real time</option>
+      </select>
+    </div>
+    <div class="control">
+      <span class="label">Guides</span>
+      <label class="switch" for="guides"><input type="checkbox" id="guides" checked> Show where the heard sound came from</label>
+    </div>
+    <div class="control">
+      <span class="label">Simulation</span>
+      <div class="button-row">
+        <button id="play">Pause</button>
+        <button id="restart">New pass</button>
+      </div>
+    </div>
+    <input type="hidden" id="listenerX" value="15">
+    <input type="hidden" id="listenerY" value="14">
+  </div>
+  <p class="callout" id="hint">Drag the listener anywhere. The faint dot marks where the siren was when it made the sound the listener hears right now. With the picture focused, the arrow keys move the listener, + and − change the speed and space pauses.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>The siren drives along the road from left to right. Every ring is one wave crest, spreading at the speed of sound, 343 m/s, from the point where the siren was when it made it. Because the siren keeps moving, it nearly catches up with the rings it sends forward, so they crowd together, while the rings it leaves behind are stretched apart.</p>
+      <p>Crests that arrive closer together mean a higher frequency, so the listener hears a higher pitch while the siren approaches and a lower one after it passes. The strip below the road plots the pitch the listener hears as a multiple of the siren's own note.</p>
+      <p data-depth="deep">The page keeps a record of where the siren was at every moment. For the listener it finds each moment of emission whose ring is just reaching them now, and compares how fast emission time and arrival time tick. If two crests made 1 ms apart arrive 0.5 ms apart, the pitch is doubled. Only every 8th crest is drawn as a ring; the real siren makes 8 crests between neighbouring rings.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Set the speed to 0. The rings are perfect circles around the siren and the listener hears the true note wherever they stand.</li>
+        <li>Press Play sound and listen to a pass at Mach 0.4. The pitch is high and almost steady on the way in, then slides down quickly as the siren goes by. It does not rise as the siren gets closer.</li>
+        <li>Move the listener far from the road. The slide becomes slower and gentler, because the angle between the siren's path and the listener changes more slowly.</li>
+        <li>Press Mach 1. The rings it sends forward can never get ahead of it, so they pile into a single wall at its nose.</li>
+        <li>Press Mach 2. The listener hears nothing at all until the cone sweeps over them, then a boom, then two sounds at once.</li>
+      </ul>
+      <p data-depth="deep">At Mach 0.4 a listener right on the road would hear 1 ÷ (1 − 0.4) = 1.67 times the note on approach and 1 ÷ (1 + 0.4) = 0.71 times it afterwards, a fall of more than an octave. Off the road the heard pitch follows the angle θ between the siren's path and the line to the listener, measured at the moment the sound was made, so the slide happens over the time the angle takes to swing round.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>The siren never changes its note, and the driver hears it steady the whole time. The change exists only for someone the siren is moving towards or away from. And what you hear now is old news: it left the siren when the siren was somewhere else, which is why the pitch is exactly the true note only once the siren is already past you.</p>
+      <p class="muted">Christian Doppler predicted the effect in 1842, for the colours of double stars. In 1845 Buys Ballot tested it with horn players riding a train near Utrecht while musicians on the platform judged the pitch. Chuck Yeager first flew faster than sound in level flight in 1947.</p>
+      <p data-depth="deep">Above Mach 1 the siren outruns its own sound. Every point on the cone is a place where crests made over a stretch of time arrive at the same moment, so their energy lands together as a shock wave: the boom. After it, the listener hears two sounds at once: the one made as the siren receded, at a low pitch, and the one made earlier as it approached, which arrives in reverse order, played backwards.</p>
+      <p data-depth="deep">Light has a Doppler effect too, with a difference. Sound moves through air, so it matters whether the source or the listener is moving relative to the air. Light needs no medium; only the relative speed counts, and time dilation adds a shift even for motion straight across the line of sight. Light from galaxies moving away from us is stretched toward red, the redshift. Most distant galaxies are redshifted, and the further away they are the larger the shift, which is how we know the universe is expanding: see <a href="../expanding-universe/index.html">The expanding universe</a>.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">t<sub>a</sub> = t<sub>e</sub> + |L − S(t<sub>e</sub>)| ÷ c</div>
+      <p>A crest made at time t<sub>e</sub>, when the siren was at S(t<sub>e</sub>), reaches the listener at L at the arrival time t<sub>a</sub>. The page stores the siren's position at every frame and, for the current time, finds every t<sub>e</sub> whose crest is arriving now by looking for a sign change in c(t − t<sub>e</sub>) − |L − S(t<sub>e</sub>)| along the record. Below Mach 1 there is exactly one; above Mach 1 there are none before the cone arrives and two after it.</p>
+      <div class="eq" data-depth="deep" translate="no">f′ = f ÷ |dt<sub>a</sub> ÷ dt<sub>e</sub>|<br>&nbsp;&nbsp;= f · c ÷ |c − v cos θ|</div>
+      <p>Crests made dt<sub>e</sub> apart arrive dt<sub>a</sub> apart, so the heard frequency f′ is the siren's frequency f divided by that ratio. Differentiating the first equation gives the second form, with v the siren's speed and θ the angle between its path and the line from where it was to the listener. The page uses the first form, computed from neighbouring records, so it also works when you change the speed mid-pass. The Heard now readout is this number.</p>
+      <div class="eq" data-depth="deep" translate="no">M = v ÷ c<br>sin α = 1 ÷ M</div>
+      <p>The Mach number M compares the siren's speed with the speed of sound. Above M = 1 the crests are wrapped by a cone with half-angle α: a crest made a time τ ago has radius cτ, and the siren is vτ further on, so the edge of the cone makes an angle with sine cτ ÷ vτ. At Mach 2, α = 30°. Where cos θ = 1 ÷ M, dt<sub>a</sub> ÷ dt<sub>e</sub> is zero: a stretch of crests arrives at once, which is the boom.</p>
+      <div class="eq" data-depth="deep" translate="no">f′ = f ÷ [γ (1 − β cos θ)]<br>γ = 1 ÷ √(1 − β²)<br>β = v ÷ c<br>1 + z = λ′ ÷ λ</div>
+      <p>The same idea for light, which the page does not simulate. The factor 1 − β cos θ is the same crowding of crests; the extra γ is time dilation of the moving source's clock. Head-on recession gives 1 + z = √((1 + β) ÷ (1 − β)). For galaxies far away, most of z comes from the stretching of space while the light travels, but nearby it reads like a Doppler shift.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Measuring speed by listening</h2>
+      <p>Any wave that bounces off or leaves a moving thing comes back with its frequency shifted by an amount set by the speed. Measure the shift and you have the speed, without touching anything.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>Doppler ultrasound</h3>
+        <p>An ultrasound probe sends sound of a few megahertz into the body. Blood cells moving toward the probe return it at a slightly higher frequency, cells moving away at a lower one. The shift, a few kilohertz, gives the speed and direction of blood flow, which is how doctors find narrowed arteries and check an unborn baby's heart.</p>
+        <span class="link"><b>In the demo:</b> moving toward the listener raises the pitch, moving away lowers it.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Traffic</span>
+        <h3>Radar speed guns</h3>
+        <p>A police radar gun sends microwaves at a car and listens to the echo. A car at 100 km/h shifts a 24 GHz signal by about 4.4 kHz, and the gun turns that into a speed. Pointing at an angle reads only the part of the speed along the beam, so the gun reads a little low.</p>
+        <span class="link"><b>In the demo:</b> only v cos θ counts, the part of the motion toward the listener.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Meteorology</span>
+        <h3>Weather radar</h3>
+        <p>Doppler weather radars measure how fast rain and hail move toward or away from the dish. Next to each other, strong inbound and outbound winds reveal a rotating storm, and forecasters can issue tornado warnings minutes before a funnel touches down.</p>
+        <span class="link"><b>In the demo:</b> the heard pitch tells you how fast the source closes in.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Astronomy</span>
+        <h3>Finding planets round other stars</h3>
+        <p>A planet makes its star wobble. The star's light shifts toward blue and then red in a regular rhythm, by an amount set by a speed of only metres per second. In 1995 Michel Mayor and Didier Queloz found 51 Pegasi b this way, the first planet seen orbiting a Sun-like star.</p>
+        <span class="link"><b>In the demo:</b> a source moving toward you is heard higher, moving away lower.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Aviation</span>
+        <h3>Taming the sonic boom</h3>
+        <p>The United States banned supersonic airliner flights over land in 1973, because the boom rattled windows along a strip tens of kilometres wide under the flight path, so Concorde flew faster than sound only over the sea. NASA's X-59 is shaped so that its shock waves spread out instead of merging, aiming for a soft thump instead of a crack.</p>
+        <span class="link"><b>In the demo:</b> above Mach 1 every listener under the path hears the cone arrive.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Biology</span>
+        <h3>Bats that correct for their own speed</h3>
+        <p>Horseshoe bats hunt with calls near 83 kHz and have ears tuned very sharply to that frequency. Flying toward a wall raises the echo's pitch, so they lower their call just enough that the echo stays in tune, and the flutter of insect wings stands out as a Doppler wobble.</p>
+        <span class="link"><b>In the demo:</b> f′ = f · c ÷ (c − v cos θ), used in reverse.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. A point source in still air at 20 °C, speed of sound 343 m/s, in two dimensions seen from above. Wave crests are exact circles spreading from where they were made; every 8th crest is drawn. Loudness falls off with distance, but the extra loudness of a fast-approaching source and the true shape of a shock wave are left out.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="doppler.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/doppler.js"></script>
+<script src="../../assets/wonders.js" data-slug="doppler"></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="rainbow"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inside a rainbow · Science Wonders</title>
+<meta name="description" content="Trace sunlight through a single raindrop, find the turning point where the exit rays pile up at 42 degrees, and build a whole rainbow, dark band and all, out of thousands of drops.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Inside a rainbow">
+<meta property="og:description" content="Trace sunlight through a single raindrop and find out why every rainbow sits at 42 degrees, with red on the outside and a dark band above it.">
+<meta property="og:url" content="https://science.daiyip.com/demos/rainbow/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/rainbow.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../../assets/icon-192.png">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  #bench { touch-action: none; cursor: crosshair; }
+  #sky { margin-top: 10px; }
+  .bench canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls button { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Optics · Theodoric 1307 / Descartes 1637 / Newton 1704</div>
+    <h1>Inside a rainbow</h1>
+    <p class="lede">A raindrop throws sunlight back at you over a whole range of angles, so why do you see a thin coloured ring and not a blur? Send light through one drop and watch the exit rays bunch up at a turning point near 42°. Then let thousands of drops fall and see the bow, the second bow and the dark band between them appear.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="540" tabindex="0" aria-label="A large raindrop with sunlight entering from the left, bending, reflecting inside and leaving again, next to a plot of exit angle against impact height and a sideways histogram of how much light leaves at each angle. Drag on the drop or the plot to move the ray. With the picture focused, up and down arrows move the ray, left and right arrows change the colour, Enter switches between one ray and a fan, W switches white sunlight on and off, and 1, 2 or 3 choose the reflections."></canvas>
+    <canvas id="sky" width="960" height="420" role="img" aria-label="Left: a side view of an observer with the sun behind them and the lines of sight at the rainbow angles. Right: the view facing away from the sun, where falling raindrops light up in colour only at the rainbow angles and slowly build the bows."></canvas>
+  </div>
+  <div class="stats">
+    <span>Primary ray leaves at <b id="theta1">–</b></span>
+    <span>Secondary ray leaves at <b id="theta2">–</b></span>
+    <span>Deviation (primary) <b id="dev">–</b></span>
+    <span>Light out after 1 / 2 reflections <b id="power">–</b></span>
+    <span>This colour's bows <b id="bowSel">–</b></span>
+    <span>Primary bow, red / violet <b id="bow1">–</b></span>
+    <span>Secondary bow, red / violet <b id="bow2">–</b></span>
+    <span>Drops in the sky <b id="drops">0</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Light</span>
+      <div class="seg" role="group" aria-label="Light">
+        <button id="lightOne" aria-pressed="true">One colour</button>
+        <button id="lightWhite" aria-pressed="false">White sunlight</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="wavelength">Colour (wavelength) <output id="wavelengthOut">650 nm</output></label>
+      <input type="range" id="wavelength" min="400" max="700" step="5" value="650">
+    </div>
+    <div class="control">
+      <span class="label">Rays</span>
+      <div class="seg" role="group" aria-label="Rays">
+        <button id="raysOne" aria-pressed="false">One ray</button>
+        <button id="raysFan" aria-pressed="true">Fan of rays</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="impact">Impact height <output id="impactOut">0.500</output></label>
+      <input type="range" id="impact" min="0" max="0.995" step="0.001" value="0.5">
+    </div>
+    <div class="control">
+      <span class="label">Reflections inside the drop</span>
+      <div class="seg" role="group" aria-label="Reflections inside the drop">
+        <button id="refl1" aria-pressed="false">1</button>
+        <button id="refl2" aria-pressed="false">2</button>
+        <button id="reflBoth" aria-pressed="true">1 and 2</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="sunAlt">Sun height <output id="sunAltOut">10°</output></label>
+      <input type="range" id="sunAlt" min="0" max="60" step="1" value="10">
+    </div>
+    <div class="control">
+      <span class="label">Sky</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="clearSky">Clear the sky</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Sky light</span>
+      <label class="switch" for="skyMono"><input type="checkbox" id="skyMono"> Light the sky with the chosen colour only</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Drag the bright ray up and down the drop and watch its exit angle on the plot: it climbs, stops near 42° and turns back. Rays near that turning point all leave in almost the same direction, and that pile-up is the rainbow. With the picture focused, the arrow keys move the ray and change its colour.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Sunlight comes in from the left as parallel rays. Each ray bends as it enters the drop, reflects off the back, and bends again on the way out. The impact height says where it hits: 0 is dead centre, 1 is the very edge. The exit angle is measured from the direction straight back toward the sun, so it is also the angle between your shadow's head and the drop that sends you this light.</p>
+      <p>The plot on the right shows that angle for every impact height. For one reflection it rises from 0°, reaches a highest value near 42° and falls again. Near the top the curve is flat, so a wide band of rays leaves at almost the same angle. The sideways histogram counts the light leaving at each angle, and it spikes right there.</p>
+      <p>The lower panel is the view from the ground. Every drop sends you only the light leaving it at one particular angle, set by where it sits in the sky. Drops on a circle 42° from the point opposite the sun all send you the bunched-up light, so the circle glows.</p>
+      <p data-depth="deep">The ray paths are exact geometric optics for a sphere: Snell's law at each crossing and mirror reflection inside. Water's refractive index comes from a Cauchy fit to measured values, 1.343 at 400 nm falling to 1.330 at 700 nm. The histograms trace 20,000 rays per colour for 31 colours, weight each by the area of the ring it hits and by the share of light the Fresnel equations let through, and blur the result by the half-degree width of the sun.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Pick One ray and drag the Impact height slowly from 0 to 1. The primary exit angle climbs to about 42° near 0.86 and then goes back down. No ray of that colour ever leaves at a larger angle.</li>
+        <li>Switch to White sunlight. Violet bends a little more than red, so its turning point is lower: about 40.6° against 42.5°. That puts red on the outside of the main bow.</li>
+        <li>Choose 2 reflections. Now the turning point is a lowest angle, near 51°, and the colour order flips: red is on the inside of the second bow.</li>
+        <li>Raise the Sun height above 42°. The bow is a circle around the point opposite the sun, so it sinks with it and disappears below the horizon. This is why you see rainbows in the morning and late afternoon.</li>
+      </ul>
+      <p data-depth="deep">The sky inside the main bow is brighter than outside it, because every one-reflection ray leaves at less than 42°. Two-reflection light only leaves at more than 51°. Between 42.5° and 50.2° no light with one or two reflections can reach you, which is Alexander's dark band. In the sky panel the band shows up within seconds once both reflections are on.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>The rainbow is not an object at a place. It is a set of directions: 42° from the point opposite the sun, which is the shadow of your own head. Each person sees light from a different set of drops, so no two people ever see the same rainbow, and you can never walk toward its end.</p>
+      <p>The drops are not special either. Each one sends light over a wide range of angles. The bow appears only because the exit angle has a turning point, and near a turning point many different rays land on the same angle.</p>
+      <p class="muted">Theodoric of Freiberg traced light through water-filled glass globes around 1307. René Descartes worked out the 42° angle by tracing rays one by one in 1637, and Isaac Newton explained the colours by the different bending of each colour in his Opticks of 1704. The dark band is named after Alexander of Aphrodisias, who described it around 200 AD.</p>
+      <p data-depth="deep">Pure ray optics says the brightness at the turning point is infinite. In reality two effects round it off: the sun is half a degree wide, and light is a wave. Rays on either side of the turning point leave in the same direction but have travelled different distances, so they interfere. That makes faint extra bands just inside the main bow, called supernumerary bows, which this simulation leaves out. In very small drops, such as fog, the wave spreading is so wide that the colours smear into a white fogbow.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">b = sin i = n sin r<br>n(λ) = 1.3240 + 0.00309 μm² ÷ λ²</div>
+      <p>Snell's law for a drop of radius 1. A ray at impact height b hits the surface at incidence angle i and is bent to the angle r inside. The page uses this Cauchy fit for water, which matches measured indices to about 0.0003 across the visible range. Every ray drawn and every histogram starts from this pair of equations.</p>
+      <div class="eq" data-depth="deep" translate="no">D<sub>k</sub> = 2(i − r) + k(180° − 2r)<br>θ = | 180° − D<sub>k</sub> |</div>
+      <p>The total turn of a ray after k internal reflections: it turns by i − r on the way in and again on the way out, and by 180° − 2r at each reflection. The angle θ from the point opposite the sun is what the plot shows and what the readouts call the exit angle. For k = 1 and b = 0.5 in 650 nm red light, D = 151.8° and θ = 28.2°.</p>
+      <div class="eq" data-depth="deep" translate="no">dD<sub>k</sub>/di = 0<br>cos² i = (n² − 1) ÷ (k² + 2k)</div>
+      <p>The turning point, first found by Descartes. Setting the rate of change of D to zero gives this impact angle; for k = 1 it is cos² i = (n² − 1)/3, at b ≈ 0.86, and for k = 2 it is cos² i = (n² − 1)/8, at b ≈ 0.95. Put back into D, it gives 42.5° for red and 40.6° for violet in the primary bow, and 50.2° and 53.6° in the secondary. The bow readouts are computed from exactly this.</p>
+      <div class="eq" data-depth="deep" translate="no">I(θ) ∝ b |db/dθ| · T(i) R(r)<sup>k</sup> T(r)</div>
+      <p>The light leaving per degree. Rays from a ring of width db land in a range dθ, so where dθ/db is zero the light piles up. T and R are the Fresnel shares transmitted and reflected, averaged over the two polarisations; they are why the second bow is fainter, since each extra reflection keeps only about 2% to 16% of the light. The sideways histogram is this sum, and the sky divides it by sin θ to get brightness per patch of sky.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Bending, bouncing and splitting light</h2>
+      <p>The same three steps that make a rainbow, refraction, reflection and dispersion, are measured and designed around in labs, on roads and in space.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Combustion research</span>
+        <h3>Rainbow refractometry</h3>
+        <p>Shine a laser through a spray of fuel droplets and each drop makes its own rainbow. Because the rainbow angle depends on the refractive index, and the index depends on temperature and composition, measuring the angle gives the temperature of drops in flight without touching them. The spacing of the faint wave fringes gives their size.</p>
+        <span class="link"><b>In the demo:</b> change the index slightly and the turning point moves.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Earth observation</span>
+        <h3>Measuring cloud droplets from orbit</h3>
+        <p>Cloud droplets make a cloudbow near the same 140° scattering angle as a rainbow. Satellite instruments such as POLDER on the French PARASOL satellite measured the polarised cloudbow from space and used its exact shape to work out droplet sizes, which matter for how clouds reflect sunlight and make rain.</p>
+        <span class="link"><b>In the demo:</b> the bow is a fixed scattering angle, seen from anywhere.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Road safety</span>
+        <h3>Glass beads in road paint</h3>
+        <p>White road lines are sprinkled with tiny glass beads. Headlight beams enter each bead, bend, reflect off the back and come out heading roughly back toward the car, so the line glows for the driver at night. It is the raindrop's enter, reflect and exit path in glass, and glass with a higher index than water sends the light back much closer to where it came from.</p>
+        <span class="link"><b>In the demo:</b> rays near the centre leave almost straight back.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Lens design</span>
+        <h3>Achromatic lenses</h3>
+        <p>Glass, like water, bends violet more than red, so a simple lens focuses each colour at a slightly different distance and gives coloured fringes. In 1758 John Dollond patented lenses that pair two glasses with different dispersion to cancel the effect. Camera, microscope and telescope lenses still use the same trick.</p>
+        <span class="link"><b>In the demo:</b> red and violet rays separate inside the drop.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Gemstones</span>
+        <h3>The fire of a diamond</h3>
+        <p>Diamond has a high refractive index and strong dispersion. A brilliant cut is shaped so that light entering the top reflects inside and leaves through the top again, split into colours that flash as the stone moves. Jewellers call those flashes fire.</p>
+        <span class="link"><b>In the demo:</b> entry, internal reflection and exit, with colours fanning out.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Science</span>
+        <h3>Spectroscopy</h3>
+        <p>Splitting light by colour reveals what made it. Newton split sunlight with a prism; in 1814 Joseph von Fraunhofer found dark lines in the solar spectrum, later traced to elements in the sun's atmosphere. Prism and grating spectrometers now identify chemicals in labs, stars and exoplanet atmospheres.</p>
+        <span class="link"><b>In the demo:</b> each wavelength leaves at its own angle.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Geometric ray optics in a perfectly round drop with Snell's law and mirror reflection; water's index from a Cauchy fit, n = 1.3240 + 0.00309/λ² with λ in micrometres; unpolarised Fresnel reflection and transmission; brightness weighted by the area each ray represents and blurred by the sun's 0.53° width; colours mixed from the CIE colour matching functions for equal-energy white light. Left out: wave effects (supernumerary bows and fogbows), light reflected off the outside of drops, the flattening of large drops and the blue of the sky.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="rainbow.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/rainbow.js"></script>
+<script src="../../assets/wonders.js" data-slug="rainbow"></script>
+</body>
+</html>

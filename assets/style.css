@@ -364,6 +364,7 @@ a.btn { display: inline-block; text-decoration: none; }
 .toolbar.compact .tool-status { flex-basis: 100%; }
 .toolbar.compact:has(.tool-status:not(:empty)) { flex-wrap: wrap; }
 .toolbar.tight .depth-ctl .eyebrow { display: none; }
+.toolbar.tight .depth-seg button { padding-inline: 10px; }
 .toolbar.compact.stack { flex-wrap: wrap; }
 
 [data-depth="deep"] { display: none !important; }

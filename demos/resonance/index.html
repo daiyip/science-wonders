@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="resonance"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Resonance · Science Wonders</title>
+<meta name="description" content="Drive a playground swing, a wine glass and a footbridge at different rhythms. Watch small pushes build a huge motion only near the natural frequency, see beats when you are slightly off, and find the note that shatters the glass.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Resonance">
+<meta property="og:description" content="Push a swing, a wine glass or a footbridge at just the right rhythm and small nudges add up to a huge motion.">
+<meta property="og:url" content="https://science.daiyip.com/demos/resonance/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/resonance.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../../assets/icon-192.png">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  [hidden] { display: none !important; }
+  .controls .seg { justify-self: start; display: flex; flex-wrap: wrap; gap: 6px; max-width: 100%; }
+  .controls .seg label {
+    position: relative;
+    display: inline-flex; align-items: center;
+    font-size: var(--step--1); font-weight: 500;
+    padding: 7px 13px;
+    border: 1px solid var(--rule); border-radius: 999px;
+    color: var(--ink); background: var(--panel);
+    cursor: pointer; white-space: nowrap;
+  }
+  .controls .seg label:hover { border-color: var(--ink-soft); }
+  .controls .seg label.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .controls .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .controls .seg input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  #push { min-width: 120px; font-size: var(--step-0); touch-action: manipulation; }
+  #push.flash { background: var(--good); border-color: var(--good); }
+  #push.flash-bad { background: var(--warn); border-color: var(--warn); }
+  #listen.on { background: var(--warn); border-color: var(--warn); color: var(--accent-ink); }
+  .bench canvas { touch-action: manipulation; }
+  .bench canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .key-hint { font-size: var(--step--1); color: var(--ink-soft); }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls button { min-height: 38px; }
+    .controls .seg label { min-height: 38px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Everyday physics · Galileo 1638 / London 2000</div>
+    <h1>Resonance</h1>
+    <p class="lede">Push a swing at random moments and it hardly moves. Push it in time with its own rhythm and small nudges add up to a big swing. The same timing lets a pure tone shatter a wine glass and lets footsteps set a bridge swaying.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="540" tabindex="0" aria-label="A driven object on the left (a playground swing, a wine glass or a footbridge) with a phase dial below it; on the right, its displacement over time, the resonance curve of steady amplitude against drive frequency, and the phase lag. With the picture focused, left and right arrows change the drive frequency, up and down change the driving strength, and Space or Enter gives a push when Your pushes is selected. Tapping the picture also pushes."></canvas>
+  </div>
+  <div class="stats">
+    <span>Natural frequency <b id="natF">–</b></span>
+    <span>Amplitude now <b id="ampNow">–</b></span>
+    <span data-drive="motor">Steady amplitude ahead <b id="ampSteady">–</b></span>
+    <span data-drive="motor">Phase lag <b id="lag">–</b></span>
+    <span data-drive="motor">Beats <b id="beats">none</b></span>
+    <span data-drive="hand" hidden>Last push <b id="pushGain">–</b></span>
+    <span data-drive="hand" hidden>Your rhythm <b id="pushRate">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <span class="label">Object</span>
+      <div class="seg" role="radiogroup" aria-label="Object">
+        <label class="on"><input type="radio" name="preset" id="presetSwing" value="swing" checked> Playground swing</label>
+        <label><input type="radio" name="preset" id="presetGlass" value="glass"> Wine glass</label>
+        <label><input type="radio" name="preset" id="presetBridge" value="bridge"> Footbridge</label>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Driven by</span>
+      <div class="seg" role="radiogroup" aria-label="Driven by">
+        <label class="on"><input type="radio" name="drive" id="driveMotor" value="motor" checked> Steady rhythm</label>
+        <label><input type="radio" name="drive" id="driveHand" value="hand"> Your pushes</label>
+      </div>
+    </div>
+    <div class="control" data-drive="motor">
+      <label for="freq">Drive frequency <output id="freqOut">0.315 Hz</output></label>
+      <input type="range" id="freq" min="0.1" max="0.6" step="0.005" value="0.315">
+    </div>
+    <div class="control" data-drive="motor">
+      <label for="strength">Driving strength <output id="strengthOut">60%</output></label>
+      <input type="range" id="strength" min="0" max="100" step="1" value="60">
+    </div>
+    <div class="control">
+      <label for="q">Damping: quality factor <output id="qOut">Q = 20</output></label>
+      <input type="range" id="q" min="0.48" max="1.48" step="0.01" value="1.3">
+    </div>
+    <div class="control" data-drive="hand" hidden>
+      <span class="label">Push it yourself</span>
+      <div class="button-row">
+        <button id="push" class="primary" type="button">Push</button>
+        <span class="key-hint">or Space on the picture</span>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Simulation</span>
+      <div class="button-row">
+        <button id="play" type="button">Pause</button>
+        <button id="restart" type="button">Restart</button>
+      </div>
+    </div>
+    <div class="control" data-preset="glass" hidden>
+      <span class="label">Hear the glass</span>
+      <div class="button-row">
+        <button id="listen" type="button">Play sound</button>
+      </div>
+    </div>
+    <div class="control" data-preset="glass" hidden>
+      <label for="volume">Volume <output id="volumeOut">40%</output></label>
+      <input type="range" id="volume" min="0" max="100" step="1" value="40">
+    </div>
+  </div>
+  <p class="callout" id="hint">The swing starts at its natural rhythm, so every push lands at the right moment. Now move Drive frequency a little away from it: the swing grows, fades and grows again. Those are beats. Then pick the wine glass and hunt for its note.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Each object has a natural frequency, the rhythm it swings or rings at when you leave it alone. A steady push that repeats at some other rhythm, the drive, is applied, and the left picture shows what happens. Damping steals a little energy every cycle; the quality factor Q says how little. A high Q means the object keeps ringing for many cycles.</p>
+      <p>The top plot traces the displacement over time. The middle plot is the resonance curve: how big the motion eventually gets for each drive frequency. The amber marker is the current drive, and the cyan ring is how big the motion is right now, climbing toward the curve. The bottom strip and the dial show the phase lag: how far the motion trails behind the push.</p>
+      <p data-depth="deep">Every object is one oscillator with one equation, integrated with fourth-order Runge-Kutta steps at 120 steps per cycle of the faster of the natural and drive frequencies. The curve and the predicted steady amplitude are exact formulas; the trace and the cyan ring come from the simulation, so you see the transient that the formula leaves out.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>On the swing, set Drive frequency to 0.290 Hz. The swing swells and fades about every 40 s. Those beats die away, and the swing settles at about a third of the amplitude it reaches at 0.315 Hz.</li>
+        <li>Pick Your pushes and press Push once per swing as it passes you going forward. Then try pushing twice per swing, or at random. Only the pushes in step with the motion add energy.</li>
+        <li>Pick the wine glass. Its resonance is less than 1 Hz wide out of 660 Hz. Creep toward 660 Hz with the arrow keys and listen. Lower Q and the same tone can no longer break it.</li>
+        <li>Pick the footbridge, put the footsteps at exactly 1.00 Hz and lower Q to see what dampers do.</li>
+      </ul>
+      <p data-depth="deep">Exactly at resonance the motion trails the push by a quarter cycle, so the push is strongest when the object moves fastest and every push does positive work. Far below resonance the object simply follows the push, in step; far above, it cannot keep up and moves opposite to it, half a cycle behind. The bottom strip shows that switch happening over a band of width about f₀/Q.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>The push is the same size at every frequency, yet the response can be a hundred or a thousand times bigger at one particular rhythm. The object is picky: it only collects energy from pushes that arrive in step with its own motion. Everything else mostly cancels out over a few cycles.</p>
+      <p class="muted">Galileo described in 1638 how small puffs of breath, timed to a pendulum, could build a large swing. In June 2000 London's Millennium Bridge began swaying sideways on its opening day and closed two days later.</p>
+      <p data-depth="deep">Famous bridge stories are often told wrongly. The Millennium Bridge was not driven by a fixed beat: as it began to sway, walkers adjusted their steps to keep their balance, which pushed it in time with its own sway, a feedback called synchronous lateral excitation. Engineers fixed it by adding dampers, which lowers Q. The Tacoma Narrows Bridge, which collapsed in 1940, was not resonance with gusts either. A steady wind of about 64 km/h drove a twisting motion that fed itself, called aeroelastic flutter. Soldiers break step on bridges because of cases like the Broughton Suspension Bridge near Manchester, which failed under marching troops in 1831.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">x″ + γ x′ + ω₀² x = (F/m) cos ωt<br>γ = ω₀ / Q &nbsp;&nbsp; ω₀ = 2π f₀</div>
+      <p>The driven damped oscillator. x is the displacement, ω₀ the natural angular frequency, γ the damping rate and F the size of the periodic push. The page integrates exactly this, except for the swing, where the restoring term is ω₀² sin x, the true pendulum, so large swings run a little slower than small ones.</p>
+      <div class="eq" data-depth="deep" translate="no">A(ω) = (F/m) ÷ √( (ω₀² − ω²)² + (γω)² )<br>tan δ = γω ÷ (ω₀² − ω²)</div>
+      <p>The steady state: once the transient has died away the motion is x = A cos(ωt − δ). The middle plot draws A(ω) and the bottom strip draws δ, the phase lag, which runs from 0° far below resonance through 90° at resonance to 180° far above. The cyan points are measured from the simulation instead: the amplitude is the largest |x| in the last cycle, and the lag is found by multiplying x by cos ωt and sin ωt and averaging over a few cycles.</p>
+      <div class="eq" data-depth="deep" translate="no">A(ω₀) = Q (F/m) ÷ ω₀²<br>Δf ≈ f₀ / Q<br>τ = 2Q / ω₀</div>
+      <p>At resonance the amplitude is Q times bigger than the response to a slow push of the same size. The peak is about f₀/Q wide, and it takes about τ to build up or ring down. For the glass with Q = 800 that is a band 0.8 Hz wide reached in 0.4 s; for the footbridge with Q = 60, 0.017 Hz wide and 19 s.</p>
+      <div class="eq" data-depth="deep" translate="no">x(t) = A cos(ωt − δ) + C e<sup>−t/τ</sup> cos(ω₁t + ψ)<br>ω₁ = ω₀ √(1 − 1/(4Q²))<br>f<sub>beat</sub> = | f − f₁ |</div>
+      <p>Starting from rest, the motion is the steady part plus a transient that rings at the object's own frequency and decays. While both are present they drift in and out of step, and the sum swells and shrinks at the difference frequency: beats. The Beats readout reports 1 / |f − f₁| while the transient is still at least a tenth of the steady part.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Tuning in, and tuning out</h2>
+      <p>Resonance is how we pick one frequency out of many, and it is also something engineers work hard to avoid.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Radio</span>
+        <h3>Tuning a station</h3>
+        <p>A radio's tuner is a coil and a capacitor, an electrical oscillator. Turning the dial changes its natural frequency. Every station's signal pushes on it, but only the one matching its frequency builds up a large current, so you hear one station instead of all of them at once.</p>
+        <span class="link"><b>In the demo:</b> only drives near the peak of the curve get a big response.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Timekeeping</span>
+        <h3>Quartz watches</h3>
+        <p>The tiny quartz tuning fork in a watch rings at 32,768 Hz with a Q of tens of thousands. An electronic circuit keeps pushing it in step, and because the resonance is so sharp, the frequency hardly wanders. Counting 32,768 vibrations gives one second, usually to within a second or so a day.</p>
+        <span class="link"><b>In the demo:</b> raise Q and the peak gets taller and much narrower.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Medicine</span>
+        <h3>MRI scanners</h3>
+        <p>In a magnetic field, hydrogen nuclei wobble at a precise frequency, about 64 MHz in a 1.5 tesla scanner. A radio pulse at exactly that frequency tips them over efficiently; any other frequency barely affects them. The signal they give back as they settle is turned into an image of soft tissue.</p>
+        <span class="link"><b>In the demo:</b> a drive at the natural frequency pumps in energy, others do not.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Buildings</span>
+        <h3>Tuned mass dampers</h3>
+        <p>Taipei 101 hangs a steel ball of about 660 tonnes near its top. The ball is a pendulum tuned to the tower's own swaying frequency, so in wind or earthquakes it swings against the building and soaks up its motion. The Millennium Bridge was fixed with dampers of the same kind.</p>
+        <span class="link"><b>In the demo:</b> lowering Q flattens the peak, as dampers do.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Earthquakes</span>
+        <h3>Mexico City, 1985</h3>
+        <p>The city sits on an old lake bed of soft clay that shakes most strongly at a period of about 2 seconds. In the 1985 earthquake, buildings of roughly 6 to 15 storeys, whose own sway period was close to that, were hit hardest, while many shorter and taller buildings survived. Building codes now consider the ground's resonance.</p>
+        <span class="link"><b>In the demo:</b> the same shaking does far more to an object tuned to it.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Music</span>
+        <h3>Instruments and the glass harmonica</h3>
+        <p>A guitar string alone is quiet; its wooden body and the air inside resonate and make it loud. In 1761 Benjamin Franklin built the glass harmonica, a row of spinning glass bowls played with wet fingers, each bowl ringing at its own resonant note, much like the rim of the wine glass here.</p>
+        <span class="link"><b>In the demo:</b> turn on the sound and hear the glass ring at its note.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Each object is modelled as a single damped oscillator driven by a sine-wave force, integrated with fixed-step fourth-order Runge-Kutta at 120 steps per cycle and shown in real time. The swing is a 2.5 m pendulum with the full sin θ restoring force. The wine glass is its lowest rim mode at 660 Hz, with displacement measured as a fraction of the amplitude at which it breaks; real glasses vary, and real ones that break usually have a flaw. The footbridge is its first sideways mode at 1.00 Hz, with the walkers replaced by a steady sideways push. The glass rim and the bridge's sway are drawn exaggerated, and the rim's motion is slowed down. Your pushes are short kicks.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="resonance.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/resonance.js"></script>
+<script src="../../assets/wonders.js" data-slug="resonance"></script>
+</body>
+</html>

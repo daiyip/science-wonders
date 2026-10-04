@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="blue-sky"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Why the sky is blue · Science Wonders</title>
+<meta name="description" content="Send sunlight through the air and watch molecules knock blue light sideways six times more often than red. Lower the sun to redden it, swap molecules for droplets to whiten the sky, and visit the blue sunsets of Mars.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Why the sky is blue">
+<meta property="og:description" content="Shine sunlight through air and see why noon is blue, sunsets are red and clouds are white, computed from the physics of scattering.">
+<meta property="og:url" content="https://science.daiyip.com/demos/blue-sky/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/blue-sky.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../../assets/icon-192.png">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  [hidden] { display: none !important; }
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .stats b.sw::before {
+    content: "";
+    display: inline-block;
+    width: 0.95em; height: 0.95em;
+    margin-right: 6px;
+    vertical-align: -0.12em;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+    background: var(--sw, transparent);
+  }
+  .control .note { font-size: var(--step--1); color: var(--ink-soft); margin: 0; }
+  /* Phones: comfortable touch targets for sliders and switches. */
+  @media (max-width: 640px) {
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Optics · Tyndall 1869 / Rayleigh 1871 / Mie 1908</div>
+    <h1>Why the sky is blue</h1>
+    <p class="lede">Sunlight carries every colour. The molecules of the air knock blue light aside about six times more often than red, so blue reaches you from every direction. Lower the sun and the same scattering strips the blue out of its long path through the air, leaving an orange sun and a glowing horizon.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="640" role="img" aria-label="A panorama of the whole sky around an observer with the sun in the middle, coloured from a scattering calculation; below it, a side view of single photons of sunlight crossing the air, and a chart comparing the spectrum of direct sunlight with the spectrum of the sky"></canvas>
+  </div>
+  <div class="stats">
+    <span>Air mass <b id="airmass">–</b></span>
+    <span>Blue (450 nm) straight through <b id="blueThrough">–</b></span>
+    <span>Red (700 nm) straight through <b id="redThrough">–</b></span>
+    <span>Scattering, blue vs red <b id="ratio">–</b></span>
+    <span>Sky overhead <b id="skyCol" class="sw">–</b></span>
+    <span>Sun <b id="sunCol" class="sw">–</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control">
+      <label for="elev">Sun height above the horizon <output id="elevOut">30°</output></label>
+      <input type="range" id="elev" min="0" max="90" step="0.5" value="30">
+    </div>
+    <div class="control">
+      <span class="label">Animation</span>
+      <div class="button-row">
+        <button id="sunset" class="primary">Watch a sunset</button>
+        <button id="play">Pause</button>
+      </div>
+    </div>
+    <div class="control" id="sizeCtl">
+      <span class="label">What scatters the light</span>
+      <div class="seg" role="group" aria-label="What scatters the light">
+        <button id="sizeSmall" aria-pressed="true">Tiny molecules</button>
+        <button id="sizeLarge" aria-pressed="false">Large droplets</button>
+      </div>
+    </div>
+    <div class="control">
+      <span class="label">Planet</span>
+      <div class="seg" role="group" aria-label="Planet">
+        <button id="planetEarth" aria-pressed="true">Earth</button>
+        <button id="planetMars" aria-pressed="false">Mars (illustration)</button>
+      </div>
+      <p class="note" id="marsNote" hidden>Thin carbon dioxide plus fine reddish dust. A qualitative picture, not a forecast.</p>
+    </div>
+    <div class="control">
+      <label for="thick">Amount of air <output id="thickOut">1.00×</output></label>
+      <input type="range" id="thick" min="0" max="3" step="0.05" value="1">
+    </div>
+    <div class="control">
+      <span class="label">Spectrum chart</span>
+      <label class="switch" for="eye"><input type="checkbox" id="eye"> Weigh the sky light by eye sensitivity</label>
+    </div>
+    <div class="control">
+      <span class="label">Side view</span>
+      <label class="switch" for="photons"><input type="checkbox" id="photons" checked> Show photons</label>
+    </div>
+  </div>
+  <p class="callout" id="hint">Press Watch a sunset and follow the photons in the side view. Blue ones are knocked aside early, so less and less blue reaches you straight from the sun, while the sky overhead stays blue.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>The top strip is the whole sky around you, with the sun in the middle and the horizon along the bottom. Every point is coloured by a calculation: sunlight with its measured mix of colours enters the air, molecules scatter some of it toward you, and part of that is lost again on the way.</p>
+      <p>Below left, single photons from the sun cross the air, which is drawn far thicker than it really is. Each photon's colour is drawn from the sun's spectrum, and its chance of being knocked aside on the way down is the real one for its colour and the current sun height.</p>
+      <p>The chart compares colours. Grey dotted: sunlight above the air. Orange: what reaches the ground straight from the sun. Blue: light from the sky overhead, scaled to the same height so you can compare its shape.</p>
+      <p data-depth="deep">Air molecules are about a thousand times smaller than the wavelength of light. Particles that small scatter in proportion to 1/λ⁴, so 450 nm blue is scattered about six times more than 700 nm red. Looking straight up, the whole column of air scatters about 20% of the sun's 450 nm light but only about 4% of its 700 nm light.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Press Watch a sunset. Near the horizon the sunlight crosses up to 38 times as much air as at noon. Blue runs out first, so the sun turns yellow, then orange, then red.</li>
+        <li>Switch to Large droplets. Droplets thousands of times bigger than molecules scatter every colour about equally, so the sky turns white, like haze or the inside of a cloud.</li>
+        <li>Slide Amount of air to 0. The sky goes black with the sun still up, as on the Moon. At 3× the noon sky turns pale and the horizon yellowish.</li>
+        <li>Pick Mars. Fine dust that absorbs blue gives a butterscotch sky, yet next to the setting sun the sky turns blue.</li>
+      </ul>
+      <p data-depth="deep">With the sun 30° up the air mass is 2.0 and 64% of the blue at 450 nm comes straight through. At 5° the air mass is 10.3 and only 10% does. At 1° it is 26 and 0.3%, while 32% of the red at 700 nm still gets through. That is the red sun.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Air is clear. The blue is not a colour the air has but sunlight it bounces. A sunset is the same process seen from the other end: the blue scattered out of the evening sun's long path is what makes the sky blue for people farther along it.</p>
+      <p>Then why is the sky not violet? Molecules scatter violet even more than blue, and in this model the light from overhead really is strongest at about 410 nm. But the sun sends less violet than blue, our eyes are weak at violet, and sky light is a broad mix of every colour that our three kinds of cone cells report together as pale blue. Switch on the eye-sensitivity curve to see where most of the brightness you see comes from.</p>
+      <p class="muted">John Tyndall made blue "skies" in tubes of fine particles in 1869. Lord Rayleigh found the 1/λ⁴ law in 1871 and showed in 1899 that air molecules alone are enough. Gustav Mie solved scattering by larger spheres in 1908.</p>
+      <p data-depth="deep">The colours here come from single scattering only: each photon reaching you was scattered once. Real skies also contain light scattered two or more times, which makes the real sky overhead a little brighter and paler and the horizon a little less bright than shown. Ozone is included because it absorbs some orange light; without it, the sky overhead would turn grey at sunset instead of staying blue.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">σ(λ) ∝ 1 ÷ λ⁴<br>τ<sub>R</sub>(λ) = 0.008569 λ⁻⁴<br>&nbsp;&nbsp;× (1 + 0.0113 λ⁻² + 0.00013 λ⁻⁴)</div>
+      <p>Scattering by a particle much smaller than the wavelength grows as 1/λ⁴. τ<sub>R</sub> is the Rayleigh optical depth of the whole column of air above sea level, with λ in micrometres: 0.22 at 450 nm, 0.097 at 550 nm and 0.037 at 700 nm. The bracket corrects for air's refractive index changing slightly with colour. The Scattering, blue vs red readout is the ratio of τ<sub>R</sub> at 450 and 700 nm, 6.1 for air; pure 1/λ⁴ would give (700/450)⁴ = 5.9.</p>
+      <div class="eq" data-depth="deep" translate="no">m(h) = 1 ÷ [ sin h<br>&nbsp;&nbsp;+ 0.50572 (h + 6.07995°)<sup>−1.6364</sup> ]<br>T(λ) = e<sup>−τ(λ) m</sup></div>
+      <p>The Kasten–Young air mass: how many times more air the sunlight crosses than from straight overhead, for a sun h degrees above the horizon. It is 1 at the zenith, 2.0 at 30°, 5.6 at 10° and 38 at the horizon, where the curvature of the Earth keeps it finite. T is the fraction of each colour that comes straight through. The orange curve is the sunlight above the air times T, and the two straight-through readouts are T at 450 and 700 nm. The photons in the side view are scattered with probability 1 − T for their own wavelength.</p>
+      <div class="eq" data-depth="deep" translate="no">L(λ) = F(λ) ∫ β(λ, s) P(Θ)<br>&nbsp;&nbsp;× e<sup>−τ<sub>sun</sub>(λ, s) − τ<sub>eye</sub>(λ, s)</sup> ds<br>P<sub>R</sub>(Θ) = 3 (1 + cos²Θ) ÷ 16π</div>
+      <p>The sky's spectral brightness in one direction: add up the sunlight scattered toward you at every point s along your line of sight, dimmed on its way in from the sun and on its way out to you. β falls with height as e<sup>−z/8 km</sup> for air, the Earth is round, and Θ is the angle between the sunlight and your line of sight. Molecules use the Rayleigh phase function P<sub>R</sub>; droplets and Mars dust use a forward-peaked Henyey–Greenstein function. The page evaluates this for 96 × 36 directions and 33 wavelengths in a background worker.</p>
+      <div class="eq" data-depth="deep" translate="no">X = Σ L(λ) x̄(λ) Δλ<br>Y = Σ L(λ) ȳ(λ) Δλ<br>Z = Σ L(λ) z̄(λ) Δλ</div>
+      <p>A spectrum becomes a colour through the CIE 1931 colour matching functions, a standard model of human colour vision built from colour-matching experiments. X, Y and Z are then converted to screen RGB, balanced so that sunlight above the air looks white, with exposure that adapts to the sky's brightness and a modest saturation boost for the screen. ȳ is the eye's sensitivity to brightness: the eye-sensitivity curve on the chart is L × ȳ. For the noon sky L peaks near 410 nm, but L × ȳ peaks near 540 nm: most of the brightness you see comes from the middle of the spectrum, and the blue hue comes from the balance between x̄, ȳ and z̄, much as it does between the three kinds of cone cells.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Reading the colour of light</h2>
+      <p>How strongly light scatters depends on its colour and on the size of what it hits. Turn that around and the colour of scattered light tells you about the air, the dust and the glass it passed through.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Air quality</span>
+        <h3>Measuring haze from the ground</h3>
+        <p>Sun photometers, such as the hundreds in NASA's AERONET network, point at the sun and measure how much light gets through at several colours. Subtracting the known scattering by air leaves the amount of haze, and how that loss changes with colour reveals the size of the particles.</p>
+        <span class="link"><b>In the demo:</b> the two straight-through readouts are what these instruments measure.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Communications</span>
+        <h3>Why internet fibres use infrared</h3>
+        <p>Tiny density ripples frozen into glass scatter light the same 1/λ⁴ way. That loss is why long-distance optical fibres carry infrared light near 1550 nm, where a good fibre loses only about 4 to 5% of its light per kilometre, so signals can cross oceans with amplifiers spaced tens of kilometres apart.</p>
+        <span class="link"><b>In the demo:</b> red gets through far more air than blue does.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Photography</span>
+        <h3>Polarising filters</h3>
+        <p>Light scattered by molecules at right angles to the sunlight is strongly polarised. A polarising filter can block much of it, which is how photographers darken a blue sky and make clouds stand out. Bees and some birds use the same pattern of polarisation to navigate.</p>
+        <span class="link"><b>In the demo:</b> the effect is strongest in the sky 90° from the sun, marked "side".</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Climate</span>
+        <h3>Volcanic sunsets</h3>
+        <p>After Krakatoa erupted in 1883, vivid red sunsets were seen around the world for months. Pinatubo in 1991 put about 15 million tonnes of sulphur dioxide into the stratosphere, where it formed fine droplets that reflected sunlight and cooled the Earth by about 0.5 °C for more than a year.</p>
+        <span class="link"><b>In the demo:</b> more particles on the light's path mean a dimmer, redder sun.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Astronomy</span>
+        <h3>Correcting starlight for the air</h3>
+        <p>A star low in the sky looks fainter and redder because its light crosses more air. Astronomers measure this extinction each night and correct for air mass, and they build telescopes on high mountains such as Mauna Kea, at 4200 m, which is above about 40% of the atmosphere.</p>
+        <span class="link"><b>In the demo:</b> the Air mass readout is the factor they correct for.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Planetary science</span>
+        <h3>Blue sunsets on Mars</h3>
+        <p>In April 2015 the Curiosity rover photographed a blue sunset in Gale crater. Fine Martian dust, with grains a few micrometres across, sends blue light mainly forward, close to the direction of the sun, while the rest of the sky looks butterscotch. Fitting such images tells scientists the size and make-up of the dust.</p>
+        <span class="link"><b>In the demo:</b> pick Mars and lower the sun.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Single scattering in a spherical atmosphere: air with a scale height of 8 km and a sea-level Rayleigh optical depth of 0.097 at 550 nm, a 300 Dobson-unit ozone layer, a smoothed measured solar spectrum from 380 to 700 nm in 10 nm steps, and CIE 1931 colour matching. Direct sunlight uses the Kasten–Young air mass. Multiple scattering, refraction, ground reflection and polarisation are left out. The side view is not to scale, and Mars is a qualitative illustration with plausible, simplified dust properties.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="blue-sky.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/blue-sky.js"></script>
+<script src="../../assets/wonders.js" data-slug="blue-sky"></script>
+</body>
+</html>

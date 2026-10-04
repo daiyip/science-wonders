@@ -9,7 +9,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Science Wonders">
 <meta property="og:title" content="Science Wonders">
-<meta property="og:description" content="Twenty-five hands-on experiments with the strangest, most beautiful ideas in science.">
+<meta property="og:description" content="Thirty hands-on experiments with the strangest, most beautiful ideas in science.">
 <meta property="og:url" content="https://science.daiyip.com/">
 <meta property="og:image" content="https://science.daiyip.com/assets/og/home.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -74,6 +74,7 @@
       <a href="#cosmos">Space and time</a>
       <a href="#complexity">Life and complexity</a>
       <a href="#math">Mind-bending math</a>
+      <a href="#everyday">Everyday wonders</a>
     </nav>
   </header>
 
@@ -87,11 +88,12 @@
   <div class="finder">
   <input type="search" id="search" class="search" placeholder="Search experiments" aria-label="Search experiments">
   <div class="filters" role="group" aria-label="Filter experiments by category">
-    <button class="chip" data-filter="all" aria-pressed="true">All <span>25</span></button>
+    <button class="chip" data-filter="all" aria-pressed="true">All <span>30</span></button>
     <button class="chip" data-filter="quantum" aria-pressed="false">Quantum world <span>7</span></button>
     <button class="chip" data-filter="cosmos" aria-pressed="false">Space and time <span>6</span></button>
     <button class="chip" data-filter="complexity" aria-pressed="false">Life and complexity <span>6</span></button>
     <button class="chip" data-filter="math" aria-pressed="false">Mind-bending math <span>6</span></button>
+    <button class="chip" data-filter="everyday" aria-pressed="false">Everyday wonders <span>5</span></button>
   </div>
   </div>
   <p class="progress-line" id="progressLine" role="status"></p>
@@ -593,6 +595,100 @@
         <span class="eyebrow">Ulam spiral</span>
         <h3>Prime spirals</h3>
         <p class="muted">Write the numbers in a spiral, light up the primes, and find diagonals nobody fully understands.</p>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
+      </div>
+    </a>
+    </div>
+  </section>
+
+  <section class="shelf" id="everyday" data-cat="everyday">
+    <div class="shelf-label">
+      <h2>Everyday wonders</h2>
+      <span class="eyebrow">5 experiments</span>
+    </div>
+    <p class="shelf-desc">The physics behind things you see every day, from a blue sky to the tide coming in.</p>
+    <div class="demos">
+    <a class="demo-card" data-cat="everyday" href="demos/blue-sky/index.html">
+      <div class="thumb">
+        <svg viewBox="0 0 320 140" aria-hidden="true">
+          <defs><linearGradient id="tSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d3f8f"/><stop offset=".62" stop-color="#5f8fe0"/><stop offset=".8" stop-color="#f0a35a"/><stop offset="1" stop-color="#7a3a2a"/></linearGradient></defs>
+          <rect width="320" height="140" fill="url(#tSky)"/>
+          <circle cx="226" cy="104" r="15" fill="#ffd27a"/><circle cx="226" cy="104" r="26" fill="#ffb35a" opacity=".25"/>
+          <rect y="118" width="320" height="22" fill="#05080e"/>
+          <g stroke="#cfe0ff" stroke-width="1.6" opacity=".7"><line x1="40" y1="30" x2="70" y2="52"/><line x1="70" y1="52" x2="58" y2="76"/><line x1="110" y1="24" x2="134" y2="48"/><line x1="134" y1="48" x2="160" y2="40"/></g>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="eyebrow">Rayleigh scattering</span>
+        <h3>Why the sky is blue</h3>
+        <p class="muted">Shine sunlight through air and see why noon is blue, sunsets are red and clouds are white.</p>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
+      </div>
+    </a>
+    <a class="demo-card" data-cat="everyday" href="demos/rainbow/index.html">
+      <div class="thumb">
+        <svg viewBox="0 0 320 140" aria-hidden="true">
+          <rect width="320" height="140" fill="#05080e"/>
+          <circle cx="160" cy="70" r="52" fill="#0e1a2e" stroke="#3a4f78" stroke-width="2"/>
+          <path d="M10 46 L128 40" stroke="#e9eef7" stroke-width="2"/>
+          <g fill="none" stroke-width="2"><path d="M128 40 L196 108 L118 112 L20 132" stroke="#ff5a4a"/><path d="M128 40 L200 104 L122 116 L36 138" stroke="#ffd25a"/><path d="M128 40 L204 98 L126 118 L56 140" stroke="#5ac8ff"/><path d="M128 40 L207 92 L130 120" stroke="#9a6bff"/></g>
+          <text x="244" y="40" fill="#8fa6ff" font-size="14" font-family="IBM Plex Mono, monospace">42°</text>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="eyebrow">Optics of raindrops</span>
+        <h3>Inside a rainbow</h3>
+        <p class="muted">Trace sunlight through a single raindrop and find out why every rainbow sits at 42 degrees.</p>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
+      </div>
+    </a>
+    <a class="demo-card" data-cat="everyday" href="demos/doppler/index.html">
+      <div class="thumb">
+        <svg viewBox="0 0 320 140" aria-hidden="true">
+          <rect width="320" height="140" fill="#05080e"/>
+          <g fill="none" stroke="#5a8cff" stroke-width="1.6"><circle cx="80" cy="70" r="62" opacity=".35"/><circle cx="118" cy="70" r="48" opacity=".5"/><circle cx="154" cy="70" r="34" opacity=".7"/><circle cx="188" cy="70" r="20" opacity=".85"/><circle cx="218" cy="70" r="7"/></g>
+          <circle cx="226" cy="70" r="5" fill="#f0b35a"/>
+          <path d="M232 70 L262 70" stroke="#f0b35a" stroke-width="2"/><path d="M256 64 L264 70 L256 76" fill="none" stroke="#f0b35a" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="eyebrow">Moving sources</span>
+        <h3>The Doppler effect</h3>
+        <p class="muted">Drive a siren past a listener, then past the speed of sound, and watch the waves bunch into a shock.</p>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
+      </div>
+    </a>
+    <a class="demo-card" data-cat="everyday" href="demos/resonance/index.html">
+      <div class="thumb">
+        <svg viewBox="0 0 320 140" aria-hidden="true">
+          <rect width="320" height="140" fill="#05080e"/>
+          <path d="M20 120 L60 118 C90 116 110 110 130 96 C145 84 152 30 160 26 C168 30 175 84 190 96 C210 110 230 116 260 118 L300 120" fill="none" stroke="#5cff8a" stroke-width="2.4"/>
+          <line x1="160" y1="22" x2="160" y2="126" stroke="#5a6a88" stroke-dasharray="3 4"/>
+          <text x="168" y="40" fill="#8fa6ff" font-size="13" font-family="IBM Plex Mono, monospace">ω₀</text>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="eyebrow">Driven oscillators</span>
+        <h3>Resonance</h3>
+        <p class="muted">Push a swing, a wine glass or a bridge at just the right rhythm and small nudges add up to a huge swing.</p>
+        <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
+      </div>
+    </a>
+    <a class="demo-card" data-cat="everyday" href="demos/tides/index.html">
+      <div class="thumb">
+        <svg viewBox="0 0 320 140" aria-hidden="true">
+          <rect width="320" height="140" fill="#05080e"/>
+          <ellipse cx="130" cy="70" rx="62" ry="44" fill="#1b4fa8" opacity=".55"/>
+          <circle cx="130" cy="70" r="40" fill="#2a7a52"/><circle cx="130" cy="70" r="40" fill="none" stroke="#5ab0ff" stroke-width="1.5"/>
+          <circle cx="272" cy="70" r="12" fill="#c9d4e3"/>
+          <g stroke="#f0b35a" stroke-width="2"><line x1="196" y1="70" x2="214" y2="70"/><line x1="64" y1="70" x2="46" y2="70"/></g>
+          <g fill="#f0b35a"><path d="M214 65 L222 70 L214 75z"/><path d="M46 65 L38 70 L46 75z"/></g>
+        </svg>
+      </div>
+      <div class="body">
+        <span class="eyebrow">Tidal forces</span>
+        <h3>Why there are two tides</h3>
+        <p class="muted">See how the Moon stretches the whole Earth, so the ocean bulges on the far side too.</p>
         <span class="card-foot"><span class="go">Run the experiment →</span><span class="badge"></span></span>
       </div>
     </a>

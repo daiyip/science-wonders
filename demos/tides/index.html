@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script src="../../assets/i18n.js" data-page="tides"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Why there are two tides · Science Wonders</title>
+<meta name="description" content="Subtract Earth's average pull from the Moon's gravity and see the tidal force stretch the planet into two bulges. Watch a town meet two high tides a day, 12 h 25 min apart, and turn on the Sun for spring and neap tides.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Science Wonders">
+<meta property="og:title" content="Why there are two tides">
+<meta property="og:description" content="See how the Moon stretches the whole Earth, so the ocean bulges on the far side too.">
+<meta property="og:url" content="https://science.daiyip.com/demos/tides/">
+<meta property="og:image" content="https://science.daiyip.com/assets/og/tides.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="../../manifest.webmanifest">
+<link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../../assets/icon-192.png">
+<meta name="theme-color" content="#0b1018">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .seg { justify-self: start; display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { border: 0; border-radius: 0; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--rule); }
+  .callout {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: var(--step--1);
+    max-width: 80ch;
+  }
+  .control.wide { grid-column: span 2; }
+  @media (max-width: 640px) {
+    .control.wide { grid-column: auto; }
+    .controls input[type="range"] { height: 32px; }
+    .controls label.switch { min-height: 36px; }
+    .controls button { min-height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="../../index.html">Science <span>Wonders</span></a>
+    <nav>
+      <a href="../../index.html">All experiments</a>
+    </nav>
+  </header>
+
+  <div class="demo-head">
+    <div class="eyebrow">Gravity · Newton 1687 / Laplace 1775</div>
+    <h1>Why there are two tides</h1>
+    <p class="lede">The Moon pulls hardest on the side of Earth facing it and least on the far side. Take away the average pull that moves Earth as a whole, and what is left stretches the planet along the line to the Moon. The ocean piles up on both sides, so a town turning underneath meets high water twice a day.</p>
+  </div>
+
+  <div class="bench">
+    <canvas id="bench" width="960" height="540" role="img" aria-label="Earth seen from above the North Pole with the Moon circling it. Arrows at twelve points on Earth show the Moon's pull, the average pull being subtracted, or the tidal force that is left. The ocean is drawn as a shell stretched into two exaggerated bulges, and a marked town turns through them. Two charts show the town's tide over the last 48 hours and the last 30 days."></canvas>
+  </div>
+  <div class="stats">
+    <span>Clock <b id="clock">Day 1, 00:00</b></span>
+    <span>Tide at the town <b id="tideNow">–</b></span>
+    <span>Time between high tides <b id="gap">–</b></span>
+    <span>Tidal range <b id="range">–</b></span>
+    <span>Tidal acceleration (2GMr/d³) <b id="accel">–</b></span>
+    <span>Moon phase <b id="phase">–</b></span>
+    <span>Sun's tide <b id="sunState">off</b></span>
+  </div>
+
+  <div class="controls">
+    <div class="control wide">
+      <span class="label">Arrows</span>
+      <div class="seg" role="group" aria-label="Arrows">
+        <button id="arrowsPull" aria-pressed="false">Moon's pull</button>
+        <button id="arrowsSub" aria-pressed="false">Subtract the average</button>
+        <button id="arrowsTidal" aria-pressed="true">Tidal force</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="dist">Moon distance <output id="distOut">60.3 Earth radii</output></label>
+      <input type="range" id="dist" min="20" max="100" step="0.1" value="60.3">
+    </div>
+    <div class="control">
+      <span class="label">Sun</span>
+      <label class="switch" for="sun"><input type="checkbox" id="sun"> Add the Sun's tide</label>
+    </div>
+    <div class="control">
+      <label for="speed">Speed <output id="speedOut">4 h per second</output></label>
+      <input type="range" id="speed" min="0" max="6" step="1" value="3">
+    </div>
+    <div class="control">
+      <span class="label">Clock</span>
+      <div class="button-row">
+        <button id="play" class="primary">Pause</button>
+        <button id="restart">Restart</button>
+        <button id="today">Today's distance</button>
+      </div>
+    </div>
+  </div>
+  <p class="callout" id="hint">Click Moon's pull: the arrows look the same everywhere. Then Subtract the average and Tidal force. The small leftover points away from Earth on the near side and on the far side, and that is why there are two bulges.</p>
+
+  <div class="explain">
+    <section>
+      <h2>What you're seeing</h2>
+      <p>Earth seen from above the North Pole, turning once a day, with the Moon going round once every 27.3 days. The arrows show the Moon's gravity at twelve points on Earth's surface. The three views show the raw pull, the average pull being taken away, and what is left over: the tidal force.</p>
+      <p>The blue shell is the ocean. Water settles where the tidal force pushes it, which makes two bulges, one under the Moon and one on the opposite side, with low water in between. The marked town is carried through both bulges and both low belts every day, which the charts on the right record.</p>
+      <p data-depth="deep">The arrows are the exact difference between the Moon's pull at each point and its pull at Earth's centre, worked out from Newton's law, not from an approximation. The ocean, the town's tide and both charts use the equilibrium tide: the shape the water would take if it could settle instantly. Distances on the picture are not to scale. The real Moon is 60 Earth radii away, far beyond the edge of the picture.</p>
+    </section>
+    <section>
+      <h2>Try this</h2>
+      <ul>
+        <li>Click Moon's pull. The near side is pulled only about 7% harder than the far side, so the arrows look identical. Then click Subtract the average and Tidal force to see what that small difference does.</li>
+        <li>Watch the Time between high tides readout. It is about 12 h 25 min, not 12 hours: while Earth turns, the Moon moves ahead along its orbit, so the town needs an extra 50 minutes a day to catch up.</li>
+        <li>Turn on the Sun's tide and set Speed to 72 h per second. The tides swell near new and full moon (spring tides) and shrink at the quarters (neap tides).</li>
+        <li>Drag Moon distance from 60 down to 30 Earth radii. Half the distance gives eight times the tidal acceleration.</li>
+      </ul>
+      <p data-depth="deep">A closer Moon also orbits faster (Kepler's third law), so it runs ahead faster and Earth takes longer to catch up with it. At about 36 Earth radii the high tides come 13 hours apart. The page keeps Earth's day at its present length. In reality the Moon was closer long ago and the day was shorter, because tides have been slowing Earth's spin ever since.</p>
+    </section>
+    <section>
+      <h2>Why it's strange</h2>
+      <p>Gravity pulls toward the Moon, yet the sea also rises on the side facing away from it. The whole Earth is falling toward the Moon as the two circle their shared centre of mass. What shapes the water is not the pull itself but how it differs from place to place: the near side is pulled a little more than the centre, the far side a little less, so both are left bulging outward.</p>
+      <p>Real tides are messier than this picture. Continents stop the bulges from sweeping round the planet, so each ocean basin holds a tide wave that circles inside it. Some bays resonate: the Bay of Fundy in Canada sloshes with a natural period close to 12 h 25 min and its tides reach about 16 m, while much of the Mediterranean sees only a few tens of centimetres.</p>
+      <p class="muted">Newton explained the two daily tides in the Principia in 1687. In 1775 Laplace showed that real tides are waves shaped by the depth and outline of the oceans.</p>
+      <p data-depth="deep">The equilibrium tide is only 0.36 m for the Moon and 0.16 m for the Sun, close to the real open-ocean tide of around half a metre. The ocean cannot keep up with the bulges, and friction drags on it, so high water usually comes hours after the Moon passes overhead and spring tides arrive a day or two after new or full moon. The Moon's orbit is also tilted to the equator, which makes the two daily tides at most places unequal in height. This model leaves both effects out.</p>
+    </section>
+    <section data-depth="deep" class="deep-math">
+      <h2>The math</h2>
+      <div class="eq" data-depth="deep" translate="no">a<sub>tidal</sub> = GM ÷ (d − r)² − GM ÷ d²<br>&nbsp;&nbsp;≈ 2GMr ÷ d³</div>
+      <p>The difference between the Moon's pull on the near side, a distance r = 6371 km closer, and on Earth's centre, a distance d away. Because r is much smaller than d, it is close to 2GMr/d³: about 1.10 × 10⁻⁶ m/s², roughly a nine-millionth of g. The Tidal acceleration readout shows this value. The arrows use the exact difference, which is a few percent larger on the near side than on the far side.</p>
+      <div class="eq" data-depth="deep" translate="no">a<sub>∥</sub> ≈ +2GMr cos ψ ÷ d³<br>a<sub>⊥</sub> ≈ −GMr sin ψ ÷ d³</div>
+      <p>At a point at angle ψ from the Earth–Moon line, the tidal force splits into a part along the line, which stretches outward on both the near and far sides, and a part across it, which squeezes inward half as strongly. That is the pattern of the Tidal force arrows. Both parts fall as 1/d³, so halving the distance multiplies them by eight.</p>
+      <div class="eq" data-depth="deep" translate="no">h(ψ) = (M ÷ M<sub>E</sub>) (R ÷ d)³ R<br>&nbsp;&nbsp;× (3 cos²ψ − 1) ÷ 2</div>
+      <p>The equilibrium tide: the height of a water surface that sits level with the tidal force plus Earth's own gravity, with R Earth's radius and M<sub>E</sub> its mass. For the Moon the bulges rise 0.36 m and the low belts drop 0.18 m. For the Sun, 27 million times heavier but 390 times farther away, the factor is 0.16 m, 46% of the Moon's. The page adds the two and evaluates the sum at the town for the readouts and charts.</p>
+      <div class="eq" data-depth="deep" translate="no">T<sub>high</sub> = ½ ÷ (1/T<sub>E</sub> − 1/T<sub>M</sub>)<br>T<sub>M</sub> = 27.32 d × (d ÷ 60.3 R)<sup>3/2</sup></div>
+      <p>The town meets a bulge each time it turns half a turn relative to the Moon. With Earth's turn relative to the stars T<sub>E</sub> = 23.93 h and the Moon's orbit T<sub>M</sub> = 27.32 days, that gives 12.42 h, or 12 h 25 min. The Moon's period follows Kepler's third law, so bringing it closer shortens T<sub>M</sub> and lengthens the time between high tides.</p>
+    </section>
+  </div>
+
+  <section class="apps" id="applications">
+    <div class="apps-head">
+      <div class="eyebrow">Real-world applications</div>
+      <h2>Living with the tides</h2>
+      <p>The same stretch that lifts the sea also bends rock, tears comets apart and slows Earth's spin. Predicting it and harvesting it are old crafts.</p>
+    </div>
+    <div class="apps-grid">
+      <div class="app">
+        <span class="eyebrow">Energy</span>
+        <h3>Tidal power stations</h3>
+        <p>A barrage across the Rance estuary in France has made electricity from the tide since 1966, with a peak output of 240 MW. South Korea's Sihwa Lake station, opened in 2011, is slightly larger at 254 MW. Both work because the water level rises and falls on a timetable that can be predicted years ahead.</p>
+        <span class="link"><b>In the demo:</b> the town's two highs a day are what a tidal plant runs on.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Navigation</span>
+        <h3>Tide tables</h3>
+        <p>Ports publish tide times a year in advance by adding up dozens of sine waves, each tied to a motion of the Moon or the Sun. The largest has a period of 12.42 hours from the Moon; the Sun's is exactly 12 hours. Lord Kelvin built a mechanical tide-predicting machine to do these sums in 1872.</p>
+        <span class="link"><b>In the demo:</b> the 12 h 25 min lunar tide and the 12 h solar tide drift in and out of step.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Coastal flooding</span>
+        <h3>King tides</h3>
+        <p>When a spring tide comes while the Moon is near its closest point to Earth, the water climbs higher than usual. In low-lying cities such as Miami Beach these king tides now flood streets on sunny days, and they make storm surges more dangerous.</p>
+        <span class="link"><b>In the demo:</b> a closer Moon and a lined-up Sun both raise the tide.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Particle physics</span>
+        <h3>A tide inside an accelerator</h3>
+        <p>In the early 1990s physicists at CERN found that the beam energy of the 27 km LEP collider drifted up and down twice a day. The Moon's tide was stretching the solid rock enough to change the ring's circumference by about a millimetre.</p>
+        <span class="link"><b>In the demo:</b> the tidal force stretches the whole Earth, rock as well as water.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Astronomy</span>
+        <h3>The Moon is drifting away</h3>
+        <p>Laser pulses bounced off mirrors left on the Moon by Apollo astronauts show it moving away by about 3.8 cm a year. Friction carries the bulges slightly ahead of the Moon; their pull speeds the Moon up and slows Earth's spin, making the day longer by roughly 2 milliseconds per century.</p>
+        <span class="link"><b>In the demo:</b> move the Moon farther out and watch the tides shrink.</span>
+      </div>
+      <div class="app">
+        <span class="eyebrow">Planetary science</span>
+        <h3>Torn apart by tides</h3>
+        <p>Comet Shoemaker–Levy 9 passed so close to Jupiter in 1992 that the difference in Jupiter's pull across it broke it into more than 20 pieces, which hit the planet in July 1994. The same stretch stops ring particles close to a planet from gathering into moons.</p>
+        <span class="link"><b>In the demo:</b> halve the distance and the stretch grows eight times.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">Part of <a href="../../index.html">Science Wonders</a>. Equilibrium tide for a Moon and Sun in the plane of Earth's equator, seen by a town on the equator, with Earth's present 23.93 h turn and Kepler's third law for the Moon's period. The arrows are exact differences of Newtonian gravity. Bulges, arrows and distances in the picture are exaggerated or not to scale; the readouts use real values.</footer>
+</div>
+
+<script src="../../assets/lab.js"></script>
+<script src="tides.js"></script>
+<script src="../../assets/catalog.js"></script>
+<script src="../../assets/tours.js"></script>
+<script src="../../assets/content/tides.js"></script>
+<script src="../../assets/wonders.js" data-slug="tides"></script>
+</body>
+</html>

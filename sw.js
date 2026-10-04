@@ -1,5 +1,5 @@
 // Offline support: precache the site, then serve from cache while refreshing it.
-const CACHE = "science-wonders-v10";
+const CACHE = "science-wonders-v11";
 const PRECACHE = [
   "./",
   "index.html",
@@ -25,6 +25,21 @@ const PRECACHE = [
   "demos/prime-spirals/index.html",
   "demos/prime-spirals/prime-spirals.js",
   "assets/content/prime-spirals.js",
+  "demos/blue-sky/index.html",
+  "demos/blue-sky/blue-sky.js",
+  "assets/content/blue-sky.js",
+  "demos/rainbow/index.html",
+  "demos/rainbow/rainbow.js",
+  "assets/content/rainbow.js",
+  "demos/doppler/index.html",
+  "demos/doppler/doppler.js",
+  "assets/content/doppler.js",
+  "demos/resonance/index.html",
+  "demos/resonance/resonance.js",
+  "assets/content/resonance.js",
+  "demos/tides/index.html",
+  "demos/tides/tides.js",
+  "assets/content/tides.js",
   "i18n/zh-CN/common.js",
   "i18n/es/common.js",
   "assets/lab.js",
