@@ -58,3 +58,14 @@ New pages also need `<script src="../../assets/i18n.js" data-page="<slug>"></scr
 ## Publish
 
 Settings → Pages → Deploy from branch → `main` / root.
+
+## Licence
+
+The framework is source-available under the [Business Source License 1.1](LICENSE). It is free for personal use,
+for schools, universities, museums and other non-profits, on private networks, and for building experiments and
+content; running it as a competing public science-experiments site is not allowed. Each version becomes MIT three
+years after it is first published.
+
+The experiment pages are MIT, and the explanations, quizzes, teacher packs, tours and translations are CC BY-SA 4.0,
+so teachers may print, adapt and translate them. See [LICENSES.md](LICENSES.md) for every path, and
+[CONTRIBUTING.md](CONTRIBUTING.md) before sending a change.
